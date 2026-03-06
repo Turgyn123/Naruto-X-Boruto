@@ -1,32 +1,223 @@
-# MultiLoader Template
+# Naruto x Boruto Mod
 
-This project provides a Gradle project template that can compile Minecraft mods for multiple modloaders using a common project for the sources. This project does not require any third party libraries or dependencies. If you have any questions or want to discuss the project, please join our [Discord](https://discord.myceliummod.network).
+Welcome to the **Naruto x Boruto** mod for Minecraft!
+This mod brings elements from the popular anime series Naruto and Boruto into the world of Minecraft, allowing you to experience ninja life, abilities, and battles like never before.
 
-## Getting Started
 
-### IntelliJ IDEA
-This guide will show how to import the MultiLoader Template into IntelliJ IDEA. The setup process is roughly equivalent to setting up the modloaders independently and should be very familiar to anyone who has worked with their MDKs.
+## Table of Contents
 
-1. Clone or download this repository to your computer.
-2. Configure the project by setting the properties in the `gradle.properties` file. You will also need to change the `rootProject.name`  property in `settings.gradle`, this should match the folder name of your project, or else IDEA may complain.
-3. Open the template's root folder as a new project in IDEA. This is the folder that contains this README.md file and the gradlew executable.
-4. If your default JVM/JDK is not Java 21 you will encounter an error when opening the project. This error is fixed by going to `File > Settings > Build, Execution, Deployment > Build Tools > Gradle > Gradle JVM` and changing the value to a valid Java 21 JVM. You will also need to set the Project SDK to Java 21. This can be done by going to `File > Project Structure > Project SDK`. Once both have been set open the Gradle tab in IDEA and click the refresh button to reload the project.
-5. Open your Run/Debug Configurations. Under the `Application` category there should now be options to run Fabric and NeoForge projects. Select one of the client options and try to run it.
-6. Assuming you were able to run the game in step 5 your workspace should now be set up.
+- [Introduction](#introduction)
+- [Features](#features)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Compatibility](#compatibility)
+- [Contributing](#contributing)
+- [Issues](#issues)
+- [License](#license)
 
-### Eclipse
-While it is possible to use this template in Eclipse it is not recommended. During the development of this template multiple critical bugs and quirks related to Eclipse were found at nearly every level of the required build tools. While we continue to work with these tools to report and resolve issues support for projects like these are not there yet. For now Eclipse is considered unsupported by this project. The development cycle for build tools is notoriously slow so there are no ETAs available.
 
-## Development Guide
-When using this template the majority of your mod should be developed in the `common` project. The `common` project is compiled against the vanilla game and is used to hold code that is shared between the different loader-specific versions of your mod. The `common` project has no knowledge or access to ModLoader specific code, apis, or concepts. Code that requires something from a specific loader must be done through the project that is specific to that loader, such as the `fabric` or `neoforge` projects.
+## Introduction
 
-Loader specific projects such as the `fabric` and `neoforge` project are used to load the `common` project into the game. These projects also define code that is specific to that loader. Loader specific projects can access all the code in the `common` project. It is important to remember that the `common` project can not access code from loader specific projects.
+The **Naruto x Boruto** mod is designed to give players a unique gameplay experience by adding characters, weapons, jutsus, and more from the Naruto and Boruto series.
+Whether you want to become a ninja, master various jutsus, or battle your way through the world, this mod has something for every fan.
 
-## Removing Platforms and Loaders
-While this template has support for many modloaders, new loaders may appear in the future, and existing loaders may become less relevant.
 
-Removing loader specific projects is as easy as deleting the folder, and removing the `include("projectname")` line from the `settings.gradle` file.
-For example if you wanted to remove support for `forge` you would follow the following steps:
+## Features
 
-1. Delete the subproject folder. For example, delete `MultiLoader-Template/forge`.
-2. Remove the project from `settings.gradle`. For example, remove `include("forge")`. 
+- **Ninja Weapons**: Use iconic weapons like kunai, shuriken, and more.
+- **Jutsus**: Master different jutsus and unleash powerful attacks.
+- **Characters**: Meet familiar characters and villains from the Naruto and Boruto series.
+- **Ninja Villages**: Explore ninja villages and hidden locations.
+- **Custom Items**: Craft and use special items from the series.
+- **Quests & Missions**: Take on quests to earn rewards and progress your ninja skills.
+
+
+## Installation
+
+### Prerequisites
+
+- **Minecraft Version**: 1.21+
+- **Java Version**: Ensure you have Java 21 installed.
+- **Git**: Make sure you have Git installed to clone the repository. You can download it [here](https://git-scm.com/).
+
+### Steps
+
+1. **Clone the Naruto x Boruto Mod Repository**:
+    - Open a terminal and run:
+      ```
+      git clone https://github.com/Turgyn123/Naruto-x-Boruto.git
+      ```
+      
+    - Navigate into the project directory:
+      ```
+      cd Naruto-x-Boruto
+      ```
+
+2. **Build the Mod**:
+    - Use Gradle to build the mod. In the terminal, run:
+      ```
+      ./gradlew build
+      ```
+      
+    - After the build completes, the `.jar` file will be generated in the `build/libs` directory.
+
+3. **Install Forge**:
+    - Make sure you have Minecraft Forge installed. Follow the instructions provided on the Forge website to install it.
+
+4. **Place the Mod File**:
+    - Copy the generated `.jar` file from the `build/libs` directory into the `mods` folder located in your Minecraft directory.
+    Typically, this folder can be found at:
+        - **Windows**: `C:\Users\<Your Username>\AppData\Roaming\.minecraft\mods`
+        - **Mac**: `~/Library/Application Support/minecraft/mods`
+        - **Linux**: `~/.minecraft/mods`
+
+5. **Launch Minecraft**:
+    - Open Minecraft Launcher, choose the Forge profile, and click **Play**.
+
+### Running the Mod Locally for Development
+
+1. **Open Project in Your IDE**:
+    - Import the project as a Gradle project in your IDE (e.g., IntelliJ IDEA or Eclipse).
+
+2. **Use the Gradle Task to Run Client**:
+    - To run the mod directly for testing, use the Gradle task:
+      ```
+      ./gradlew runClient
+      ```
+    - This will start a local Minecraft instance with your mod loaded, allowing you to test and develop without building the `.jar` file each time.
+
+3. **Making Changes and Testing**:
+    - As you make changes to the mod, you can re-run the `runClient` Gradle task to see your updates immediately.
+
+TODO: Having the project in WSL and running runClient from there seems to bug out.
+Client opens and game starts but mouse controls (at least) seem to not work.
+
+
+## Usage
+
+- **Access Ninja Skills**: After installing the mod, you can start accessing new ninja tools, jutsus, and items directly in-game.
+- **Crafting & Recipes**: Use the in-game crafting table to create special items and weapons.
+- **Jutsus**: Learn different jutsus by ...
+
+TODO: More information about gameplay mechanics, how to access specific features, other quick setups
+
+
+## Compatibility
+
+- **Minecraft Version**: 1.21+
+- **Mod Dependencies**: This mod requires Minecraft Either Forge, NeoForge or Fabric for 1.21+. Ensure other mods installed are also compatible with this version of Minecraft.
+- **Known Issues**:
+    - <Describe any known compatibility issues or conflicts with other mods>
+
+    
+## Contributing
+
+We welcome contributions to the **Naruto x Boruto** mod! If you have ideas, feature requests, or bug fixes, feel free to contribute.
+
+### How to Contribute from the GitHub Page
+
+1. **Fork the repository**:
+   - Click the "Fork" button at the top of this repository page to create a copy of the project under your own GitHub account.
+2. **Clone your fork**:
+    - In your terminal run:
+    ```
+    git clone https://github.com/<your-own-username>/Naruto-x-Boruto.git
+    ```
+    - Navigate into the project directory:
+    ```
+    cd Naruto-x-Boruto
+    ```
+3. **Create a new branch**:
+    - Create a branch to work on your changes:
+    ```
+    git checkout -b feature/<your-feature-name>
+    ```
+4. **Make your changes and commit them**:
+    - Make the changes you want to contribute. Afterward, stage and commit your changes:
+    ```
+    git add .
+    git commit -m "<Add your feature description>"
+    ```
+5. **Push to your fork**:
+    - Push your changes to the new branch on your forked repository:
+    ```
+    git push origin feature/<your-feature-name>
+    ```
+6. **Create a Pull Request**:
+   - Go to the original **Naruto x Boruto** repository on GitHub.
+   - You should see an option to **"Compare & Pull Request"**. Click it and write a brief description of your changes.
+   - Submit the pull request for review. The maintainers will review your changes, suggest improvements if needed, and merge if approved.
+
+### How to Contribute Directly via Git
+
+1. **Clone the Repository**:
+    - Clone the original repository directly (if you have write access):
+      ```
+      git clone https://github.com/Turgyn123/Naruto-x-Boruto.git
+      ```
+    - Navigate into the project directory:
+      ```
+      cd Naruto-x-Boruto
+      ```
+2. **Create a New Branch**:
+    - Create a branch for your changes:
+      ```
+      git checkout -b feature/<your-feature-name>
+      ```
+3. **Commit Your Changes**:
+    - Make the necessary changes, then stage and commit them:
+      ```
+      git add .
+      git commit -m "<Add description of your feature or fix>"
+      ```
+4. **Push Your Branch**:
+    - Push your changes to the remote repository:
+      ```
+      git push origin feature/<your-feature-name>
+      ```
+5. **Create a Pull Request**:
+    - Go to the original **Naruto x Boruto** GitHub repository.
+    - Open a pull request from the new branch you just pushed.
+    - Provide a clear description of your changes, mentioning why they are needed, and submit the PR.
+
+### Contributing Guidelines
+
+- **Keep Your Branch Up-to-Date**: Regularly pull changes from the original repository to keep your fork or branch up-to-date.
+- **Code Quality**: Ensure your code follows the project's coding standards.
+Add comments where necessary, and make sure the code is clean and readable.
+- **Test Your Changes**: Before submitting a PR, thoroughly test your changes to make sure they work as expected.
+- **Descriptive Commits**: Write clear, concise, and descriptive commit messages.
+
+By following these steps, you can effectively contribute to the development of the **Naruto x Boruto** mod.
+Thank you for your interest in improving the project!
+
+
+## Issues
+
+If you encounter any bugs, crashes, or have suggestions, please report them in the [Issues](https://github.com/Turgyn123/Naruto-x-Boruto/issues) section of the repository.
+
+### Reporting Bugs
+
+1. Describe the issue in detail.
+2. Provide screenshots or logs if possible.
+3. Specify the **Minecraft version**, **Forge version**, and **mod version** you are using.
+
+
+## License
+
+This project is licensed under a custom license.
+By downloading, installing or using this software, you agree to the terms outlined in the [LICENSE](LICENSE.txt) file.
+Please review these terms carefully.
+
+This license allows personal, non-commercial use only and restricts distribution, commercialization and certain modifications.
+For any other usage, please contact Turgyn for permission.
+
+
+## Credits
+
+- **Mod Developers**: Turgyn123, Tyler; <others>
+- **Special Thanks**:
+- **Inspired by Naruto & Boruto**: This mod is inspired by the popular anime series Naruto and Boruto, created by Masashi Kishimoto.
+
+---
+**Disclaimer**: This is a fan-made mod, not officially affiliated with Naruto, Boruto, or any associated companies.
