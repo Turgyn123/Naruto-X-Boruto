@@ -1,21 +1,33 @@
 package net.narutoxboruto.main;
 
 
+import net.narutoxboruto.entities.ModEntities;
+import net.narutoxboruto.entities.NeoForgeEntities;
+import net.narutoxboruto.items.NeoForgeItems;
+import net.narutoxboruto.items.NeoForgeTab;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 
 @Mod(Main.MOD_ID)
 public class NeoForgeMain {
 
     public NeoForgeMain(IEventBus eventBus) {
 
-        // This method is invoked by the NeoForge mod loader when it is ready
-        // to load your mod. You can access NeoForge and Common code in this
-        // project.
-
-        // Use NeoForge to bootstrap the Common mod.
-        Main.LOG.info("Hello NeoForge world!");
+        NeoForgeItems.register(eventBus);
+        NeoForgeTab.register(eventBus);
+        NeoForgeEntities.register(eventBus);
+        eventBus.addListener(this::Entities);
         Main.init();
-
     }
+
+    private void Entities(final FMLCommonSetupEvent event) {
+        ModEntities.KUNAI = NeoForgeEntities.KUNAI.get();
+        ModEntities.EXPLOSIVE_KUNAI = NeoForgeEntities.EXPLOSIVE_KUNAI.get();
+        ModEntities.SHURIKEN = NeoForgeEntities.SHURIKEN.get();
+        ModEntities.SENBON = NeoForgeEntities.SENBON.get();
+        ModEntities.POISON_SENBON = NeoForgeEntities.POISON_SENBON.get();
+        ModEntities.FUMA_SHURIKEN = NeoForgeEntities.FUMA_SHURIKEN.get();
+    }
+
 }

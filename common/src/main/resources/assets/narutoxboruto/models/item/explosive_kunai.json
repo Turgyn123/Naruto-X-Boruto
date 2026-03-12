@@ -1,0 +1,14 @@
+{
+  "parent": "narutoxboruto:item/kunai",
+  "textures": {
+    "layer0": "narutoxboruto:item/throwables/explosive_kunai"
+  },
+  "display": {
+    "fixed": {
+      "rotation":
+      [90, 0, 135],
+      "scale":
+      [0.68, 0.68, 0.3]
+    }
+  }
+}

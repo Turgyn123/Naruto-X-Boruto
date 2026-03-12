@@ -1,0 +1,27 @@
+{
+  "parent": "minecraft:item/handheld",
+  "textures": {
+    "layer0": "narutoxboruto:item/throwables/fuma_shuriken"
+  },
+  "display": {
+    "thirdperson_righthand": {
+      "rotation": [0, -90, 15],
+      "translation": [0, -1.5, 0],
+      "scale": [1.5, 1.5, 1]
+    },
+    "thirdperson_lefthand": {
+      "rotation": [0, 90, -15],
+      "translation": [0, -1.5, 0
+      ],
+      "scale": [1.5, 1.5, 1]
+    },
+    "ground": {
+      "rotation": [90, 0, 0],
+      "scale": [1.5, 1.5, 1]
+    },
+    "fixed": {
+      "rotation": [90, 0,0],
+      "scale": [1.5, 1.5, 0.4]
+    }
+  }
+}

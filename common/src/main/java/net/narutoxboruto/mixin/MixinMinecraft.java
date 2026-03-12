@@ -1,4 +1,4 @@
-package net.narutoxboruto.main.mixin;
+package net.narutoxboruto.mixin;
 
 import net.narutoxboruto.main.Main;
 import net.minecraft.client.Minecraft;
