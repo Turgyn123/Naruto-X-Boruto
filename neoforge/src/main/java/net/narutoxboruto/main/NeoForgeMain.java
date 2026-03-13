@@ -1,10 +1,13 @@
 package net.narutoxboruto.main;
 
 
+import net.narutoxboruto.capabilities.info.Affiliation;
 import net.narutoxboruto.entities.ModEntities;
 import net.narutoxboruto.entities.NeoForgeEntities;
 import net.narutoxboruto.items.NeoForgeItems;
 import net.narutoxboruto.items.NeoForgeTab;
+import net.narutoxboruto.main.platform.Services;
+import net.narutoxboruto.capabilities.NeoForgeCapabilities;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
@@ -17,6 +20,7 @@ public class NeoForgeMain {
         NeoForgeItems.register(eventBus);
         NeoForgeTab.register(eventBus);
         NeoForgeEntities.register(eventBus);
+        NeoForgeCapabilities.register(eventBus);
         eventBus.addListener(this::Entities);
         Main.init();
     }
