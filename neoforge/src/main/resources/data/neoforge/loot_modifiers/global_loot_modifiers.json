@@ -1,0 +1,18 @@
+{
+  "replace": false,
+  "entries": [
+    "narutoxboruto:scrolls/add_village_desert",
+    "narutoxboruto:scrolls/add_village_plains",
+    "narutoxboruto:scrolls/add_village_savanna",
+    "narutoxboruto:scrolls/add_village_snowy",
+    "narutoxboruto:scrolls/add_village_taiga",
+    "narutoxboruto:scrolls/add_village_weaponsmith",
+    "narutoxboruto:scrolls/add_village_toolsmith",
+    "narutoxboruto:scrolls/add_village_armor",
+    "narutoxboruto:scrolls/add_desert_temple",
+    "narutoxboruto:scrolls/add_ancient_city",
+    "narutoxboruto:scrolls/add_jungle_pyramid",
+    "narutoxboruto:scrolls/add_ruin_portal",
+    "narutoxboruto:scrolls/add_shipwreck"
+  ]
+}

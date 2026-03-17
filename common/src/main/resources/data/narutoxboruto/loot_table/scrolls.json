@@ -1,0 +1,52 @@
+{
+  "pools": [
+    {
+      "rolls": {
+        "min": 0,
+        "max": 2
+      },
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "narutoxboruto:ninjutsu_scroll"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "narutoxboruto:genjutsu_scroll"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "narutoxboruto:kenjutsu_scroll"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "narutoxboruto:kinjutsu_scroll"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "narutoxboruto:medical_scroll"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "narutoxboruto:senjutsu_scroll"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "narutoxboruto:shurikenjutsu_scroll"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "narutoxboruto:speed_scroll"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "narutoxboruto:summoning_scroll"
+        },
+        {
+          "type": "minecraft:item",
+          "name": "narutoxboruto:taijutsu_scroll"
+        }
+      ]
+    }
+  ]
+}

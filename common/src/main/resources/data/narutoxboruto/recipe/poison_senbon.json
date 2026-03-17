@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "equipment",
+  "ingredients": [
+    {
+      "item": "minecraft:spider_eye"
+    },
+    {
+      "item": "narutoxboruto:senbon"
+    },
+    {
+      "item": "narutoxboruto:senbon"
+    },
+    {
+      "item": "narutoxboruto:senbon"
+    }
+  ],
+  "result": {
+    "id": "narutoxboruto:poison_senbon",
+    "count": 3
+  }
+}

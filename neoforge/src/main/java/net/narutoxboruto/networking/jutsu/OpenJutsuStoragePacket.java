@@ -10,6 +10,7 @@ import net.minecraft.world.SimpleMenuProvider;
 import net.narutoxboruto.capabilities.NeoForgeCapabilities;
 import net.narutoxboruto.capabilities.jutsu.JutsuStorage;
 import net.narutoxboruto.main.Main;
+import net.narutoxboruto.main.platform.NeoForgePlatformHelper;
 import net.narutoxboruto.util.JutsuGrantHelper;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
@@ -17,13 +18,17 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
  * Packet sent from client when player wants to open their Jutsu Storage.
  * Server responds by opening the JutsuStorageMenu.
  */
-public record OpenJutsuStoragePacket() implements CustomPacketPayload {
+public class OpenJutsuStoragePacket implements CustomPacketPayload {
 
     public static final Type<OpenJutsuStoragePacket> TYPE = new Type<>(
             ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "open_jutsu_storage")
     );
 
-    public static final StreamCodec<FriendlyByteBuf, OpenJutsuStoragePacket> STREAM_CODEC = StreamCodec.unit(new OpenJutsuStoragePacket());
+    public static final StreamCodec<FriendlyByteBuf, OpenJutsuStoragePacket> STREAM_CODEC = StreamCodec.ofMember(OpenJutsuStoragePacket::toBytes, OpenJutsuStoragePacket::new);
+
+    public OpenJutsuStoragePacket() {}
+    public OpenJutsuStoragePacket(FriendlyByteBuf buf) {}
+    public void toBytes(FriendlyByteBuf buf) {}
 
     @Override
     public Type<? extends CustomPacketPayload> type() {
@@ -40,7 +45,7 @@ public record OpenJutsuStoragePacket() implements CustomPacketPayload {
 
                 serverPlayer.openMenu(new SimpleMenuProvider(
                         (containerId, playerInventory, player) ->
-                                new JutsuStorageMenu(containerId, playerInventory, storage.toItemStackHandler()),
+                                new JutsuStorageMenu(containerId, playerInventory, NeoForgePlatformHelper.toItemStackHandler(storage)),
                         Component.translatable("container.narutoxboruto.jutsu_storage")
                 ));
             }

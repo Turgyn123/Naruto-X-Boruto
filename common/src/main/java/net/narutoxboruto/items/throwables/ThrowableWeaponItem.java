@@ -1,5 +1,7 @@
 package net.narutoxboruto.items.throwables;
 
+import net.narutoxboruto.main.platform.Services;
+
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -84,7 +86,7 @@ public class ThrowableWeaponItem extends Item implements PreventSlow {
     @Override
     public void releaseUsing(ItemStack stack, Level world, LivingEntity entity, int timeLeft) {
         if (!(entity instanceof ServerPlayer player)) return;
-        int charge = this.getUseDuration(stack) - timeLeft;
+        int charge = this.getUseDuration(stack, entity) - timeLeft;
         float power = getPowerForTime(player, charge);
         if (power > 0.2f || getPowerForTime(player, charge) >= 1f) {
             if (!world.isClientSide && !player.getCooldowns().isOnCooldown(this)) {
@@ -96,7 +98,8 @@ public class ThrowableWeaponItem extends Item implements PreventSlow {
     }
 
 
-    public int getUseDuration(ItemStack stack) {
+    @Override
+    public int getUseDuration(ItemStack stack, LivingEntity entity) {
         return 72000;
     }
 
@@ -144,7 +147,7 @@ public class ThrowableWeaponItem extends Item implements PreventSlow {
     }
 
   //  public boolean canSpecialThrow(ServerPlayer serverPlayer, ItemStack stack) {
-  //      Shurikenjutsu shurikenjutsu = serverPlayer.getData(MainAttachment.SHURIKENJUTSU);
+  //      Shurikenjutsu shurikenjutsu = Services.PLATFORM.getShurikenjutsu(serverPlayer);
   //      int statValue = (shurikenjutsu != null) ? shurikenjutsu.getValue() : 0;
 
   //      return statValue >= 20

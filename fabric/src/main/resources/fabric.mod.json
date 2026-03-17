@@ -17,6 +17,9 @@
     "entrypoints": {
         "main": [
           "net.narutoxboruto.main.FabricMain"
+        ],
+        "client": [
+          "net.narutoxboruto.main.FabricClient"
         ]
     },
     "mixins": [

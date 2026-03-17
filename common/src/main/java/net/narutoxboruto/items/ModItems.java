@@ -1,5 +1,7 @@
 package net.narutoxboruto.items;
 
+import net.minecraft.world.item.Item;
+
 public class ModItems {
 
     //Misc
@@ -59,6 +61,13 @@ public class ModItems {
     public static final String WATER_PRISON_JUTSU = "water_prison_jutsu";
     public static final String EARTH_WAVE_JUTSU = "earth_wave_jutsu";
     public static final String EARTH_WALL_JUTSU = "earth_wall_jutsu";
-    public static final String LIGHTING_CHAKRA_MODE = "lighting_chakra_mode";
+    public static final String LIGHTNING_CHAKRA_MODE = "lightning_chakra_mode";
 
+    // Item holder fields populated by each loader at registration time
+    public static Item SHURIKEN_ITEM;
+    public static Item SAMEHADA_ITEM;
+    public static Item KUBIKIRIBOCHO_ITEM;
+    public static Item SHIBUKI_ITEM;
+    public static Item FUMA_SHURIKEN_ITEM;
+    public static Item CHAKRA_PAPER_ITEM;
 }

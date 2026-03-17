@@ -1,0 +1,30 @@
+{
+  "type": "minecraft:entity",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "narutoxboruto:random_dna",
+          "conditions": [
+            {
+              "condition": "minecraft:random_chance",
+              "chance": 1.00
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "narutoxboruto:samehada",
+          "conditions": [
+            {
+              "condition": "minecraft:random_chance",
+              "chance": 5.00
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

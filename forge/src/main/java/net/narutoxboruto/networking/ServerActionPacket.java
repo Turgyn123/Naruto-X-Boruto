@@ -1,0 +1,83 @@
+package net.narutoxboruto.networking;
+
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.SimpleMenuProvider;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.event.network.CustomPayloadEvent;
+import net.narutoxboruto.capabilities.PlayerCapData;
+import net.narutoxboruto.capabilities.PlayerDataManager;
+import net.narutoxboruto.capabilities.info.Chakra;
+import net.narutoxboruto.capabilities.info.ChakraControl;
+import net.narutoxboruto.capabilities.jutsu.JutsuStorage;
+import net.narutoxboruto.items.swords.AbstractAbilitySword;
+import net.narutoxboruto.items.throwables.FumaShurikenItem;
+import net.narutoxboruto.items.throwables.ThrowableWeaponItem;
+import net.narutoxboruto.main.platform.ForgePlatformHelper;
+import net.narutoxboruto.networking.jutsu.JutsuStorageMenu;
+import net.narutoxboruto.util.JutsuGrantHelper;
+
+public class ServerActionPacket {
+    private final String action;
+
+    public ServerActionPacket(String action) {
+        this.action = action;
+    }
+
+    public static void encode(ServerActionPacket msg, FriendlyByteBuf buf) {
+        buf.writeUtf(msg.action);
+    }
+
+    public static ServerActionPacket decode(FriendlyByteBuf buf) {
+        return new ServerActionPacket(buf.readUtf());
+    }
+
+    public static void handle(ServerActionPacket msg, CustomPayloadEvent.Context ctx) {
+        ServerPlayer serverPlayer = ctx.getSender();
+        if (serverPlayer == null) return;
+        PlayerCapData data = PlayerDataManager.get(serverPlayer);
+
+        switch (msg.action) {
+            case "toggle_sword_ability" -> {
+                ItemStack stack = serverPlayer.getItemInHand(InteractionHand.MAIN_HAND);
+                if (stack.getItem() instanceof AbstractAbilitySword sword) {
+                    sword.toggleAbility(serverPlayer);
+                }
+            }
+            case "recharge_chakra" -> {
+                Chakra chakra = data.getChakra();
+                chakra.addValue(1, serverPlayer);
+                serverPlayer.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 10, 1, false, true));
+            }
+            case "toggle_chakra_control" -> {
+                Chakra chakra = data.getChakra();
+                if (chakra.getValue() > 0) {
+                    ChakraControl control = data.getChakraControl();
+                    control.setValue(!control.isActive(), serverPlayer);
+                } else {
+                    serverPlayer.displayClientMessage(Component.translatable("msg.no_chakra"), true);
+                }
+            }
+            case "special_throw" -> {
+                ItemStack stack = serverPlayer.getItemInHand(InteractionHand.MAIN_HAND);
+                if (stack.getItem() instanceof ThrowableWeaponItem throwableItem &&
+                        !(stack.getItem() instanceof FumaShurikenItem)) {
+                    throwableItem.performSpecialThrow(serverPlayer, stack);
+                }
+            }
+            case "open_jutsu_storage" -> {
+                JutsuGrantHelper.cleanupDuplicateJutsus(serverPlayer);
+                JutsuStorage storage = data.getJutsuStorage();
+                serverPlayer.openMenu(new SimpleMenuProvider(
+                        (containerId, playerInventory, player) ->
+                                new JutsuStorageMenu(containerId, playerInventory, ForgePlatformHelper.toItemStackHandler(storage)),
+                        Component.translatable("container.narutoxboruto.jutsu_storage")
+                ));
+            }
+        }
+    }
+}

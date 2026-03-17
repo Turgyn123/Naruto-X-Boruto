@@ -42,3 +42,15 @@ neoForge {
 }
 
 sourceSets.main.resources { srcDir 'src/generated/resources' }
+
+repositories {
+    maven {
+        name = "GeckoLib"
+        url = uri("https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/")
+    }
+}
+
+dependencies {
+    // GeckoLib for animated entity models
+    implementation "software.bernie.geckolib:geckolib-neoforge-1.21.1:4.8.3"
+}

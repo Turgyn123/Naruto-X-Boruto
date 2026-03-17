@@ -3,6 +3,13 @@ plugins {
     id 'net.minecraftforge.gradle' version '[6.0.24,6.2)'
     id 'org.spongepowered.mixin' version '0.7-SNAPSHOT'
 }
+repositories {
+    maven {
+        name = "GeckoLib"
+        url = uri("https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/")
+    }
+}
+
 base {
     archivesName = "${mod_name}-forge-${minecraft_version}"
 }
@@ -77,6 +84,8 @@ dependencies {
 
     // Forge's hack fix
     implementation('net.sf.jopt-simple:jopt-simple:5.0.4') { version { strictly '5.0.4' } }
+    // GeckoLib for animated entity models
+    implementation "software.bernie.geckolib:geckolib-forge-1.21.1:4.8.3"
 }
 
 publishing {

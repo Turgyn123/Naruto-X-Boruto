@@ -1,0 +1,503 @@
+﻿To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.10/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :buildSrc:extractPluginRequests UP-TO-DATE
+> Task :buildSrc:generatePluginAdapters UP-TO-DATE
+> Task :buildSrc:compileJava UP-TO-DATE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:compileGroovyPlugins UP-TO-DATE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources UP-TO-DATE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+
+> Configure project :fabric
+Fabric Loom: 1.8.13
+
+> Configure project :forge
+MixinGradle is skipping eclipse integration, extension not found
+Neither the 'eclipse' nor the 'idea' plugins were found, but IDE resource copy has been enabled.
+
+> Task :common:createMinecraftArtifacts UP-TO-DATE
+
+> Task :common:compileJava
+.\gradlew.bat : C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\blocks\entity\ModBlockEntities.java:7: error: 
+package net.neoforged.bus.api does not exist
+At line:1 char:1
++ .\gradlew.bat compileJava 2>&1 | Out-File -FilePath "C:\Users\purea\M ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (C:\Users\purea\... does not exist:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+import net.neoforged.bus.api.IEventBus;
+                            ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\blocks\entity\ModBlockEntities.java:8: error: package 
+net.neoforged.neoforge.registries does not exist
+import net.neoforged.neoforge.registries.DeferredRegister;
+                                        ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\blocks\entity\ModBlockEntities.java:13: error: cannot find symbol
+    public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES = DeferredRegister.create(
+                        ^
+  symbol:   class DeferredRegister
+  location: class ModBlockEntities
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\blocks\entity\ModBlockEntities.java:20: error: cannot find symbol
+    public static void register(IEventBus eventBus) {
+                                ^
+  symbol:   class IEventBus
+  location: class ModBlockEntities
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\blocks\ModBlocks.java:11: error: package net.neoforged.bus.api 
+does not exist
+import net.neoforged.bus.api.IEventBus;
+                            ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\blocks\ModBlocks.java:12: error: package 
+net.neoforged.neoforge.registries does not exist
+import net.neoforged.neoforge.registries.DeferredRegister;
+                                        ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\blocks\ModBlocks.java:17: error: cannot find symbol
+    public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(
+                        ^
+  symbol:   class DeferredRegister
+  location: class ModBlocks
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\blocks\ModBlocks.java:36: error: cannot find symbol
+    public static void register(IEventBus eventBus) {
+                                ^
+  symbol:   class IEventBus
+  location: class ModBlocks
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\capabilities\climber\ClimberMoveController.java:39: error: cannot 
+find symbol
+    public static boolean handleTravel(Player player, Vec3 travelVector, ClimberComponent climber) {
+                                                                         ^
+  symbol:   class ClimberComponent
+  location: class ClimberMoveController
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\client\gui\JutsuStorageScreen.java:10: error: package 
+net.narutoxboruto.menu does not exist
+import net.narutoxboruto.menu.JutsuStorageMenu;
+                             ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\client\gui\JutsuStorageScreen.java:20: error: cannot find symbol
+public class JutsuStorageScreen extends AbstractContainerScreen<JutsuStorageMenu> {
+                                                                ^
+  symbol: class JutsuStorageMenu
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\client\gui\JutsuStorageScreen.java:31: error: cannot find symbol
+    public JutsuStorageScreen(JutsuStorageMenu menu, Inventory playerInventory, Component title) {
+                              ^
+  symbol:   class JutsuStorageMenu
+  location: class JutsuStorageScreen
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\client\model\SharkBombModel.java:6: error: package 
+software.bernie.geckolib.model does not exist
+import software.bernie.geckolib.model.GeoModel;
+                                     ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\client\model\SharkBombModel.java:8: error: cannot find symbol
+public class SharkBombModel extends GeoModel<SharkBombEntity> {
+                                    ^
+  symbol: class GeoModel
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\entities\jutsus\SharkBombEntity.java:26: error: package 
+software.bernie.geckolib.animatable does not exist
+import software.bernie.geckolib.animatable.GeoEntity;
+                                          ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\entities\jutsus\SharkBombEntity.java:27: error: package 
+software.bernie.geckolib.animatable.instance does not exist
+import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
+                                                   ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\entities\jutsus\SharkBombEntity.java:29: error: package 
+software.bernie.geckolib.util does not exist
+import software.bernie.geckolib.util.GeckoLibUtil;
+                                    ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\entities\jutsus\SharkBombEntity.java:41: error: cannot find symbol
+public class SharkBombEntity extends Projectile implements GeoEntity {
+                                                           ^
+  symbol: class GeoEntity
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\entities\jutsus\SharkBombEntity.java:43: error: cannot find symbol
+    private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
+                  ^
+  symbol:   class AnimatableInstanceCache
+  location: class SharkBombEntity
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\entities\jutsus\SharkBombEntity.java:348: error: package 
+AnimatableManager does not exist
+    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
+                                                     ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\entities\jutsus\SharkBombEntity.java:355: error: cannot find 
+symbol
+    public AnimatableInstanceCache getAnimatableInstanceCache() {
+           ^
+  symbol:   class AnimatableInstanceCache
+  location: class SharkBombEntity
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\entities\jutsus\SharkBombEntity.java:28: error: package 
+software.bernie.geckolib.animation does not exist
+import software.bernie.geckolib.animation.*;
+^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\client\model\WaterDragonModel.java:6: error: package 
+software.bernie.geckolib.model does not exist
+import software.bernie.geckolib.model.GeoModel;
+                                     ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\client\model\WaterDragonModel.java:8: error: cannot find symbol
+public class WaterDragonModel extends GeoModel<WaterDragonEntity> {
+                                      ^
+  symbol: class GeoModel
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\entities\jutsus\WaterDragonEntity.java:26: error: package 
+software.bernie.geckolib.animatable does not exist
+import software.bernie.geckolib.animatable.GeoEntity;
+                                          ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\entities\jutsus\WaterDragonEntity.java:27: error: package 
+software.bernie.geckolib.animatable.instance does not exist
+import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
+                                                   ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\entities\jutsus\WaterDragonEntity.java:29: error: package 
+software.bernie.geckolib.util does not exist
+import software.bernie.geckolib.util.GeckoLibUtil;
+                                    ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\entities\jutsus\WaterDragonEntity.java:48: error: cannot find 
+symbol
+public class WaterDragonEntity extends Projectile implements GeoEntity {
+                                                             ^
+  symbol: class GeoEntity
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\entities\jutsus\WaterDragonEntity.java:50: error: cannot find 
+symbol
+    private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
+                  ^
+  symbol:   class AnimatableInstanceCache
+  location: class WaterDragonEntity
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\entities\jutsus\WaterDragonEntity.java:483: error: cannot find 
+symbol
+    private static final RawAnimation SPAWN_ANIM = RawAnimation.begin().thenPlayAndHold("Spawn");
+                         ^
+  symbol:   class RawAnimation
+  location: class WaterDragonEntity
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\entities\jutsus\WaterDragonEntity.java:484: error: cannot find 
+symbol
+    private static final RawAnimation IDLE_ANIM = RawAnimation.begin().thenLoop("Idle");
+                         ^
+  symbol:   class RawAnimation
+  location: class WaterDragonEntity
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\entities\jutsus\WaterDragonEntity.java:485: error: cannot find 
+symbol
+    private static final RawAnimation ATTACK_ANIM = RawAnimation.begin().thenPlayAndHold("Attack");
+                         ^
+  symbol:   class RawAnimation
+  location: class WaterDragonEntity
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\entities\jutsus\WaterDragonEntity.java:488: error: package 
+AnimatableManager does not exist
+    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
+                                                     ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\entities\jutsus\WaterDragonEntity.java:504: error: cannot find 
+symbol
+    public AnimatableInstanceCache getAnimatableInstanceCache() {
+           ^
+  symbol:   class AnimatableInstanceCache
+  location: class WaterDragonEntity
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\entities\jutsus\WaterDragonEntity.java:28: error: package 
+software.bernie.geckolib.animation does not exist
+import software.bernie.geckolib.animation.*;
+^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\client\PlayerData.java:3: error: cannot find symbol
+import net.narutoxboruto.util.RotationUtil;
+                             ^
+  symbol:   class RotationUtil
+  location: package net.narutoxboruto.util
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\client\PlayerData.java:22: error: package RotationUtil does not 
+exist
+    private static RotationUtil.Surface wallRunningSurface = RotationUtil.Surface.GROUND;
+                               ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\client\PlayerData.java:322: error: package RotationUtil does not 
+exist
+    public static RotationUtil.Surface getWallRunningSurface() {
+                              ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\client\PlayerData.java:326: error: package RotationUtil does not 
+exist
+    public static void setWallRunningSurface(RotationUtil.Surface surface) {
+                                                         ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\client\renderer\entity\SharkBombRenderer.java:9: error: package 
+software.bernie.geckolib.renderer does not exist
+import software.bernie.geckolib.renderer.GeoEntityRenderer;
+                                        ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\client\renderer\entity\SharkBombRenderer.java:16: error: cannot 
+find symbol
+public class SharkBombRenderer extends GeoEntityRenderer<SharkBombEntity> {
+                                       ^
+  symbol: class GeoEntityRenderer
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\client\renderer\entity\WaterDragonRenderer.java:13: error: 
+package software.bernie.geckolib.renderer does not exist
+import software.bernie.geckolib.renderer.GeoEntityRenderer;
+                                        ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\client\renderer\entity\WaterDragonRenderer.java:25: error: cannot 
+find symbol
+public class WaterDragonRenderer extends GeoEntityRenderer<WaterDragonEntity> {
+                                         ^
+  symbol: class GeoEntityRenderer
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\client\renderer\item\KibaClientExtension.java:4: error: package 
+net.neoforged.neoforge.client.extensions.common does not exist
+import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
+                                                      ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\client\renderer\item\KibaClientExtension.java:9: error: cannot 
+find symbol
+public class KibaClientExtension implements IClientItemExtensions {
+                                            ^
+  symbol: class IClientItemExtensions
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\client\renderer\item\KibaLightningOverlay.java:23: error: package 
+net.neoforged.bus.api does not exist
+import net.neoforged.bus.api.SubscribeEvent;
+                            ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\client\renderer\item\KibaLightningOverlay.java:24: error: package 
+net.neoforged.fml.common does not exist
+import net.neoforged.fml.common.EventBusSubscriber;
+                               ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\client\renderer\item\KibaLightningOverlay.java:25: error: package 
+net.neoforged.neoforge.client.event does not exist
+import net.neoforged.neoforge.client.event.RenderHandEvent;
+                                          ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\client\renderer\item\KibaLightningOverlay.java:26: error: package 
+net.neoforged.neoforge.client.event does not exist
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+                                          ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\client\renderer\item\KibaLightningOverlay.java:27: error: package 
+net.neoforged.neoforge.client.event does not exist
+import net.neoforged.neoforge.client.event.RenderPlayerEvent;
+                                          ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\client\renderer\item\KibaLightningOverlay.java:40: error: cannot 
+find symbol
+@EventBusSubscriber(modid = Main.MOD_ID, value = Dist.CLIENT)
+ ^
+  symbol: class EventBusSubscriber
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\client\renderer\item\KibaLightningOverlay.java:73: error: cannot 
+find symbol
+    public static void onRenderHand_DISABLED(RenderHandEvent event) {
+                                             ^
+  symbol:   class RenderHandEvent
+  location: class KibaLightningOverlay
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\client\renderer\item\KibaLightningOverlay.java:82: error: cannot 
+find symbol
+    public static void onRenderLevel(RenderLevelStageEvent event) {
+                                     ^
+  symbol:   class RenderLevelStageEvent
+  location: class KibaLightningOverlay
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\client\renderer\item\KibaLightningOverlay.java:123: error: 
+package RenderPlayerEvent does not exist
+    public static void onRenderPlayer(RenderPlayerEvent.Post event) {
+                                                       ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\command\ClanCommand.java:19: error: package 
+net.narutoxboruto.events does not exist
+import static net.narutoxboruto.events.AttachmentEvents.syncAllStatsToClient;
+                                      ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\command\ClanCommand.java:19: error: static import only from 
+classes and interfaces
+import static net.narutoxboruto.events.AttachmentEvents.syncAllStatsToClient;
+^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\command\ClanCommand.java:20: error: cannot find symbol
+import static net.narutoxboruto.util.ModUtil.capChakraToMax;
+^
+  symbol:   static capChakraToMax
+  location: class ModUtil
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\command\ClanCommand.java:21: error: cannot find symbol
+import static net.narutoxboruto.util.ModUtil.giveClanStatBonuses;
+^
+  symbol:   static giveClanStatBonuses
+  location: class ModUtil
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\command\ClanCommand.java:22: error: cannot find symbol
+import static net.narutoxboruto.util.ModUtil.removeClanStatBonuses;
+^
+  symbol:   static removeClanStatBonuses
+  location: class ModUtil
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\effect\ModEffects.java:9: error: package net.neoforged.bus.api 
+does not exist
+import net.neoforged.bus.api.IEventBus;
+                            ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\effect\ModEffects.java:10: error: package 
+net.neoforged.neoforge.registries does not exist
+import net.neoforged.neoforge.registries.DeferredHolder;
+                                        ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\effect\ModEffects.java:11: error: package 
+net.neoforged.neoforge.registries does not exist
+import net.neoforged.neoforge.registries.DeferredRegister;
+                                        ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\effect\ModEffects.java:14: error: cannot find symbol
+    public static final DeferredRegister<MobEffect> MOD_EFFECTS = DeferredRegister.create(Registries.MOB_EFFECT, Main.MOD_ID);
+                        ^
+  symbol:   class DeferredRegister
+  location: class ModEffects
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\effect\ModEffects.java:16: error: cannot find symbol
+    public static final DeferredHolder<MobEffect, MobEffect> CHAKRA_CONTROL = MOD_EFFECTS.register("chakra_control",
+                        ^
+  symbol:   class DeferredHolder
+  location: class ModEffects
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\effect\ModEffects.java:22: error: cannot find symbol
+    public static void register(IEventBus eventBus) {
+                                ^
+  symbol:   class IEventBus
+  location: class ModEffects
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\items\jutsus\EarthWave.java:21: error: package 
+net.neoforged.bus.api does not exist
+import net.neoforged.bus.api.SubscribeEvent;
+                            ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\items\jutsus\EarthWave.java:22: error: package 
+net.neoforged.fml.common does not exist
+import net.neoforged.fml.common.EventBusSubscriber;
+                               ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\items\jutsus\EarthWave.java:23: error: package 
+net.neoforged.neoforge.event.tick does not exist
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+                                        ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\items\jutsus\EarthWave.java:40: error: cannot find symbol
+@EventBusSubscriber(modid = "narutoxboruto")
+ ^
+  symbol: class EventBusSubscriber
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\items\jutsus\EarthWave.java:106: error: package ServerTickEvent 
+does not exist
+    public static void onServerTick(ServerTickEvent.Post event) {
+                                                   ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\items\jutsus\WaterPrison.java:27: error: package 
+net.narutoxboruto.fluids does not exist
+import net.narutoxboruto.fluids.ModFluidBlocks;
+                               ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\items\jutsus\WaterPrison.java:28: error: package 
+net.neoforged.bus.api does not exist
+import net.neoforged.bus.api.SubscribeEvent;
+                            ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\items\jutsus\WaterPrison.java:29: error: package 
+net.neoforged.fml.common does not exist
+import net.neoforged.fml.common.EventBusSubscriber;
+                               ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\items\jutsus\WaterPrison.java:30: error: package 
+net.neoforged.neoforge.event.tick does not exist
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+                                        ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\items\jutsus\WaterPrison.java:49: error: cannot find symbol
+@EventBusSubscriber(modid = "narutoxboruto")
+ ^
+  symbol: class EventBusSubscriber
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\items\jutsus\WaterPrison.java:98: error: package ServerTickEvent 
+does not exist
+    public static void onServerTick(ServerTickEvent.Post event) {
+                                                   ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\mixin\MixinCamera.java:7: error: cannot find symbol
+import net.narutoxboruto.util.RotationUtil;
+                             ^
+  symbol:   class RotationUtil
+  location: package net.narutoxboruto.util
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\mixin\MixinEntity.java:8: error: cannot find symbol
+import net.narutoxboruto.util.RotationUtil;
+                             ^
+  symbol:   class RotationUtil
+  location: package net.narutoxboruto.util
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\mixin\MixinEntity.java:31: error: package RotationUtil does not 
+exist
+    private RotationUtil.Surface nxb$getSurface(Player player) {
+                        ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\mixin\MixinEntityRenderDispatcher.java:12: error: cannot find 
+symbol
+import net.narutoxboruto.util.RotationUtil;
+                             ^
+  symbol:   class RotationUtil
+  location: package net.narutoxboruto.util
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\mixin\MixinLivingEntityClimbing.java:7: error: cannot find symbol
+import net.narutoxboruto.capabilities.climber.ClimberComponent;
+                                             ^
+  symbol:   class ClimberComponent
+  location: package net.narutoxboruto.capabilities.climber
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\mixin\MixinLivingEntityTravel.java:8: error: cannot find symbol
+import net.narutoxboruto.capabilities.climber.ClimberComponent;
+                                             ^
+  symbol:   class ClimberComponent
+  location: package net.narutoxboruto.capabilities.climber
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\particles\ModParticles.java:7: error: package 
+net.neoforged.bus.api does not exist
+import net.neoforged.bus.api.IEventBus;
+                            ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\particles\ModParticles.java:8: error: package 
+net.neoforged.neoforge.registries does not exist
+import net.neoforged.neoforge.registries.DeferredHolder;
+                                        ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\particles\ModParticles.java:9: error: package 
+net.neoforged.neoforge.registries does not exist
+import net.neoforged.neoforge.registries.DeferredRegister;
+                                        ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\particles\ModParticles.java:12: error: cannot find symbol
+    public static final DeferredRegister<ParticleType<?>> PARTICLE_TYPES = 
+                        ^
+  symbol:   class DeferredRegister
+  location: class ModParticles
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\particles\ModParticles.java:15: error: cannot find symbol
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> LIGHTNING_SPARKS = 
+                        ^
+  symbol:   class DeferredHolder
+  location: class ModParticles
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\particles\ModParticles.java:18: error: cannot find symbol
+    public static void register(IEventBus eventBus) {
+                                ^
+  symbol:   class IEventBus
+  location: class ModParticles
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\util\ModKeyBinds.java:5: error: package 
+net.neoforged.neoforge.client.settings does not exist
+import net.neoforged.neoforge.client.settings.KeyConflictContext;
+                                             ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\client\renderer\item\KibaLightningOverlay.java:81: error: cannot 
+find symbol
+    @SubscribeEvent
+     ^
+  symbol:   class SubscribeEvent
+  location: class KibaLightningOverlay
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\client\renderer\item\KibaLightningOverlay.java:122: error: cannot 
+find symbol
+    @SubscribeEvent
+     ^
+  symbol:   class SubscribeEvent
+  location: class KibaLightningOverlay
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\items\jutsus\EarthWave.java:105: error: cannot find symbol
+    @SubscribeEvent
+     ^
+  symbol:   class SubscribeEvent
+  location: class EarthWave
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\items\jutsus\WaterPrison.java:97: error: cannot find symbol
+    @SubscribeEvent
+     ^
+  symbol:   class SubscribeEvent
+  location: class WaterPrison
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\blocks\entity\ModBlockEntities.java:13: error: cannot find symbol
+    public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES = DeferredRegister.create(
+                                                                              ^
+  symbol:   variable DeferredRegister
+  location: class ModBlockEntities
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\blocks\entity\ModBlockEntities.java:18: error: 
+BlockEntitySupplier is not public in BlockEntityType; cannot be accessed from outside package
+            () -> BlockEntityType.Builder.of(PaperBombBlockEntity::new, ModBlocks.PAPER_BOMB.get()).build(null));
+                                             ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\blocks\ModBlocks.java:17: error: cannot find symbol
+    public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(
+                                                         ^
+  symbol:   variable DeferredRegister
+  location: class ModBlocks
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\blocks\ModBlocks.java:33: error: cannot find symbol
+        return ModItems.ITEMS.register(name, () -> new BlockItem(block.get(), new Item.Properties()));
+                       ^
+  symbol:   variable ITEMS
+  location: class ModItems
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\blocks\PaperBombBlock.java:166: error: method does not override 
+or implement a method from a supertype
+    @Override
+    ^
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\blocks\PaperBombBlock.java:169: error: cannot find symbol
+        super.onBlockExploded(state, level, pos, explosion);
+             ^
+  symbol: method onBlockExploded(BlockState,Level,BlockPos,Explosion)
+C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\capabilities\climber\ClimberMoveController.java:78: error: cannot 
+find symbol
+                        .getFriction(player.level(), offsetPos, player);
+                        ^
+  symbol:   method getFriction(Level,BlockPos,Player)
+  location: class BlockState
+Note: C:\Users\purea\Modding\Naruto-X-Boruto\common\src\main\java\net\narutoxboruto\items\swords\SwordCustomTiers.java uses or overrides a 
+deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+100 errors
+
+> Task :common:compileJava FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':common:compileJava'.
+> Compilation failed; see the compiler error output for details.
+
+* Try:
+> Run with --info option to get more log output.
+> Run with --scan to get full insights.
+
+BUILD FAILED in 11s
+9 actionable tasks: 1 executed, 8 up-to-date

@@ -26,4 +26,8 @@ public class Affiliation {
         this.value = ModUtil.concatAndFormat(this.value, value);
         Services.PLATFORM.syncAffiliation(serverPlayer, this.value);
     }
+
+    public void syncValue(ServerPlayer serverPlayer) {
+        Services.PLATFORM.syncAffiliation(serverPlayer, this.value);
+    }
 }

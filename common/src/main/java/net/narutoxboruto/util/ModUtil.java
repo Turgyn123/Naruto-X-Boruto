@@ -1,5 +1,7 @@
 package net.narutoxboruto.util;
 
+import net.narutoxboruto.main.platform.Services;
+
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -55,124 +57,129 @@ public class ModUtil {
      * @param serverPlayer The player to check
      * @return The multiplier (1 for normal, 3 for Uzumaki)
      */
-   // public static int getChakraGrowthMultiplier(ServerPlayer serverPlayer) {
-   //     String clan = serverPlayer.getData(MainAttachment.CLAN).getValue();
-   //     return "uzumaki".equals(clan) ? 3 : 1;
-   // }
+    public static int getChakraGrowthMultiplier(ServerPlayer serverPlayer) {
+        String clan = Services.PLATFORM.getClan(serverPlayer).getValue();
+        return "uzumaki".equals(clan) ? 3 : 1;
+    }
 
     /**
      * Ensures current chakra doesn't exceed max chakra.
      * Call this after any operation that might change max chakra.
      * @param serverPlayer The player to cap chakra for
      */
-  //  public static void capChakraToMax(ServerPlayer serverPlayer) {
-  //      var maxChakra = serverPlayer.getData(MainAttachment.MAX_CHAKRA.get());
-  //      var currentChakra = serverPlayer.getData(MainAttachment.CHAKRA.get());
-//
-  //      if (currentChakra.getValue() > maxChakra.getValue()) {
-  //          currentChakra.setValue(maxChakra.getValue());
-  //          currentChakra.syncValue(serverPlayer);
-  //      }
-  //  }
+    /**
+     * Ensures current chakra doesn't exceed max chakra.
+     */
+    public static void capChakraToMax(ServerPlayer serverPlayer) {
+        var maxChakra = Services.PLATFORM.getMaxChakra(serverPlayer);
+        var currentChakra = Services.PLATFORM.getChakra(serverPlayer);
+        if (maxChakra != null && currentChakra != null && currentChakra.getValue() > maxChakra.getValue()) {
+            currentChakra.setValue(maxChakra.getValue());
+            Services.PLATFORM.syncChakra(serverPlayer, currentChakra.getValue());
+        }
+    }
 
     /**
      * Recalculates max chakra when switching to/from Uzumaki clan.
-     * @param serverPlayer The player whose chakra needs recalculation
-     * @param leavingUzumaki True if leaving Uzumaki (reduce), false if joining (increase)
      */
     private static void recalculateMaxChakraForClanChange(ServerPlayer serverPlayer, boolean leavingUzumaki) {
-   //     int ninjutsuValue = serverPlayer.getData(MainAttachment.NINJUTSU).getValue();
-//
-   //     // Calculate the chakra difference: Uzumaki gets 15 per point, normal gets 5 per point
-   //     // So the difference is 10 per point
-   //     int chakraDifference = ninjutsuValue * 10;
-//
-   //     if (chakraDifference > 0) {
-   //         var maxChakra = serverPlayer.getData(MainAttachment.MAX_CHAKRA.get());
-   //         var currentChakra = serverPlayer.getData(MainAttachment.CHAKRA.get());
-//
-   //         if (leavingUzumaki) {
-   //             // Leaving Uzumaki: reduce max chakra
-   //             maxChakra.subValue(chakraDifference, serverPlayer);
-   //             // Adjust current chakra if it exceeds new max
-   //             if (currentChakra.getValue() > maxChakra.getValue()) {
-   //                 currentChakra.setValue(maxChakra.getValue());
-   //             }
-   //         } else {
-   //             // Joining Uzumaki: increase max chakra
-   //             maxChakra.addValue(chakraDifference, serverPlayer);
-   //         }
-   //     }
+        int ninjutsuValue = Services.PLATFORM.getNinjutsu(serverPlayer).getValue();
+        int chakraDifference = ninjutsuValue * 10;
+        if (chakraDifference > 0) {
+            var maxChakra = Services.PLATFORM.getMaxChakra(serverPlayer);
+            var currentChakra = Services.PLATFORM.getChakra(serverPlayer);
+            if (leavingUzumaki) {
+                maxChakra.subValue(chakraDifference, serverPlayer);
+                if (currentChakra.getValue() > maxChakra.getValue()) {
+                    currentChakra.setValue(maxChakra.getValue());
+                }
+            } else {
+                maxChakra.addValue(chakraDifference, serverPlayer);
+            }
+            Services.PLATFORM.syncMaxChakra(serverPlayer, maxChakra.getValue());
+            Services.PLATFORM.syncChakra(serverPlayer, currentChakra.getValue());
+        }
     }
 
-    //public static void giveClanStatBonuses(ServerPlayer serverPlayer) {
-    //    String clan = serverPlayer.getData(MainAttachment.CLAN).getValue();
-//
-    //    switch (clan) {
-    //        case "fuma" -> {
-    //            serverPlayer.getData(MainAttachment.SHURIKENJUTSU).incrementValue(25, serverPlayer);
-    //            // Give permanent Fuma Shuriken to Fuma clan members
-    //            ClanItemHelper.giveFumaClanItem(serverPlayer);
-    //        }
-    //        case "nara" -> {
-    //            serverPlayer.getData(MainAttachment.NINJUTSU).incrementValue(15, serverPlayer);
-    //            serverPlayer.getData(MainAttachment.SHURIKENJUTSU).incrementValue(10, serverPlayer);
-    //            serverPlayer.getData(MainAttachment.KINJUTSU).incrementValue(5, serverPlayer);
-    //        }
-    //        case "shiin" -> {
-    //            serverPlayer.getData(MainAttachment.KINJUTSU).incrementValue(15, serverPlayer);
-    //        }
-//
-    //        case "shirogane" -> {
-    //            serverPlayer.getData(MainAttachment.SUMMONING).incrementValue(20, serverPlayer);
-    //            serverPlayer.getData(MainAttachment.NINJUTSU).incrementValue(10, serverPlayer);
-    //        }
-    //        case "uzumaki" -> {
-    //            serverPlayer.getData(MainAttachment.NINJUTSU).incrementValue(15, serverPlayer);
-    //            serverPlayer.getData(MainAttachment.MEDICAL).incrementValue(10, serverPlayer);
-    //            serverPlayer.getData(MainAttachment.KENJUTSU).incrementValue(5, serverPlayer);
-    //            // After giving stat bonuses, recalculate max chakra with Uzumaki multiplier
-    //            recalculateMaxChakraForClanChange(serverPlayer, false);
-    //        }
-    //    }
-    //}
+    public static void giveClanStatBonuses(ServerPlayer serverPlayer) {
+        String clan = Services.PLATFORM.getClan(serverPlayer).getValue();
+        switch (clan) {
+            case "fuma" -> {
+                Services.PLATFORM.getShurikenjutsu(serverPlayer).incrementValue(25, serverPlayer);
+                serverPlayer.addItem(new net.minecraft.world.item.ItemStack(net.narutoxboruto.items.ModItems.FUMA_SHURIKEN_ITEM));
+            }
+            case "nara" -> {
+                Services.PLATFORM.getNinjutsu(serverPlayer).incrementValue(15, serverPlayer);
+                Services.PLATFORM.getShurikenjutsu(serverPlayer).incrementValue(10, serverPlayer);
+                Services.PLATFORM.getKinjutsu(serverPlayer).incrementValue(5, serverPlayer);
+            }
+            case "shiin" -> {
+                Services.PLATFORM.getKinjutsu(serverPlayer).incrementValue(15, serverPlayer);
+            }
+            case "shirogane" -> {
+                Services.PLATFORM.getSummoning(serverPlayer).incrementValue(20, serverPlayer);
+                Services.PLATFORM.getNinjutsu(serverPlayer).incrementValue(10, serverPlayer);
+            }
+            case "uzumaki" -> {
+                Services.PLATFORM.getNinjutsu(serverPlayer).incrementValue(15, serverPlayer);
+                Services.PLATFORM.getMedical(serverPlayer).incrementValue(10, serverPlayer);
+                Services.PLATFORM.getKenjutsu(serverPlayer).incrementValue(5, serverPlayer);
+                recalculateMaxChakraForClanChange(serverPlayer, false);
+            }
+        }
+        syncAllStatsToClient(serverPlayer);
+    }
 
-   // public static void removeClanStatBonuses(ServerPlayer serverPlayer) {
-   //     String clan = serverPlayer.getData(MainAttachment.CLAN).getValue();
-//
-   //     // If leaving Uzumaki clan, recalculate max chakra with normal multiplier
-   //     if ("uzumaki".equals(clan)) {
-   //         recalculateMaxChakraForClanChange(serverPlayer, true);
-   //     }
-//
-   //     // If leaving Fuma clan, remove the permanent Fuma Shuriken
-   //     if ("fuma".equals(clan)) {
-   //         ClanItemHelper.removeClanItems(serverPlayer);
-   //     }
-//
-   //     switch (clan) {
-   //         case "fuma" -> {
-   //             serverPlayer.getData(MainAttachment.SHURIKENJUTSU).subValue(25, serverPlayer);
-   //         }
-   //         case "nara" -> {
-   //             serverPlayer.getData(MainAttachment.NINJUTSU).subValue(15, serverPlayer);
-   //             serverPlayer.getData(MainAttachment.SHURIKENJUTSU).subValue(10, serverPlayer);
-   //             serverPlayer.getData(MainAttachment.KINJUTSU).subValue(5, serverPlayer);
-   //         }
-   //         case "shiin" -> {
-   //             serverPlayer.getData(MainAttachment.KINJUTSU).subValue(15, serverPlayer);
-   //         }
-   //         case "shirogane" -> {
-   //             serverPlayer.getData(MainAttachment.SUMMONING).subValue(20, serverPlayer);
-   //             serverPlayer.getData(MainAttachment.NINJUTSU).subValue(10, serverPlayer);
-   //         }
-   //         case "uzumaki" -> {
-   //             serverPlayer.getData(MainAttachment.NINJUTSU).subValue(15, serverPlayer);
-   //             serverPlayer.getData(MainAttachment.MEDICAL).subValue(10, serverPlayer);
-   //             serverPlayer.getData(MainAttachment.KENJUTSU).subValue(5, serverPlayer);
-   //         }
-   //     }
-   // }
+    public static void removeClanStatBonuses(ServerPlayer serverPlayer) {
+        String clan = Services.PLATFORM.getClan(serverPlayer).getValue();
+        if ("uzumaki".equals(clan)) {
+            recalculateMaxChakraForClanChange(serverPlayer, true);
+        }
+        if ("fuma".equals(clan)) {
+            ClanItemHelper.removeClanItems(serverPlayer);
+        }
+        switch (clan) {
+            case "fuma" -> {
+                Services.PLATFORM.getShurikenjutsu(serverPlayer).subValue(25, serverPlayer);
+            }
+            case "nara" -> {
+                Services.PLATFORM.getNinjutsu(serverPlayer).subValue(15, serverPlayer);
+                Services.PLATFORM.getShurikenjutsu(serverPlayer).subValue(10, serverPlayer);
+                Services.PLATFORM.getKinjutsu(serverPlayer).subValue(5, serverPlayer);
+            }
+            case "shiin" -> {
+                Services.PLATFORM.getKinjutsu(serverPlayer).subValue(15, serverPlayer);
+            }
+            case "shirogane" -> {
+                Services.PLATFORM.getSummoning(serverPlayer).subValue(20, serverPlayer);
+                Services.PLATFORM.getNinjutsu(serverPlayer).subValue(10, serverPlayer);
+            }
+            case "uzumaki" -> {
+                Services.PLATFORM.getNinjutsu(serverPlayer).subValue(15, serverPlayer);
+                Services.PLATFORM.getMedical(serverPlayer).subValue(10, serverPlayer);
+                Services.PLATFORM.getKenjutsu(serverPlayer).subValue(5, serverPlayer);
+            }
+        }
+        syncAllStatsToClient(serverPlayer);
+    }
+
+    /**
+     * Syncs all stats from server to client via platform-specific packets.
+     */
+    public static void syncAllStatsToClient(ServerPlayer player) {
+        Services.PLATFORM.syncNinjutsu(player, Services.PLATFORM.getNinjutsu(player).getValue());
+        Services.PLATFORM.syncShurikenjutsu(player, Services.PLATFORM.getShurikenjutsu(player).getValue());
+        Services.PLATFORM.syncKinjutsu(player, Services.PLATFORM.getKinjutsu(player).getValue());
+        Services.PLATFORM.syncSummoning(player, Services.PLATFORM.getSummoning(player).getValue());
+        Services.PLATFORM.syncMedical(player, Services.PLATFORM.getMedical(player).getValue());
+        Services.PLATFORM.syncKenjutsu(player, Services.PLATFORM.getKenjutsu(player).getValue());
+        Services.PLATFORM.syncTaijutsu(player, Services.PLATFORM.getTaijutsu(player).getValue());
+        Services.PLATFORM.syncSenjutsu(player, Services.PLATFORM.getSenjutsu(player).getValue());
+        Services.PLATFORM.syncSpeed(player, Services.PLATFORM.getSpeed(player).getValue());
+        Services.PLATFORM.syncGenjutsu(player, Services.PLATFORM.getGenjutsu(player).getValue());
+        Services.PLATFORM.syncClan(player, Services.PLATFORM.getClan(player).getValue());
+        Services.PLATFORM.syncShinobiPoints(player, Services.PLATFORM.getShinobiPoints(player).getValue());
+    }
 
     public static int getPlayerStatistics(ServerPlayer serverPlayer, ResourceLocation stat) {
         return serverPlayer.getStats().getValue(Stats.CUSTOM.get(stat));

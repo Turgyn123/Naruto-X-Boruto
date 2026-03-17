@@ -44,7 +44,7 @@ public class JutsuGrantHelper {
                 break;
             case "lightning":
                 grantSingleJutsu(serverPlayer, storage,
-                        ModItems.LIGHTING_CHAKRA_MODE, "Lightning Chakra Mode");
+                        ModItems.LIGHTNING_CHAKRA_MODE, "Lightning Chakra Mode");
                 break;
         }
     }
@@ -136,10 +136,12 @@ public class JutsuGrantHelper {
 
         if (playerReleases.toLowerCase().contains("water")) {
             modified |= restoreIfMissing(serverPlayer, storage, ModItems.WATER_PRISON_JUTSU, checkInventory);
+            modified |= restoreIfMissing(serverPlayer, storage, ModItems.SHARK_BOMB_JUTSU, checkInventory);
+            modified |= restoreIfMissing(serverPlayer, storage, ModItems.WATER_DRAGON_JUTSU, checkInventory);
         }
 
         if (playerReleases.toLowerCase().contains("lightning")) {
-            modified |= restoreIfMissing(serverPlayer, storage, ModItems.LIGHTING_CHAKRA_MODE, checkInventory);
+            modified |= restoreIfMissing(serverPlayer, storage, ModItems.LIGHTNING_CHAKRA_MODE, checkInventory);
         }
 
         if (modified) {

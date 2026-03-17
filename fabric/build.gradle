@@ -2,6 +2,14 @@ plugins {
     id 'multiloader-loader'
     id 'fabric-loom'
 }
+
+repositories {
+    maven {
+        name = "GeckoLib"
+        url = uri("https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/")
+    }
+}
+
 dependencies {
     minecraft "com.mojang:minecraft:${minecraft_version}"
     mappings loom.layered {
@@ -10,6 +18,9 @@ dependencies {
     }
     modImplementation "net.fabricmc:fabric-loader:${fabric_loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_version}"
+    compileOnly group: 'com.google.code.findbugs', name: 'jsr305', version: '3.0.2'
+    // GeckoLib for animated entity models
+    modImplementation "software.bernie.geckolib:geckolib-fabric-1.21.1:4.8.3"
 }
 
 loom {

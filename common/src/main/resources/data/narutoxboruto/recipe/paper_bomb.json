@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "$@$",
+    "$#$",
+    "$@$"
+  ],
+  "key": {
+    "@": {
+      "item": "minecraft:paper"
+    },
+    "#": {
+      "item": "minecraft:tnt"
+    },
+    "$": {
+      "item": "minecraft:red_dye"
+    }
+  },
+  "result": {
+    "id": "narutoxboruto:paper_bomb",
+    "count": 3
+  }
+}
