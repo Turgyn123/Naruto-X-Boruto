@@ -11,10 +11,8 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Abilities;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -33,7 +31,7 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
 
 @Mixin(Player.class)
 public abstract class MixinPlayer extends LivingEntity implements ModeHandler {
@@ -56,16 +54,8 @@ public abstract class MixinPlayer extends LivingEntity implements ModeHandler {
                 && !this.isInWater();
     }
 
-    @Inject(method = "getDefaultDimensions", at = @At("HEAD"), cancellable = true)
-    private void getDefaultDimensions(Pose pPose, CallbackInfoReturnable<EntityDimensions> cir) {
-        if ($isNarutoRunning()) {
-            cir.setReturnValue(EntityDimensions.scalable(1.2F, 1.7F));
-            EntityDimensions newDimensions = EntityDimensions.scalable(0.6F, 1.8F)
-                    .withEyeHeight(1.4F);
-            cir.setReturnValue(newDimensions);
-
-        }
-    }
+    // Naruto run visual is handled purely by MixinPlayerRenderer (forward lean).
+    // No dimension changes needed — they cause camera/orientation issues.
 
         @Inject(method = "defineSynchedData", at = @At("HEAD"))
     private void defineSynchedData(SynchedEntityData.Builder builder, CallbackInfo ci) {
@@ -122,9 +112,6 @@ public abstract class MixinPlayer extends LivingEntity implements ModeHandler {
 
     @Override
     public void onSyncedDataUpdated(EntityDataAccessor<?> entityDataAccessor) {
-        if (DATA_NARUTO_RUNNING.equals(entityDataAccessor)) {
-            this.refreshDimensions();
-        }
         super.onSyncedDataUpdated(entityDataAccessor);
     }
 
@@ -143,11 +130,16 @@ public abstract class MixinPlayer extends LivingEntity implements ModeHandler {
             NarutoRun narutoRun = Services.PLATFORM.getNarutoRun(serverPlayer);
             ChakraControl chakraControl = Services.PLATFORM.getChakraControl(serverPlayer);
 
-            narutoRun.setValue(
-                    chakraControl.isActive() && !this.isInWater() && this.isSprinting() && !this.isCrouching()
+            boolean shouldNarutoRun = chakraControl.isActive() && !this.isInWater() && this.isSprinting() && !this.isCrouching()
                             && (this.getUseItem().getItem() instanceof PreventSlow || !this.isUsingItem())
-                            && !this.isFallFlying() && !this.getAbilities().flying && this.fallDistance <= 3,
-                    serverPlayer);
+                            && !this.isFallFlying() && !this.getAbilities().flying && this.fallDistance <= 3;
+
+            narutoRun.setValue(shouldNarutoRun, serverPlayer);
+
+            // Keep entity data in sync with platform capabilities so canStandOnFluid()
+            // and getDefaultDimensions() (which read entity data) work correctly
+            this.entityData.set(DATA_CHAKRA_CONTROL, chakraControl.isActive());
+            this.entityData.set(DATA_NARUTO_RUNNING, shouldNarutoRun);
         }
     }
 }

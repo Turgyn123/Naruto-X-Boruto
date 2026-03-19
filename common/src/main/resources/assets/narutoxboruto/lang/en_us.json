@@ -36,6 +36,10 @@
   "item.narutoxboruto.kisame_hoshigaki_egg":"Kisame Hoshigaki Spawn Egg",
   "item.narutoxboruto.jinpachi_munashi_egg":"Jinpachi Munashi Spawn Egg",
   "item.narutoxboruto.zabuza_momochi_egg":"Zabuza Momochi Spawn Egg",
+
+  "entity.narutoxboruto.kisame_hoshigaki": "Kisame Hoshigaki",
+  "entity.narutoxboruto.jinpachi_munashi": "Jinpachi Munashi",
+  "entity.narutoxboruto.zabuza_momochi": "Zabuza Momochi",
   "item.narutoxboruto.taijutsu_scroll":"Taijutsu Scroll",
   "item.narutoxboruto.genjutsu_scroll":"Genjutsu Scroll",
   "item.narutoxboruto.kenjutsu_scroll":"Kenjutsu Scroll",

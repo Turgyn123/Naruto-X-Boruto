@@ -86,6 +86,12 @@ public class Kabutowari extends AbstractAbilitySword {
                 return InteractionResultHolder.fail(itemStack);
             }
             
+            // Check if the target block is a natural block
+            if (!isNaturalBlock(pLevel, targetGround)) {
+                serverPlayer.displayClientMessage(Component.translatable("msg.no_ground"), true);
+                return InteractionResultHolder.fail(itemStack);
+            }
+            
             // Consume chakra
             chakra.subValue(CHAKRA_COST, serverPlayer);
             
@@ -282,13 +288,13 @@ public class Kabutowari extends AbstractAbilitySword {
     }
     
     private BlockPos findGroundLevel(Level level, BlockPos startPos, int originY) {
-        // Only check at the exact Y level of the clicked block
-        BlockPos checkPos = new BlockPos(startPos.getX(), originY, startPos.getZ());
-        BlockState state = level.getBlockState(checkPos);
-        
-        // Must be a solid block
-        if (!state.isAir() && state.isSolidRender(level, checkPos)) {
-            return checkPos;
+        // Check at origin Y and adjacent levels to handle height differences (e.g., snow on grass)
+        for (int yOff : new int[]{0, 1, -1}) {
+            BlockPos checkPos = new BlockPos(startPos.getX(), originY + yOff, startPos.getZ());
+            BlockState state = level.getBlockState(checkPos);
+            if (!state.isAir() && (state.isSolidRender(level, checkPos) || isNaturalBlock(level, checkPos))) {
+                return checkPos;
+            }
         }
         return null;
     }
@@ -330,6 +336,12 @@ public class Kabutowari extends AbstractAbilitySword {
                block == Blocks.BLACKSTONE ||
                block == Blocks.END_STONE ||
                block == Blocks.TERRACOTTA ||
+               block == Blocks.ICE ||
+               block == Blocks.PACKED_ICE ||
+               block == Blocks.BLUE_ICE ||
+               block == Blocks.FROSTED_ICE ||
+               block == Blocks.SNOW_BLOCK ||
+               block == Blocks.SNOW ||
                state.is(BlockTags.TERRACOTTA) ||
                state.is(BlockTags.DIRT) ||
                state.is(BlockTags.SAND) ||
@@ -349,6 +361,21 @@ public class Kabutowari extends AbstractAbilitySword {
         
         // Don't remove the origin block - only lift blocks further out
         if (distance == 0) {
+            return;
+        }
+        
+        Block block = state.getBlock();
+        boolean isIce = block == Blocks.ICE || block == Blocks.PACKED_ICE || block == Blocks.BLUE_ICE || block == Blocks.FROSTED_ICE;
+        
+        // Ice blocks shatter instead of being launched
+        if (isIce) {
+            level.destroyBlock(pos, false);
+            if (level instanceof ServerLevel serverLevel) {
+                serverLevel.sendParticles(ParticleTypes.ITEM_SNOWBALL,
+                        pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
+                        10, 0.3, 0.3, 0.3, 0.05);
+            }
+            level.playSound(null, pos, SoundEvents.GLASS_BREAK, SoundSource.BLOCKS, 1.0f, 1.0f);
             return;
         }
         

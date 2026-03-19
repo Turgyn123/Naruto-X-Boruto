@@ -55,6 +55,7 @@ public class Ninjutsu {
         if (actualAdd > 0) {
             growMaxChakra(actualAdd, player);
         }
+        this.syncValue(player);
     }
 
     public void syncValue(ServerPlayer player) {

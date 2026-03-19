@@ -61,7 +61,7 @@ public class Samehada extends AbstractAbilitySword {
             targetChakra.addValue(swordChakra, (ServerPlayer) pTarget);
             swordChakra = Math.max(swordChakra - this.chakraDiff, 0);
         }
-        serverPlayer.sendSystemMessage(Component.translatable("samehada.chakra_amount", swordChakra));
+        serverPlayer.displayClientMessage(Component.translatable("samehada.chakra_amount", swordChakra), true);
     }
 
     @Override

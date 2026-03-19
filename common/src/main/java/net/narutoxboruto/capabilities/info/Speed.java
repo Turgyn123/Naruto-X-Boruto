@@ -1,9 +1,12 @@
 package net.narutoxboruto.capabilities.info;
 
 import com.mojang.serialization.Codec;
+import net.minecraft.server.level.ServerPlayer;
+import net.narutoxboruto.main.platform.Services;
 
 public class Speed {
     private int value;
+    private static final int MAX_VALUE = 500;
 
     public static final Codec<Speed> CODEC = Codec.INT.xmap(Speed::new, Speed::getValue);
 
@@ -14,9 +17,23 @@ public class Speed {
 
     public void setValue(int value) { this.value = value; }
 
-    public void setValue(int value, net.minecraft.server.level.ServerPlayer player) { this.value = value; }
-    public void addValue(int amount, net.minecraft.server.level.ServerPlayer player) { this.value += amount; }
-    public void subValue(int amount, net.minecraft.server.level.ServerPlayer player) { this.value -= amount; }
-    public void incrementValue(int amount, net.minecraft.server.level.ServerPlayer player) { this.value += amount; }
-    public void syncValue(net.minecraft.server.level.ServerPlayer player) { /* sync handled by platform */ }
+    public void setValue(int value, ServerPlayer player) {
+        this.value = Math.min(value, MAX_VALUE);
+        this.syncValue(player);
+    }
+    public void addValue(int amount, ServerPlayer player) {
+        this.value = Math.min(this.value + amount, MAX_VALUE);
+        this.syncValue(player);
+    }
+    public void subValue(int amount, ServerPlayer player) {
+        this.value = Math.max(this.value - amount, 0);
+        this.syncValue(player);
+    }
+    public void incrementValue(int amount, ServerPlayer player) {
+        this.value = Math.min(this.value + amount, MAX_VALUE);
+        this.syncValue(player);
+    }
+    public void syncValue(ServerPlayer player) {
+        Services.PLATFORM.syncSpeed(player, this.value);
+    }
 }

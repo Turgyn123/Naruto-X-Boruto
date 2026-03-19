@@ -14,6 +14,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
@@ -70,7 +71,7 @@ public class WaterDragonEntity extends Projectile implements GeoEntity {
     private static final int MAX_TOTAL_TICKS = 160;      // ~8s total lifetime
     private static final double MAX_RANGE = 50.0;        // Max travel distance after launch
     private static final float AOE_RADIUS = 4.0F;        // Large splash radius
-    private static final float EXPLOSION_POWER = 2.0F;   // Visual explosion (no block damage)
+    private static final float EXPLOSION_POWER = 0.5F;   // Visual-only explosion (low power to avoid extra knockback)
     private static final int LAUNCH_GRACE_TICKS = 5;     // Ticks after launch to ignore block collisions
     private static final int FLIGHT_SCAN_INTERVAL = 5;   // Re-scan for targets every N flight ticks
     private static final double TARGET_SCAN_RANGE = 30.0; // Range for in-flight target scanning
@@ -241,9 +242,9 @@ public class WaterDragonEntity extends Projectile implements GeoEntity {
     }
     
     /**
-     * Lock onto the best enemy near the player's crosshair direction.
-     * Scores by both alignment to look direction AND distance (closer + more aligned = better).
-     * Called once when entering the idle phase.
+     * Lock onto the best enemy near the player's crosshair direction with line of sight from the dragon.
+     * Requires visibility from the dragon to the target (no walls/blocks in between).
+     * Scores by crosshair alignment (primary) with distance bonus for closer targets.
      */
     private void lockOnTarget(Entity owner) {
         if (!(owner instanceof Player player)) return;
@@ -258,18 +259,27 @@ public class WaterDragonEntity extends Projectile implements GeoEntity {
         
         Vec3 look = player.getLookAngle();
         Vec3 eye = player.getEyePosition();
+        Vec3 dragonPos = this.position().add(0, this.getBbHeight() / 2.0, 0);
         LivingEntity best = null;
         double bestScore = -1;
         
         for (LivingEntity e : nearby) {
             Vec3 toE = e.position().subtract(eye);
             double dist = toE.length();
-            if (dist < 0.5) continue; // Too close, skip
+            if (dist < 0.5) continue;
             double dot = look.dot(toE.normalize());
-            if (dot < 0.3) continue; // Outside ~72° cone, skip
-            // Score: alignment weighted heavily, with distance penalty
-            // Closer targets get a bonus (1/dist capped), aligned targets score higher
-            double score = dot * (1.0 + 10.0 / (dist + 5.0));
+            if (dot < -0.2) continue; // Behind the player
+            
+            // Line of sight check from dragon to target (must not be blocked by terrain)
+            Vec3 targetCenter = e.position().add(0, e.getBbHeight() / 2.0, 0);
+            ClipContext clipCtx = new ClipContext(dragonPos, targetCenter, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, e);
+            BlockHitResult blockHit = this.level().clip(clipCtx);
+            if (blockHit.getType() == HitResult.Type.BLOCK) {
+                continue; // Dragon can't see this entity
+            }
+            
+            // Score: crosshair alignment primary, distance as tiebreaker (closer = bonus)
+            double score = dot * (1.0 + 5.0 / (dist + 3.0));
             if (score > bestScore) {
                 bestScore = score;
                 best = e;
