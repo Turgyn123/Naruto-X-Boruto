@@ -1,7 +1,8 @@
-package net.narutoxboruto.capabilities.info;
+package net.narutoxboruto.capabilities.stats;
 
 import com.mojang.serialization.Codec;
 import net.minecraft.server.level.ServerPlayer;
+import net.narutoxboruto.capabilities.info.MaxChakra;
 import net.narutoxboruto.main.platform.Services;
 import net.narutoxboruto.util.ModUtil;
 

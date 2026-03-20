@@ -1,17 +1,17 @@
-package net.narutoxboruto.capabilities.info;
+package net.narutoxboruto.capabilities.stats;
 
 import com.mojang.serialization.Codec;
 import net.minecraft.server.level.ServerPlayer;
 import net.narutoxboruto.main.platform.Services;
 
-public class Genjutsu {
+public class Medical {
     private int value;
     private static final int MAX_VALUE = 500;
 
-    public static final Codec<Genjutsu> CODEC = Codec.INT.xmap(Genjutsu::new, Genjutsu::getValue);
+    public static final Codec<Medical> CODEC = Codec.INT.xmap(Medical::new, Medical::getValue);
 
-    public Genjutsu() { this.value = 0; }
-    public Genjutsu(int value) { this.value = value; }
+    public Medical() { this.value = 0; }
+    public Medical(int value) { this.value = value; }
 
     public int getValue() { return value; }
 
@@ -34,6 +34,6 @@ public class Genjutsu {
         this.syncValue(player);
     }
     public void syncValue(ServerPlayer player) {
-        Services.PLATFORM.syncGenjutsu(player, this.value);
+        Services.PLATFORM.syncMedical(player, this.value);
     }
 }

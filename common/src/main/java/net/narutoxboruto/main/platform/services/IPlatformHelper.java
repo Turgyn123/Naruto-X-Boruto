@@ -9,6 +9,7 @@ import net.narutoxboruto.capabilities.climber.ClimberComponent;
 import net.narutoxboruto.capabilities.info.*;
 import net.narutoxboruto.capabilities.jutsu.JutsuStorage;
 import net.narutoxboruto.capabilities.release.*;
+import net.narutoxboruto.capabilities.stats.*;
 
 public interface IPlatformHelper {
 

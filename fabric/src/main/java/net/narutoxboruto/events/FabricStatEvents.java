@@ -15,6 +15,7 @@ import net.minecraft.world.item.SwordItem;
 import net.narutoxboruto.capabilities.PlayerCapData;
 import net.narutoxboruto.capabilities.PlayerDataManager;
 import net.narutoxboruto.capabilities.info.*;
+import net.narutoxboruto.capabilities.stats.*;
 import net.narutoxboruto.effect.ModEffects;
 import net.narutoxboruto.items.FabricItems;
 import net.narutoxboruto.items.swords.Kiba;

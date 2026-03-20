@@ -1,17 +1,17 @@
-package net.narutoxboruto.capabilities.info;
+package net.narutoxboruto.capabilities.stats;
 
 import com.mojang.serialization.Codec;
 import net.minecraft.server.level.ServerPlayer;
 import net.narutoxboruto.main.platform.Services;
 
-public class Summoning {
+public class Senjutsu {
     private int value;
     private static final int MAX_VALUE = 500;
 
-    public static final Codec<Summoning> CODEC = Codec.INT.xmap(Summoning::new, Summoning::getValue);
+    public static final Codec<Senjutsu> CODEC = Codec.INT.xmap(Senjutsu::new, Senjutsu::getValue);
 
-    public Summoning() { this.value = 0; }
-    public Summoning(int value) { this.value = value; }
+    public Senjutsu() { this.value = 0; }
+    public Senjutsu(int value) { this.value = value; }
 
     public int getValue() { return value; }
 
@@ -34,6 +34,6 @@ public class Summoning {
         this.syncValue(player);
     }
     public void syncValue(ServerPlayer player) {
-        Services.PLATFORM.syncSummoning(player, this.value);
+        Services.PLATFORM.syncSenjutsu(player, this.value);
     }
 }

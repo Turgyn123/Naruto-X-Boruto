@@ -11,7 +11,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.gameevent.GameEvent;
-import net.narutoxboruto.capabilities.info.Ninjutsu;
+import net.narutoxboruto.capabilities.stats.Ninjutsu;
 
 public class NinjutsuScroll extends Item {
 

@@ -7,7 +7,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
-import net.narutoxboruto.capabilities.info.Genjutsu;
+import net.narutoxboruto.capabilities.stats.Genjutsu;
 import net.narutoxboruto.capabilities.NeoForgeCapabilities;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 

@@ -1,17 +1,17 @@
-package net.narutoxboruto.capabilities.info;
+package net.narutoxboruto.capabilities.stats;
 
 import com.mojang.serialization.Codec;
 import net.minecraft.server.level.ServerPlayer;
 import net.narutoxboruto.main.platform.Services;
 
-public class Taijutsu {
+public class Speed {
     private int value;
     private static final int MAX_VALUE = 500;
 
-    public static final Codec<Taijutsu> CODEC = Codec.INT.xmap(Taijutsu::new, Taijutsu::getValue);
+    public static final Codec<Speed> CODEC = Codec.INT.xmap(Speed::new, Speed::getValue);
 
-    public Taijutsu() { this.value = 0; }
-    public Taijutsu(int value) { this.value = value; }
+    public Speed() { this.value = 0; }
+    public Speed(int value) { this.value = value; }
 
     public int getValue() { return value; }
 
@@ -34,6 +34,6 @@ public class Taijutsu {
         this.syncValue(player);
     }
     public void syncValue(ServerPlayer player) {
-        Services.PLATFORM.syncTaijutsu(player, this.value);
+        Services.PLATFORM.syncSpeed(player, this.value);
     }
 }

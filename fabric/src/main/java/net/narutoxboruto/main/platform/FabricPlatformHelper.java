@@ -8,6 +8,7 @@ import net.narutoxboruto.capabilities.climber.ClimberComponent;
 import net.narutoxboruto.capabilities.info.*;
 import net.narutoxboruto.capabilities.jutsu.JutsuStorage;
 import net.narutoxboruto.capabilities.release.*;
+import net.narutoxboruto.capabilities.stats.*;
 import net.narutoxboruto.main.platform.services.IPlatformHelper;
 import net.narutoxboruto.networking.FabricPacketHandler;
 import net.narutoxboruto.networking.SyncBoolData;

@@ -1,5 +1,6 @@
 package net.narutoxboruto.command;
 
+import net.narutoxboruto.capabilities.stats.*;
 import net.narutoxboruto.main.platform.Services;
 
 import com.mojang.brigadier.CommandDispatcher;
@@ -11,7 +12,6 @@ import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.narutoxboruto.capabilities.info.*;
 import net.narutoxboruto.util.ModUtil;
 
 import java.util.Collection;

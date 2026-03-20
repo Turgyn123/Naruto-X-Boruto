@@ -11,8 +11,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.gameevent.GameEvent;
-import net.narutoxboruto.capabilities.info.Shurikenjutsu;
-import net.narutoxboruto.capabilities.info.Speed;
+import net.narutoxboruto.capabilities.stats.Shurikenjutsu;
 
 public class ShurikenjutsuScroll extends Item {
 

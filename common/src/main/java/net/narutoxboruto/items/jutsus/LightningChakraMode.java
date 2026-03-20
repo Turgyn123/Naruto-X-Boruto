@@ -1,5 +1,6 @@
 package net.narutoxboruto.items.jutsus;
 
+import net.narutoxboruto.capabilities.stats.Speed;
 import net.narutoxboruto.main.platform.Services;
 
 import net.minecraft.ChatFormatting;
@@ -261,7 +262,7 @@ public class LightningChakraMode extends Item {
         serverPlayer.removeEffect(MobEffects.MOVEMENT_SPEED);
         
         // Restore stat-based speed effect if player has speed points
-        net.narutoxboruto.capabilities.info.Speed speed = Services.PLATFORM.getSpeed(serverPlayer);
+        Speed speed = Services.PLATFORM.getSpeed(serverPlayer);
         int speedLevel = speed.getValue() / 10;
         if (speedLevel > 0) {
             serverPlayer.addEffect(new MobEffectInstance(
