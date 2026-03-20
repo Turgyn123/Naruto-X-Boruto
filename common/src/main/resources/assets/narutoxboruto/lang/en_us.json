@@ -91,9 +91,11 @@
   "key.narutoxboruto.open_gui": "Stats Gui",
   "key.narutoxboruto.special_action": "Special Action",
   "key.narutoxboruto.jutsu_storage": "Jutsu Storage",
+  "key.narutoxboruto.dojutsu_menu": "Dojutsu Menu",
 
   "gui.narutoxboruto.shinobi_stats": "Shinobi Stats",
   "gui.narutoxboruto.jutsu_storage": "Jutsu Storage",
+  "gui.narutoxboruto.dojutsu_menu": "Dojutsu Menu",
 
   "msg.jutsu_cooldown": "Jutsu is on cooldown!",
   "msg.no_ground": "Must target solid ground!",
@@ -128,6 +130,9 @@
   "clan.shiin": "Shiin",
   "clan.shirogane": "Shirogane",
   "clan.uzumaki": "Uzumaki",
+  "clan.uchiha": "Uchiha",
+  "clan.hyuuga": "Hyūga",
+  "clan.chinoike": "Chinoike",
   "rank.civilian": "Civilian",
   "rank.student": "Student",
   "rank.genin": "Genin",
@@ -204,5 +209,41 @@
   "command.shinobi_info.add.multiple": "Added %s to %s for %s players",
 
   "jutsu.earth_wall": "Earth Style: Mud Wall",
-  "jutsu.fire_ball": "Fire Style: Fireball Jutsu"
+  "jutsu.fire_ball": "Fire Style: Fireball Jutsu",
+
+  "shinobiStat.kekkei_genkai": "Kekkei Genkai",
+  "shinobiStat.dojutsu": "Dōjutsu",
+  "shinobiStat.dojutsu_none": "None",
+
+  "kekkei_genkai.1_tomoe_sharingan": "Sharingan",
+  "kekkei_genkai.byakugan": "Byakugan",
+  "kekkei_genkai.ketsuryugan": "Ketsuryūgan",
+  "kekkei_genkai.none": "None",
+
+  "dojutsu.1_tomoe_sharingan": "1 Tomoe Sharingan",
+  "dojutsu.2_tomoe_sharingan": "2 Tomoe Sharingan",
+  "dojutsu.3_tomoe_sharingan": "3 Tomoe Sharingan",
+  "dojutsu.byakugan": "Byakugan",
+  "dojutsu.ketsuryugan": "Ketsuryūgan",
+
+  "dojutsu.left_eye": "Left Eye",
+  "dojutsu.right_eye": "Right Eye",
+  "dojutsu.unlocked": "Unlocked Dōjutsu",
+  "dojutsu.drag_hint": "Drag eye overlays to reposition",
+  "dojutsu.explanation": "Dōjutsu awakens through time spent with your clan.",
+  "dojutsu.limit": "Dōjutsu: %s/%s",
+  "dojutsu.timer_line1": "Awakening %s...",
+  "dojutsu.timer_line2": "%s remaining",
+  "dojutsu.already_obtained": "Already awakened: %s",
+  "dojutsu.max_reached": "Maximum dōjutsu limit reached",
+  "dojutsu.not_eligible": "Your clan cannot awaken a dōjutsu",
+  "dojutsu.acquired": "You have awakened the %s!",
+
+  "command.dojutsu.give.success": "Gave %s the %s dōjutsu",
+  "command.dojutsu.give.already": "%s already has %s",
+  "command.dojutsu.give.invalid": "Unknown dōjutsu type: %s",
+  "command.dojutsu.give.single": "Gave %s the %s dōjutsu",
+  "command.dojutsu.give.multiple": "Gave %s players the %s dōjutsu",
+  "command.dojutsu.invalid": "Unknown dōjutsu type: %s",
+  "command.dojutsu.already_has": "%s already has %s"
 }
