@@ -11,6 +11,7 @@ public class FabricCommandEvents {
             AffiliationCommand.register(dispatcher);
             ShinobiStatCommand.register(dispatcher);
             ShinobiInfoCommand.register(dispatcher);
+            DojutsuCommand.register(dispatcher);
         });
     }
 }

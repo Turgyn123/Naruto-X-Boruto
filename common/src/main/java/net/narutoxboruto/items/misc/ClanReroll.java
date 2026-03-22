@@ -34,11 +34,11 @@ public class ClanReroll extends Item {
             removeClanStatBonuses(serverPlayer);
 
             String currentClan = clanAttachment.getValue();
-            String newClan = getRandomIndex(CLAN_LIST);
+            String newClan = getWeightedRandomClan();
 
             // Ensure we get a different clan
             while (newClan.equals(currentClan)) {
-                newClan = getRandomIndex(CLAN_LIST);
+                newClan = getWeightedRandomClan();
             }
 
             // Set the new clan value

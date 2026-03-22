@@ -78,6 +78,13 @@ public class FabricPacketHandler {
                 if (player != null) {
                     if ("jutsu_storage".equals(payload.key())) {
                         PlayerDataManager.get(player).setJutsuStorage(JutsuStorage.fromNbt(payload.nbt()));
+                    } else if ("dojutsu".equals(payload.key())) {
+                        net.narutoxboruto.capabilities.info.Dojutsu dojutsu = net.narutoxboruto.capabilities.info.Dojutsu.fromNbt(payload.nbt());
+                        PlayerDataManager.get(player).setDojutsu(dojutsu);
+                        PlayerData.setDojutsuUnlockedList(dojutsu.getUnlockedListRaw());
+                        PlayerData.setDojutsuLeftEye(dojutsu.getLeftEye());
+                        PlayerData.setDojutsuRightEye(dojutsu.getRightEye());
+                        PlayerData.setDojutsuTimer(dojutsu.getTimer());
                     }
                 }
             });
@@ -134,6 +141,37 @@ public class FabricPacketHandler {
                                 new JutsuStorageMenu(containerId, playerInventory, storage),
                         Component.translatable("container.narutoxboruto.jutsu_storage")
                 ));
+            }
+            default -> {
+                if (action.startsWith("set_left_eye:")) {
+                    String type = action.substring("set_left_eye:".length());
+                    var dojutsu = data.getDojutsu();
+                    dojutsu.setLeftEye(type);
+                    data.setDojutsu(dojutsu);
+                    dojutsu.syncValue(serverPlayer);
+                } else if (action.startsWith("set_right_eye:")) {
+                    String type = action.substring("set_right_eye:".length());
+                    var dojutsu = data.getDojutsu();
+                    dojutsu.setRightEye(type);
+                    data.setDojutsu(dojutsu);
+                    dojutsu.syncValue(serverPlayer);
+                } else if (action.startsWith("set_offset_left_eye:") || action.startsWith("set_offset_right_eye:")) {
+                    boolean isLeft = action.startsWith("set_offset_left_eye:");
+                    String coords = action.substring(action.indexOf(':') + 1);
+                    String[] parts = coords.split(",");
+                    if (parts.length == 2) {
+                        int ox = Integer.parseInt(parts[0]);
+                        int oy = Integer.parseInt(parts[1]);
+                        var dojutsu = data.getDojutsu();
+                        if (isLeft) {
+                            dojutsu.setLeftEyeOffset(ox, oy);
+                        } else {
+                            dojutsu.setRightEyeOffset(ox, oy);
+                        }
+                        data.setDojutsu(dojutsu);
+                        dojutsu.syncValue(serverPlayer);
+                    }
+                }
             }
         }
     }

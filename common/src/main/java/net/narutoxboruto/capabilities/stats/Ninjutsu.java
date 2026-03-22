@@ -26,6 +26,7 @@ public class Ninjutsu {
         if (actualAdd > 0) {
             growMaxChakra(actualAdd, player);
         }
+        this.syncValue(player);
     }
 
     public void addValue(int amount, ServerPlayer player) {
@@ -35,6 +36,7 @@ public class Ninjutsu {
         if (actualAdd > 0) {
             growMaxChakra(actualAdd, player);
         }
+        this.syncValue(player);
     }
 
     public void subValue(int amount, ServerPlayer player) {
@@ -47,6 +49,7 @@ public class Ninjutsu {
             maxChakra.subValue(pointsRemoved * 5 * multiplier, player);
             ModUtil.capChakraToMax(player);
         }
+        this.syncValue(player);
     }
 
     public void incrementValue(int amount, ServerPlayer player) {

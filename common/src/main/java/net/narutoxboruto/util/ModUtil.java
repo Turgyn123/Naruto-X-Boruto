@@ -18,25 +18,21 @@ import javax.management.Attribute;
 import java.util.*;
 
 public class ModUtil {
-    public static final List<String> CLAN_LIST = Arrays.asList("fuma", "nara", "shiin", "shirogane", "uzumaki");
+    public static final List<String> CLAN_LIST = Arrays.asList("fuma", "nara", "shiin", "shirogane", "uzumaki",
+            "uchiha", "hyuuga", "chinoike");
 
-    public static final Map<String, Integer> CLAN_MAP = new HashMap<>();
+    // Weighted clan map for random selection (total weight: 800)
+    // uchiha/hyuuga/uzumaki = 5% each (40), chinoike = 7.5% (60), others = 19.375% each (155)
+    public static final Map<String, Integer> CLAN_MAP = new LinkedHashMap<>();
     static {
-        CLAN_MAP.put("fuma", 25);
-        CLAN_MAP.put("nara", 10);
-        CLAN_MAP.put("shiin", 4);
-        CLAN_MAP.put("shirogane", 25);
-        CLAN_MAP.put("uzumaki", 1);
-        //CLAN_MAP.put("jugo", 10);
-        //CLAN_MAP.put("hyuuga", 5);
-        //CLAN_MAP.put("sarutobi", 15);
-        // CLAN_MAP.put("senju", 1);
-        // CLAN_MAP.put("tsuchigumo", 25);
-        // CLAN_MAP.put("uchiha", 1);
-        // CLAN_MAP.put("kaguya", 5);
-        // CLAN_MAP.put("kurama", 15);
-        // CLAN_MAP.put("ryu", 15);
-        // CLAN_MAP.put("inuzuka", 25);
+        CLAN_MAP.put("fuma", 155);
+        CLAN_MAP.put("nara", 155);
+        CLAN_MAP.put("shiin", 155);
+        CLAN_MAP.put("shirogane", 155);
+        CLAN_MAP.put("uzumaki", 40);
+        CLAN_MAP.put("uchiha", 40);
+        CLAN_MAP.put("hyuuga", 40);
+        CLAN_MAP.put("chinoike", 60);
     }
     public static final List<String> RANK_LIST = Arrays.asList("civilian", "student", "genin", "chuunin", "jounin",
             "special_jounin", "anbu", "sage", "kage", "rogue");
@@ -47,6 +43,22 @@ public class ModUtil {
             "kinjutsu", "medical", "senjutsu", "shurikenjutsu", "speed", "summoning");
 
     public static final Random RANDOM = new Random();
+
+    /**
+     * Selects a random clan using weighted probabilities from CLAN_MAP.
+     */
+    public static String getWeightedRandomClan() {
+        int totalWeight = CLAN_MAP.values().stream().mapToInt(Integer::intValue).sum();
+        int roll = RANDOM.nextInt(totalWeight);
+        int cumulative = 0;
+        for (Map.Entry<String, Integer> entry : CLAN_MAP.entrySet()) {
+            cumulative += entry.getValue();
+            if (roll < cumulative) {
+                return entry.getKey();
+            }
+        }
+        return CLAN_LIST.get(0); // fallback
+    }
 
     public static final List<String> RELEASES_LIST = Arrays.asList("earth", "fire", "lightning", "water", "wind",
             "yang", "yin");
@@ -126,7 +138,25 @@ public class ModUtil {
                 Services.PLATFORM.getKenjutsu(serverPlayer).incrementValue(5, serverPlayer);
                 recalculateMaxChakraForClanChange(serverPlayer, false);
             }
+            case "uchiha" -> {
+                Services.PLATFORM.getGenjutsu(serverPlayer).incrementValue(20, serverPlayer);
+                Services.PLATFORM.getKenjutsu(serverPlayer).incrementValue(10, serverPlayer);
+                Services.PLATFORM.getTaijutsu(serverPlayer).incrementValue(10, serverPlayer);
+            }
+            case "hyuuga" -> {
+                Services.PLATFORM.getTaijutsu(serverPlayer).incrementValue(15, serverPlayer);
+                Services.PLATFORM.getGenjutsu(serverPlayer).incrementValue(20, serverPlayer);
+                Services.PLATFORM.getMedical(serverPlayer).incrementValue(5, serverPlayer);
+            }
+            case "chinoike" -> {
+                Services.PLATFORM.getGenjutsu(serverPlayer).incrementValue(20, serverPlayer);
+                Services.PLATFORM.getKenjutsu(serverPlayer).incrementValue(5, serverPlayer);
+            }
         }
+        // Reset dojutsu timer for the new clan
+        var dojutsu = Services.PLATFORM.getDojutsu(serverPlayer);
+        dojutsu.resetTimer();
+        dojutsu.syncValue(serverPlayer);
         syncAllStatsToClient(serverPlayer);
     }
 
@@ -157,6 +187,20 @@ public class ModUtil {
             case "uzumaki" -> {
                 Services.PLATFORM.getNinjutsu(serverPlayer).subValue(15, serverPlayer);
                 Services.PLATFORM.getMedical(serverPlayer).subValue(10, serverPlayer);
+                Services.PLATFORM.getKenjutsu(serverPlayer).subValue(5, serverPlayer);
+            }
+            case "uchiha" -> {
+                Services.PLATFORM.getGenjutsu(serverPlayer).subValue(20, serverPlayer);
+                Services.PLATFORM.getKenjutsu(serverPlayer).subValue(10, serverPlayer);
+                Services.PLATFORM.getTaijutsu(serverPlayer).subValue(10, serverPlayer);
+            }
+            case "hyuuga" -> {
+                Services.PLATFORM.getTaijutsu(serverPlayer).subValue(15, serverPlayer);
+                Services.PLATFORM.getGenjutsu(serverPlayer).subValue(20, serverPlayer);
+                Services.PLATFORM.getMedical(serverPlayer).subValue(5, serverPlayer);
+            }
+            case "chinoike" -> {
+                Services.PLATFORM.getGenjutsu(serverPlayer).subValue(20, serverPlayer);
                 Services.PLATFORM.getKenjutsu(serverPlayer).subValue(5, serverPlayer);
             }
         }

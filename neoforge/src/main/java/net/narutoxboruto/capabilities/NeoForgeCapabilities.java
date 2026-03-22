@@ -45,6 +45,7 @@ public class NeoForgeCapabilities {
     public static final Supplier<AttachmentType<KibaActive>> KIBA_ACTIVE = ATTACHMENT_TYPES.register("kiba_active", () -> AttachmentType.<KibaActive>builder(() -> new KibaActive()).serialize(KibaActive.CODEC).build());
     public static final Supplier<AttachmentType<LightningChakraModeActive>> LIGHTNING_CHAKRA_MODE_ACTIVE = ATTACHMENT_TYPES.register("lightning_chakra_mode_active", () -> AttachmentType.<LightningChakraModeActive>builder(() -> new LightningChakraModeActive()).serialize(LightningChakraModeActive.CODEC).build());
     public static final Supplier<AttachmentType<JutsuStorage>> JUTSU_STORAGE = ATTACHMENT_TYPES.register("jutsu_storage", () -> AttachmentType.<JutsuStorage>builder(() -> new JutsuStorage()).serialize(JutsuStorage.CODEC).copyOnDeath().build());
+    public static final Supplier<AttachmentType<Dojutsu>> DOJUTSU = ATTACHMENT_TYPES.register("dojutsu", () -> AttachmentType.<Dojutsu>builder(() -> new Dojutsu()).serialize(Dojutsu.CODEC).copyOnDeath().build());
     public static final Supplier<AttachmentType<WallRunning>> WALL_RUNNING = ATTACHMENT_TYPES.register("wall_running", () -> AttachmentType.<WallRunning>builder(() -> new WallRunning()).serialize(WallRunning.CODEC).build());
     public static final Supplier<AttachmentType<ClimberComponent>> CLIMBER = ATTACHMENT_TYPES.register("climber", () -> AttachmentType.<ClimberComponent>builder(() -> new ClimberComponent()).build());
 

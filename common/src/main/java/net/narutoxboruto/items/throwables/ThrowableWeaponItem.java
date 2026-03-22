@@ -121,6 +121,12 @@ public class ThrowableWeaponItem extends Item implements PreventSlow {
             return; // Still on cooldown
         }
 
+        // Require 25 shurikenjutsu to use special throw
+        net.narutoxboruto.capabilities.stats.Shurikenjutsu shurikenjutsu = Services.PLATFORM.getShurikenjutsu(serverPlayer);
+        if (shurikenjutsu == null || shurikenjutsu.getValue() < 25) {
+            return;
+        }
+
         // Check if player has enough items
         if (!serverPlayer.getAbilities().instabuild && stack.getCount() < 3) {
             return; // Not enough items

@@ -140,6 +140,27 @@ public abstract class MixinPlayer extends LivingEntity implements ModeHandler {
             // and getDefaultDimensions() (which read entity data) work correctly
             this.entityData.set(DATA_CHAKRA_CONTROL, chakraControl.isActive());
             this.entityData.set(DATA_NARUTO_RUNNING, shouldNarutoRun);
+
+            // Dojutsu timer: tick towards dojutsu acquisition
+            var dojutsu = Services.PLATFORM.getDojutsu(serverPlayer);
+            String clan = Services.PLATFORM.getClan(serverPlayer).getValue();
+            if (dojutsu.isClanEligible(clan) && dojutsu.canObtainMore()) {
+                String clanDojutsu = dojutsu.getDojutsuForClan(clan);
+                if (clanDojutsu != null && !dojutsu.hasUnlocked(clanDojutsu)) {
+                    dojutsu.incrementTimer();
+                    if (dojutsu.isTimerComplete()) {
+                        dojutsu.unlock(clanDojutsu);
+                        dojutsu.resetTimer();
+                        dojutsu.syncValue(serverPlayer);
+                        serverPlayer.displayClientMessage(
+                                net.minecraft.network.chat.Component.translatable("dojutsu.acquired",
+                                        net.minecraft.network.chat.Component.translatable("dojutsu." + clanDojutsu)), false);
+                    } else if (dojutsu.getTimer() % 1200 == 0) {
+                        // Sync every 60 seconds to keep client timer updated
+                        dojutsu.syncValue(serverPlayer);
+                    }
+                }
+            }
         }
     }
 }

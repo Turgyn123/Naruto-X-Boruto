@@ -13,6 +13,7 @@ import net.narutoxboruto.capabilities.PlayerCapData;
 import net.narutoxboruto.capabilities.PlayerDataManager;
 import net.narutoxboruto.capabilities.info.Chakra;
 import net.narutoxboruto.capabilities.info.ChakraControl;
+import net.narutoxboruto.capabilities.info.Dojutsu;
 import net.narutoxboruto.capabilities.jutsu.JutsuStorage;
 import net.narutoxboruto.items.swords.AbstractAbilitySword;
 import net.narutoxboruto.items.throwables.FumaShurikenItem;
@@ -77,6 +78,37 @@ public class ServerActionPacket {
                                 new JutsuStorageMenu(containerId, playerInventory, ForgePlatformHelper.toItemStackHandler(storage)),
                         Component.translatable("container.narutoxboruto.jutsu_storage")
                 ));
+            }
+            default -> {
+                if (msg.action.startsWith("set_left_eye:")) {
+                    String type = msg.action.substring("set_left_eye:".length());
+                    Dojutsu dojutsu = data.getDojutsu();
+                    dojutsu.setLeftEye(type);
+                    data.setDojutsu(dojutsu);
+                    dojutsu.syncValue(serverPlayer);
+                } else if (msg.action.startsWith("set_right_eye:")) {
+                    String type = msg.action.substring("set_right_eye:".length());
+                    Dojutsu dojutsu = data.getDojutsu();
+                    dojutsu.setRightEye(type);
+                    data.setDojutsu(dojutsu);
+                    dojutsu.syncValue(serverPlayer);
+                } else if (msg.action.startsWith("set_offset_left_eye:") || msg.action.startsWith("set_offset_right_eye:")) {
+                    boolean isLeft = msg.action.startsWith("set_offset_left_eye:");
+                    String coords = msg.action.substring(msg.action.indexOf(':') + 1);
+                    String[] parts = coords.split(",");
+                    if (parts.length == 2) {
+                        int ox = Integer.parseInt(parts[0]);
+                        int oy = Integer.parseInt(parts[1]);
+                        Dojutsu dojutsu = data.getDojutsu();
+                        if (isLeft) {
+                            dojutsu.setLeftEyeOffset(ox, oy);
+                        } else {
+                            dojutsu.setRightEyeOffset(ox, oy);
+                        }
+                        data.setDojutsu(dojutsu);
+                        dojutsu.syncValue(serverPlayer);
+                    }
+                }
             }
         }
     }

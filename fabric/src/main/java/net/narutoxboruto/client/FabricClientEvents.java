@@ -27,6 +27,11 @@ public class FabricClientEvents {
                 client.setScreen(new ShinobiStatsGui());
             }
 
+            // Dojutsu menu keybind
+            if (ModKeyBinds.DOJUTSU_MENU.consumeClick()) {
+                client.setScreen(new net.narutoxboruto.client.gui.DojutsuScreen());
+            }
+
             // Jutsu storage keybind
             if (client.screen == null && ModKeyBinds.JUTSU_STORAGE.consumeClick()) {
                 FabricPacketHandler.sendToServer(new ServerActionPacket("open_jutsu_storage"));

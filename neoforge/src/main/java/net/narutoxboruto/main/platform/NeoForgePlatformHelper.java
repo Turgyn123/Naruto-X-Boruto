@@ -64,6 +64,7 @@ public class NeoForgePlatformHelper implements IPlatformHelper {
     @Override public YangList getYangList(Player player) { return player.getData(NeoForgeCapabilities.YANGLIST); }
     @Override public YinList getYinList(Player player) { return player.getData(NeoForgeCapabilities.YINLIST); }
     @Override public JutsuStorage getJutsuStorage(Player player) {return player.getData(NeoForgeCapabilities.JUTSU_STORAGE);}
+    @Override public Dojutsu getDojutsu(Player player) {return player.getData(NeoForgeCapabilities.DOJUTSU);}
 
     //Get stats
     @Override public Genjutsu getGenjutsu(Player player) { return player.getData(NeoForgeCapabilities.GENJUTSU); }
@@ -89,6 +90,7 @@ public class NeoForgePlatformHelper implements IPlatformHelper {
     @Override public void setChakra(ServerPlayer player, Chakra chakra) { player.setData(NeoForgeCapabilities.CHAKRA, chakra); }
     @Override public void setMaxChakra(ServerPlayer player, MaxChakra maxChakra) { player.setData(NeoForgeCapabilities.MAX_CHAKRA, maxChakra); }
     @Override public void setJutsuStorage(ServerPlayer player, JutsuStorage storage) {player.setData(NeoForgeCapabilities.JUTSU_STORAGE, storage);}
+    @Override public void setDojutsu(ServerPlayer player, Dojutsu dojutsu) {player.setData(NeoForgeCapabilities.DOJUTSU, dojutsu);}
 
     //Sync data
     @Override public void syncAffiliation(ServerPlayer player, String value) {PacketDistributor.sendToPlayer(player, new SyncAffiliation(value));}
@@ -106,6 +108,7 @@ public class NeoForgePlatformHelper implements IPlatformHelper {
     @Override public void syncYangList(ServerPlayer player, String value) { PacketDistributor.sendToPlayer(player, new SyncYangList(value)); }
     @Override public void syncYinList(ServerPlayer player, String value) { PacketDistributor.sendToPlayer(player, new SyncYinList(value)); }
     @Override public void syncJutsuStorage(ServerPlayer player, CompoundTag nbt) {PacketDistributor.sendToPlayer(player, new SyncJutsuStorage(nbt));}
+    @Override public void syncDojutsu(ServerPlayer player, CompoundTag nbt) {PacketDistributor.sendToPlayer(player, new SyncDojutsu(nbt));}
     @Override public void syncGenjutsu(ServerPlayer player, int value) { PacketDistributor.sendToPlayer(player, new SyncGenjutsu(value)); }
     @Override public void syncKenjutsu(ServerPlayer player, int value) { PacketDistributor.sendToPlayer(player, new SyncKenjutsu(value)); }
     @Override public void syncKinjutsu(ServerPlayer player, int value) { PacketDistributor.sendToPlayer(player, new SyncKinjutsu(value)); }
@@ -120,6 +123,11 @@ public class NeoForgePlatformHelper implements IPlatformHelper {
     @Override public void syncKibaActive(ServerPlayer player, boolean value) { PacketDistributor.sendToPlayer(player, new SyncKibaActive(value)); }
     @Override public void syncLightningChakraModeActive(ServerPlayer player, boolean value) { PacketDistributor.sendToPlayer(player, new SyncLightningChakraModeActive(value)); }
     @Override public void syncNarutoRun(ServerPlayer player, boolean value) { PacketDistributor.sendToPlayer(player, new SyncNarutoRun(value)); }
+
+    //Client → Server
+    @Override public void sendEquipDojutsu(String slot, String type) {
+        PacketDistributor.sendToServer(new EquipDojutsuPacket(slot, type));
+    }
 
     //Fluids
     @Override public Block getStaticWaterBlock() { return ModFluidBlocks.STATIC_WATER_BLOCK.get(); }

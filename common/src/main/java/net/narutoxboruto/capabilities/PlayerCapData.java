@@ -54,6 +54,9 @@ public class PlayerCapData {
     // Jutsu
     private JutsuStorage jutsuStorage = new JutsuStorage();
 
+    // Dojutsu
+    private Dojutsu dojutsu = new Dojutsu();
+
     // ===== Getters =====
     public Chakra getChakra() { return chakra; }
     public MaxChakra getMaxChakra() { return maxChakra; }
@@ -86,11 +89,13 @@ public class PlayerCapData {
     public WallRunning getWallRunning() { return wallRunning; }
     public ClimberComponent getClimberComponent() { return climberComponent; }
     public JutsuStorage getJutsuStorage() { return jutsuStorage; }
+    public Dojutsu getDojutsu() { return dojutsu; }
 
     // ===== Setters =====
     public void setChakra(Chakra v) { this.chakra = v; }
     public void setMaxChakra(MaxChakra v) { this.maxChakra = v; }
     public void setJutsuStorage(JutsuStorage v) { this.jutsuStorage = v; }
+    public void setDojutsu(Dojutsu v) { this.dojutsu = v; }
 
     // ===== Int value setter by key (for generic sync packets) =====
     public void setIntValue(String key, int value) {
@@ -176,6 +181,8 @@ public class PlayerCapData {
         tag.putBoolean("wall_running", wallRunning.getValue());
         // Jutsu Storage
         tag.put("jutsu_storage", jutsuStorage.toNbt());
+        // Dojutsu
+        tag.put("dojutsu", dojutsu.toNbt());
         return tag;
     }
 
@@ -217,6 +224,8 @@ public class PlayerCapData {
         if (tag.contains("wall_running")) wallRunning = new WallRunning(tag.getBoolean("wall_running"));
         // Jutsu Storage
         if (tag.contains("jutsu_storage")) jutsuStorage = JutsuStorage.fromNbt(tag.getCompound("jutsu_storage"));
+        // Dojutsu
+        if (tag.contains("dojutsu")) dojutsu = Dojutsu.fromNbt(tag.getCompound("dojutsu"));
     }
 
     // ===== Copy from another PlayerCapData =====
@@ -256,5 +265,7 @@ public class PlayerCapData {
 
         this.jutsuStorage = new JutsuStorage();
         this.jutsuStorage.copyFrom(source.jutsuStorage);
+
+        this.dojutsu = Dojutsu.fromNbt(source.dojutsu.toNbt());
     }
 }

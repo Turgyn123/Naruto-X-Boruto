@@ -5,8 +5,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.stats.Stats;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.entity.ai.attributes.AttributeInstance;
-import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -72,11 +70,6 @@ public class ForgeStatEvents {
                 medical.incrementValue(1, serverPlayer);
                 data.getShinobiPoints().incrementValue(1, serverPlayer);
 
-                AttributeInstance maxHealthAttr = serverPlayer.getAttribute(Attributes.MAX_HEALTH);
-                if (maxHealthAttr != null) {
-                    double currentMaxHealth = maxHealthAttr.getBaseValue();
-                    maxHealthAttr.setBaseValue(currentMaxHealth + 2.0);
-                }
                 playerDamageCounters.put(playerId, 0);
             }
         }

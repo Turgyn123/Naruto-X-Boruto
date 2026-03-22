@@ -20,6 +20,12 @@ public class PlayerData {
     
     // Wall running state cache (synced from server)
     private static RotationUtil.Surface wallRunningSurface = RotationUtil.Surface.GROUND;
+
+    // Dojutsu
+    private static String dojutsuUnlockedList = "";
+    private static String dojutsuLeftEye = "";
+    private static String dojutsuRightEye = "";
+    private static int dojutsuTimer = 0;
     
     // Activation burst timing - tracks when abilities were just activated for flashy effect
     private static long kibaActivationTime = 0;
@@ -326,5 +332,15 @@ public class PlayerData {
     public static void setWallRunningSurface(RotationUtil.Surface surface) {
         wallRunningSurface = surface;
     }
+
+    // Dojutsu getters/setters
+    public static String getDojutsuUnlockedList() { return dojutsuUnlockedList; }
+    public static void setDojutsuUnlockedList(String v) { dojutsuUnlockedList = v; }
+    public static String getDojutsuLeftEye() { return dojutsuLeftEye; }
+    public static void setDojutsuLeftEye(String v) { dojutsuLeftEye = v; }
+    public static String getDojutsuRightEye() { return dojutsuRightEye; }
+    public static void setDojutsuRightEye(String v) { dojutsuRightEye = v; }
+    public static int getDojutsuTimer() { return dojutsuTimer; }
+    public static void setDojutsuTimer(int v) { dojutsuTimer = v; }
 
 }

@@ -10,6 +10,7 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.narutoxboruto.capabilities.info.Dojutsu;
 import net.narutoxboruto.capabilities.info.ReleaseList;
 import net.narutoxboruto.main.Main;
 import net.narutoxboruto.util.ModUtil;
@@ -59,6 +60,8 @@ public class ShinobiStatsGui extends Screen {
         guiGraphics.blit(BACKGROUND, (this.width - 234) / 2, (this.height - 192) / 2, 0, 0, 256, 192);
         this.renderInfo(guiGraphics);
         this.drawReleaseIcons(guiGraphics, 95, 16);
+        this.drawKekkeiGenkai(guiGraphics, 95);
+        this.drawDojutsuInfo(guiGraphics, 95);
         super.render(guiGraphics, pMouseX, pMouseY, pPartialTick);
     }
 
@@ -151,6 +154,42 @@ public class ShinobiStatsGui extends Screen {
                         (this.width - 192) / 2 + x + (size + 1) * column,
                         this.height / 2 - 33 + row * (size + 1),
                         0, 0, 0, size, size, size, size);
+            }
+        }
+    }
+
+    private void drawKekkeiGenkai(GuiGraphics guiGraphics, int x) {
+        Component kgLabel = Component.translatable("shinobiStat.kekkei_genkai")
+                .append(": ")
+                .append(Component.translatable("kekkei_genkai.none"));
+        guiGraphics.drawString(this.font, kgLabel,
+                (this.width - 192) / 2 + x, this.height / 2 - 7, 0, false);
+    }
+
+    private void drawDojutsuInfo(GuiGraphics guiGraphics, int x) {
+        Dojutsu dojutsu = Services.PLATFORM.getDojutsu(player);
+        List<String> unlocked = dojutsu.getUnlockedList();
+
+        Component dojutsuLabel = Component.translatable("shinobiStat.dojutsu")
+                .append(": ")
+                .append(unlocked.isEmpty()
+                        ? Component.translatable("shinobiStat.dojutsu_none")
+                        : Component.empty());
+
+        guiGraphics.drawString(this.font, dojutsuLabel,
+                (this.width - 192) / 2 + x, this.height / 2 + 5, 0, false);
+
+        if (!unlocked.isEmpty()) {
+            for (int i = 0; i < unlocked.size(); i++) {
+                String dj = unlocked.get(i);
+                if (Dojutsu.DOJUTSU_ICON.containsKey(dj)) {
+                    ResourceLocation icon = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID,
+                            "textures/dojutsu/icons/" + Dojutsu.DOJUTSU_ICON.get(dj) + ".png");
+                    guiGraphics.blit(icon,
+                            (this.width - 192) / 2 + x + i * 14,
+                            this.height / 2 + 15,
+                            11, 11, 0.0F, 0.0F, 32, 32, 32, 32);
+                }
             }
         }
     }

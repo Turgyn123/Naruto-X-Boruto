@@ -1,6 +1,7 @@
 package net.narutoxboruto.command;
 
 import net.narutoxboruto.capabilities.stats.*;
+import net.narutoxboruto.capabilities.info.ShinobiPoints;
 import net.narutoxboruto.main.platform.Services;
 
 import com.mojang.brigadier.CommandDispatcher;
@@ -61,6 +62,8 @@ public class ShinobiStatCommand {
                     stat.addValue(pValue, serverPlayer);
                 }
             }
+            // Award shinobi points to match stat gain
+            Services.PLATFORM.getShinobiPoints(serverPlayer).addValue(pValue, serverPlayer);
         }
         if (pTargets.size() == 1) {
             pSource.sendSuccess(() -> Component.translatable("command.shinobi_stat.add.single",
@@ -116,6 +119,8 @@ public class ShinobiStatCommand {
                     stat.subValue(pValue, serverPlayer);
                 }
             }
+            // Subtract shinobi points to match stat loss
+            Services.PLATFORM.getShinobiPoints(serverPlayer).subValue(pValue, serverPlayer);
         }
         if (pTargets.size() == 1) {
             pSource.sendSuccess(() -> Component.translatable("command.shinobi_stat.sub.single",
@@ -171,6 +176,8 @@ public class ShinobiStatCommand {
                     stat.setValue(pValue, serverPlayer);
                 }
             }
+            // Award shinobi points to match stat set
+            Services.PLATFORM.getShinobiPoints(serverPlayer).addValue(pValue, serverPlayer);
         }
         if (pTargets.size() == 1) {
             pSource.sendSuccess(() -> Component.translatable("command.shinobi_stat.set.single",

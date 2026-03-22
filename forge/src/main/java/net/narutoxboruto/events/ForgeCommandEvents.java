@@ -12,5 +12,6 @@ public class ForgeCommandEvents {
         AffiliationCommand.register(event.getDispatcher());
         ShinobiStatCommand.register(event.getDispatcher());
         ShinobiInfoCommand.register(event.getDispatcher());
+        DojutsuCommand.register(event.getDispatcher());
     }
 }

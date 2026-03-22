@@ -58,7 +58,9 @@ public class NeoForgePacketHandler {
 
         // Jutsu Storage packets
         registrar.playToClient(SyncJutsuStorage.TYPE, SyncJutsuStorage.STREAM_CODEC, (payload, context) -> payload.handle(context));
+        registrar.playToClient(SyncDojutsu.TYPE, SyncDojutsu.STREAM_CODEC, (payload, context) -> payload.handle(context));
         registrar.playToServer(OpenJutsuStoragePacket.TYPE, OpenJutsuStoragePacket.STREAM_CODEC, OpenJutsuStoragePacket::handle);
+        registrar.playToServer(EquipDojutsuPacket.TYPE, EquipDojutsuPacket.STREAM_CODEC, (payload, context) -> payload.handle(context));
     }
 
     public static void sendToPlayer(CustomPacketPayload packet, ServerPlayer player) {

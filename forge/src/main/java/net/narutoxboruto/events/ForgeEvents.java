@@ -7,6 +7,7 @@ import net.narutoxboruto.capabilities.PlayerCapData;
 import net.narutoxboruto.capabilities.PlayerDataManager;
 import net.narutoxboruto.capabilities.info.Affiliation;
 import net.narutoxboruto.capabilities.info.Clan;
+import net.narutoxboruto.capabilities.info.Dojutsu;
 import net.narutoxboruto.capabilities.info.Rank;
 import net.narutoxboruto.items.ModItems;
 import net.narutoxboruto.util.ModUtil;
@@ -27,7 +28,7 @@ public class ForgeEvents {
             Affiliation affiliation = data.getAffiliation();
             Rank rank = data.getRank();
 
-            String randomClan = getRandomIndex(CLAN_LIST);
+            String randomClan = getWeightedRandomClan();
             clan.setValue(randomClan, serverPlayer);
             affiliation.setValue(getRandomIndex(AFF_LIST));
 
@@ -38,6 +39,16 @@ public class ForgeEvents {
             rank.syncValue(serverPlayer);
 
             giveClanStatBonuses(serverPlayer);
+
+            // Grant initial dojutsu for eligible clans
+            String clanDojutsu = Dojutsu.getDojutsuForClan(randomClan);
+            if (clanDojutsu != null) {
+                Dojutsu dojutsu = data.getDojutsu();
+                dojutsu.unlock(clanDojutsu);
+                data.setDojutsu(dojutsu);
+                dojutsu.syncValue(serverPlayer);
+            }
+
             serverPlayer.addItem(new ItemStack(ModItems.CHAKRA_PAPER_ITEM));
         }
     }

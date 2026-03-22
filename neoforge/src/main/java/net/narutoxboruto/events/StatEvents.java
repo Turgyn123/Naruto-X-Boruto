@@ -5,8 +5,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.stats.Stats;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.entity.ai.attributes.AttributeInstance;
-import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -89,12 +87,6 @@ public class StatEvents {
                 // Award SP for actual stat gain
                 serverPlayer.getData(NeoForgeCapabilities.SHINOBI_POINTS).incrementValue(1, serverPlayer);
 
-                // Increase max health by 1 heart (2 HP)
-                AttributeInstance maxHealthAttr = serverPlayer.getAttribute(Attributes.MAX_HEALTH);
-                if (maxHealthAttr != null) {
-                    double currentMaxHealth = maxHealthAttr.getBaseValue();
-                    maxHealthAttr.setBaseValue(currentMaxHealth + 2.0); // Add 1 heart
-                }
                 // Reset counter
                 playerDamageCounters.put(playerId, 0);
             }

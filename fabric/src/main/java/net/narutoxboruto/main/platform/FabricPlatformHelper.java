@@ -52,6 +52,7 @@ public class FabricPlatformHelper implements IPlatformHelper {
     @Override public YangList getYangList(Player player) { return PlayerDataManager.get(player).getYangList(); }
     @Override public YinList getYinList(Player player) { return PlayerDataManager.get(player).getYinList(); }
     @Override public JutsuStorage getJutsuStorage(Player player) { return PlayerDataManager.get(player).getJutsuStorage(); }
+    @Override public Dojutsu getDojutsu(Player player) { return PlayerDataManager.get(player).getDojutsu(); }
 
     // Get stats
     @Override public Genjutsu getGenjutsu(Player player) { return PlayerDataManager.get(player).getGenjutsu(); }
@@ -83,6 +84,9 @@ public class FabricPlatformHelper implements IPlatformHelper {
     @Override public void setJutsuStorage(ServerPlayer player, JutsuStorage storage) {
         PlayerDataManager.get(player).setJutsuStorage(storage);
     }
+    @Override public void setDojutsu(ServerPlayer player, Dojutsu dojutsu) {
+        PlayerDataManager.get(player).setDojutsu(dojutsu);
+    }
 
     // Sync data (server → client)
     @Override public void syncAffiliation(ServerPlayer player, String value) { FabricPacketHandler.sendToPlayer(player, new SyncStringData("affiliation", value)); }
@@ -100,6 +104,7 @@ public class FabricPlatformHelper implements IPlatformHelper {
     @Override public void syncYangList(ServerPlayer player, String value) { FabricPacketHandler.sendToPlayer(player, new SyncStringData("yang_list", value)); }
     @Override public void syncYinList(ServerPlayer player, String value) { FabricPacketHandler.sendToPlayer(player, new SyncStringData("yin_list", value)); }
     @Override public void syncJutsuStorage(ServerPlayer player, CompoundTag nbt) { FabricPacketHandler.sendToPlayer(player, new SyncNbtData("jutsu_storage", nbt)); }
+    @Override public void syncDojutsu(ServerPlayer player, CompoundTag nbt) { FabricPacketHandler.sendToPlayer(player, new SyncNbtData("dojutsu", nbt)); }
     @Override public void syncGenjutsu(ServerPlayer player, int value) { FabricPacketHandler.sendToPlayer(player, new SyncIntData("genjutsu", value)); }
     @Override public void syncKenjutsu(ServerPlayer player, int value) { FabricPacketHandler.sendToPlayer(player, new SyncIntData("kenjutsu", value)); }
     @Override public void syncKinjutsu(ServerPlayer player, int value) { FabricPacketHandler.sendToPlayer(player, new SyncIntData("kinjutsu", value)); }
@@ -108,6 +113,11 @@ public class FabricPlatformHelper implements IPlatformHelper {
     @Override public void syncSenjutsu(ServerPlayer player, int value) { FabricPacketHandler.sendToPlayer(player, new SyncIntData("senjutsu", value)); }
     @Override public void syncShurikenjutsu(ServerPlayer player, int value) { FabricPacketHandler.sendToPlayer(player, new SyncIntData("shurikenjutsu", value)); }
     @Override public void syncSpeed(ServerPlayer player, int value) { FabricPacketHandler.sendToPlayer(player, new SyncIntData("speed", value)); }
+
+    //Client → Server
+    @Override public void sendEquipDojutsu(String slot, String type) {
+        FabricPacketHandler.sendToServer(new net.narutoxboruto.networking.ServerActionPacket("set_" + slot + "_eye:" + type));
+    }
     @Override public void syncSummoning(ServerPlayer player, int value) { FabricPacketHandler.sendToPlayer(player, new SyncIntData("summoning", value)); }
     @Override public void syncTaijutsu(ServerPlayer player, int value) { FabricPacketHandler.sendToPlayer(player, new SyncIntData("taijutsu", value)); }
     @Override public void syncChakraControl(ServerPlayer player, boolean value) { FabricPacketHandler.sendToPlayer(player, new SyncBoolData("chakra_control", value)); }

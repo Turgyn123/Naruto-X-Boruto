@@ -45,6 +45,9 @@ public class AttachmentEvents {
             serverPlayer.getData(NeoForgeCapabilities.SUMMONING).syncValue(serverPlayer);
             serverPlayer.getData(NeoForgeCapabilities.TAIJUTSU).syncValue(serverPlayer);
             
+            // Dojutsu
+            serverPlayer.getData(NeoForgeCapabilities.DOJUTSU).syncValue(serverPlayer);
+
             // Clean up any duplicate jutsus and sync jutsu storage
             JutsuGrantHelper.cleanupDuplicateJutsus(serverPlayer);
             serverPlayer.getData(NeoForgeCapabilities.JUTSU_STORAGE).syncToClient(serverPlayer);
@@ -86,6 +89,9 @@ public class AttachmentEvents {
             // serverPlayer.getData(NeoForgeCapabilities.YANGLIST).syncValue(serverPlayer);
             // serverPlayer.getData(NeoForgeCapabilities.YINLIST).syncValue(serverPlayer);
             
+            // Dojutsu
+            serverPlayer.getData(NeoForgeCapabilities.DOJUTSU).syncValue(serverPlayer);
+
             // Sync jutsu storage
             serverPlayer.getData(NeoForgeCapabilities.JUTSU_STORAGE).syncToClient(serverPlayer);
         }
@@ -120,6 +126,9 @@ public class AttachmentEvents {
             newPlayer.setData(NeoForgeCapabilities.NINJUTSU, original.getData(NeoForgeCapabilities.NINJUTSU));
             newPlayer.setData(NeoForgeCapabilities.SENJUTSU, original.getData(NeoForgeCapabilities.SENJUTSU));
             
+            // Dojutsu
+            newPlayer.setData(NeoForgeCapabilities.DOJUTSU, original.getData(NeoForgeCapabilities.DOJUTSU));
+
             // Preserve Jutsu Storage across death
             newPlayer.setData(NeoForgeCapabilities.JUTSU_STORAGE, original.getData(NeoForgeCapabilities.JUTSU_STORAGE));
             

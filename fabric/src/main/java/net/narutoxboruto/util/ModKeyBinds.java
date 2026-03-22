@@ -12,6 +12,7 @@ public class ModKeyBinds {
     public static final String KEY_SPECIAL_ACTION = "key.narutoxboruto.special_action";
     public static final String KEY_CHAKRA_RECHARGE = "key.narutoxboruto.chakra_recharge";
     public static final String KEY_JUTSU_STORAGE = "key.narutoxboruto.jutsu_storage";
+    public static final String KEY_DOJUTSU_MENU = "key.narutoxboruto.dojutsu_menu";
 
     public static final KeyMapping OPEN_GUI = new KeyMapping(KEY_OPEN_GUI,
             InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_V, KEY_CATEGORY);
@@ -28,11 +29,15 @@ public class ModKeyBinds {
     public static final KeyMapping JUTSU_STORAGE = new KeyMapping(KEY_JUTSU_STORAGE,
             InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_Z, KEY_CATEGORY);
 
+    public static final KeyMapping DOJUTSU_MENU = new KeyMapping(KEY_DOJUTSU_MENU,
+            InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_G, KEY_CATEGORY);
+
     public static void register() {
         KeyBindingHelper.registerKeyBinding(OPEN_GUI);
         KeyBindingHelper.registerKeyBinding(SPECIAL_ACTION);
         KeyBindingHelper.registerKeyBinding(CHAKRA_RECHARGE);
         KeyBindingHelper.registerKeyBinding(CHAKRA_CONTROL);
         KeyBindingHelper.registerKeyBinding(JUTSU_STORAGE);
+        KeyBindingHelper.registerKeyBinding(DOJUTSU_MENU);
     }
 }

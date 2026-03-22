@@ -11,9 +11,6 @@ import net.narutoxboruto.entities.jutsus.WaterDragonEntity;
  * A powerful water-style technique that summons a fast-moving dragon made of compressed water.
  * More powerful and faster than Shark Bomb, creates an explosive water impact.
  * 
- * TODO: Awaiting custom model and textures from owner.
- * Current implementation uses placeholder rendering.
- * 
  * - Long range (20 blocks)
  * - High speed
  * - Large explosion on impact

@@ -54,6 +54,7 @@ public class ForgePlatformHelper implements IPlatformHelper {
     @Override public YangList getYangList(Player player) { return PlayerDataManager.get(player).getYangList(); }
     @Override public YinList getYinList(Player player) { return PlayerDataManager.get(player).getYinList(); }
     @Override public JutsuStorage getJutsuStorage(Player player) { return PlayerDataManager.get(player).getJutsuStorage(); }
+    @Override public Dojutsu getDojutsu(Player player) { return PlayerDataManager.get(player).getDojutsu(); }
 
     // Get stats
     @Override public Genjutsu getGenjutsu(Player player) { return PlayerDataManager.get(player).getGenjutsu(); }
@@ -85,6 +86,9 @@ public class ForgePlatformHelper implements IPlatformHelper {
     @Override public void setJutsuStorage(ServerPlayer player, JutsuStorage storage) {
         PlayerDataManager.get(player).setJutsuStorage(storage);
     }
+    @Override public void setDojutsu(ServerPlayer player, Dojutsu dojutsu) {
+        PlayerDataManager.get(player).setDojutsu(dojutsu);
+    }
 
     // Sync data (server → client)
     @Override public void syncAffiliation(ServerPlayer player, String value) { ForgePacketHandler.sendToPlayer(new SyncStringData("affiliation", value), player); }
@@ -102,6 +106,7 @@ public class ForgePlatformHelper implements IPlatformHelper {
     @Override public void syncYangList(ServerPlayer player, String value) { ForgePacketHandler.sendToPlayer(new SyncStringData("yang_list", value), player); }
     @Override public void syncYinList(ServerPlayer player, String value) { ForgePacketHandler.sendToPlayer(new SyncStringData("yin_list", value), player); }
     @Override public void syncJutsuStorage(ServerPlayer player, CompoundTag nbt) { ForgePacketHandler.sendToPlayer(new SyncNbtData("jutsu_storage", nbt), player); }
+    @Override public void syncDojutsu(ServerPlayer player, CompoundTag nbt) { ForgePacketHandler.sendToPlayer(new SyncNbtData("dojutsu", nbt), player); }
     @Override public void syncGenjutsu(ServerPlayer player, int value) { ForgePacketHandler.sendToPlayer(new SyncIntData("genjutsu", value), player); }
     @Override public void syncKenjutsu(ServerPlayer player, int value) { ForgePacketHandler.sendToPlayer(new SyncIntData("kenjutsu", value), player); }
     @Override public void syncKinjutsu(ServerPlayer player, int value) { ForgePacketHandler.sendToPlayer(new SyncIntData("kinjutsu", value), player); }
@@ -116,6 +121,11 @@ public class ForgePlatformHelper implements IPlatformHelper {
     @Override public void syncKibaActive(ServerPlayer player, boolean value) { ForgePacketHandler.sendToPlayer(new SyncBoolData("kiba_active", value), player); }
     @Override public void syncLightningChakraModeActive(ServerPlayer player, boolean value) { ForgePacketHandler.sendToPlayer(new SyncBoolData("lightning_chakra_mode_active", value), player); }
     @Override public void syncNarutoRun(ServerPlayer player, boolean value) { ForgePacketHandler.sendToPlayer(new SyncBoolData("naruto_run", value), player); }
+
+    //Client → Server
+    @Override public void sendEquipDojutsu(String slot, String type) {
+        ForgePacketHandler.sendToServer(new net.narutoxboruto.networking.ServerActionPacket("set_" + slot + "_eye:" + type));
+    }
 
     @Override public Block getStaticWaterBlock() { return ForgeBlocks.STATIC_WATER_BLOCK.get(); }
 

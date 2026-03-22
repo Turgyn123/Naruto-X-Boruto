@@ -5,6 +5,7 @@ import net.minecraft.stats.Stats;
 import net.minecraft.world.item.ItemStack;
 import net.narutoxboruto.capabilities.info.Affiliation;
 import net.narutoxboruto.capabilities.info.Clan;
+import net.narutoxboruto.capabilities.info.Dojutsu;
 import net.narutoxboruto.capabilities.info.Rank;
 import net.narutoxboruto.items.ModItems;
 import net.narutoxboruto.util.ModUtil;
@@ -12,9 +13,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 
 import static net.narutoxboruto.capabilities.NeoForgeCapabilities.*;
-import static net.narutoxboruto.capabilities.NeoForgeCapabilities.RANK;
 import static net.narutoxboruto.util.ModUtil.*;
-import static net.narutoxboruto.util.ModUtil.getRandomIndex;
 
 public class Events {
 
@@ -28,7 +27,7 @@ public class Events {
             Affiliation affiliation = serverPlayer.getData(AFFILIATION);
             Rank rank = serverPlayer.getData(RANK);
 
-            String randomClan = getRandomIndex(CLAN_LIST);
+            String randomClan = getWeightedRandomClan();
             clan.setValue(randomClan, serverPlayer);
             affiliation.setValue(getRandomIndex(AFF_LIST));
 
@@ -39,6 +38,16 @@ public class Events {
             rank.syncValue(serverPlayer);
 
             giveClanStatBonuses(serverPlayer);
+
+            // Grant initial dojutsu for eligible clans (e.g., Uchiha starts with 1 tomoe)
+            String clanDojutsu = Dojutsu.getDojutsuForClan(randomClan);
+            if (clanDojutsu != null) {
+                Dojutsu dojutsu = serverPlayer.getData(DOJUTSU);
+                dojutsu.unlock(clanDojutsu);
+                serverPlayer.setData(DOJUTSU, dojutsu);
+                dojutsu.syncValue(serverPlayer);
+            }
+
             serverPlayer.addItem(new ItemStack(ModItems.CHAKRA_PAPER_ITEM));
         }
     }

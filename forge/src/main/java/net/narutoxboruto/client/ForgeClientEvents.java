@@ -46,6 +46,9 @@ public class ForgeClientEvents {
             if (ModKeyBinds.OPEN_GUI.consumeClick()) {
                 minecraft.setScreen(new ShinobiStatsGui());
             }
+            if (ModKeyBinds.DOJUTSU_MENU.consumeClick()) {
+                minecraft.setScreen(new net.narutoxboruto.client.gui.DojutsuScreen());
+            }
         }
 
         @SubscribeEvent
@@ -110,6 +113,7 @@ public class ForgeClientEvents {
             event.register(ModKeyBinds.OPEN_GUI);
             event.register(ModKeyBinds.CHAKRA_CONTROL);
             event.register(ModKeyBinds.JUTSU_STORAGE);
+            event.register(ModKeyBinds.DOJUTSU_MENU);
         }
 
         @SubscribeEvent

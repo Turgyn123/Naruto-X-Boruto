@@ -12,6 +12,7 @@ import net.narutoxboruto.client.overlay.FabricHudOverlay;
 import net.narutoxboruto.client.model.FireBallModel;
 import net.narutoxboruto.client.renderer.entity.*;
 import net.narutoxboruto.client.renderer.item.FabricLightningCloakRenderer;
+import net.narutoxboruto.client.renderer.FabricDojutsuEyeRenderer;
 import net.narutoxboruto.client.renderer.shinobi.AbstractShinobiRender;
 import net.narutoxboruto.client.renderer.throwables.*;
 import net.narutoxboruto.entities.FabricEntities;
@@ -38,6 +39,9 @@ public class FabricClient implements ClientModInitializer {
 
         // Register lightning cloak renderer
         FabricLightningCloakRenderer.register();
+
+        // Register dojutsu eye overlay renderer
+        FabricDojutsuEyeRenderer.register();
 
         // Register menu screens
         MenuScreens.register(FabricMenuTypes.JUTSU_STORAGE, JutsuStorageScreen::new);

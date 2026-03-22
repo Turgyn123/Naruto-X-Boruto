@@ -6,7 +6,9 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.event.network.CustomPayloadEvent;
 import net.narutoxboruto.capabilities.PlayerDataManager;
+import net.narutoxboruto.capabilities.info.Dojutsu;
 import net.narutoxboruto.capabilities.jutsu.JutsuStorage;
+import net.narutoxboruto.client.PlayerData;
 
 public class SyncNbtData {
     private final String key;
@@ -31,6 +33,13 @@ public class SyncNbtData {
         if (player != null) {
             if ("jutsu_storage".equals(msg.key)) {
                 PlayerDataManager.get(player).setJutsuStorage(JutsuStorage.fromNbt(msg.nbt));
+            } else if ("dojutsu".equals(msg.key)) {
+                Dojutsu dojutsu = Dojutsu.fromNbt(msg.nbt);
+                PlayerDataManager.get(player).setDojutsu(dojutsu);
+                PlayerData.setDojutsuUnlockedList(dojutsu.getUnlockedListRaw());
+                PlayerData.setDojutsuLeftEye(dojutsu.getLeftEye());
+                PlayerData.setDojutsuRightEye(dojutsu.getRightEye());
+                PlayerData.setDojutsuTimer(dojutsu.getTimer());
             }
         }
     }

@@ -30,6 +30,7 @@ public interface IPlatformHelper {
     ReleaseList getReleaseList(Player player);
     ShinobiPoints getShinobiPoints(Player player);
     JutsuStorage getJutsuStorage(Player player);
+    Dojutsu getDojutsu(Player player);
 
     //Capability - Stats
     Genjutsu getGenjutsu(Player player);
@@ -64,6 +65,7 @@ public interface IPlatformHelper {
     void setChakra(ServerPlayer player, Chakra chakra);
     void setMaxChakra(ServerPlayer player, MaxChakra maxChakra);
     void setJutsuStorage(ServerPlayer player, JutsuStorage storage);
+    void setDojutsu(ServerPlayer player, Dojutsu dojutsu);
 
     //Sync
     void syncAffiliation(ServerPlayer player, String value);
@@ -81,6 +83,7 @@ public interface IPlatformHelper {
     void syncYangList(ServerPlayer player, String value);
     void syncYinList(ServerPlayer player, String value);
     void syncJutsuStorage(ServerPlayer player, CompoundTag nbt);
+    void syncDojutsu(ServerPlayer player, CompoundTag nbt);
     void syncGenjutsu(ServerPlayer player, int value);
     void syncKenjutsu(ServerPlayer player, int value);
     void syncKinjutsu(ServerPlayer player, int value);
@@ -95,6 +98,9 @@ public interface IPlatformHelper {
     void syncKibaActive(ServerPlayer player, boolean value);
     void syncLightningChakraModeActive(ServerPlayer player, boolean value);
     void syncNarutoRun(ServerPlayer player, boolean value);
+
+    //Client → Server
+    void sendEquipDojutsu(String slot, String type);
 
     //Fluids
     default Block getStaticWaterBlock() { return Blocks.WATER; }
