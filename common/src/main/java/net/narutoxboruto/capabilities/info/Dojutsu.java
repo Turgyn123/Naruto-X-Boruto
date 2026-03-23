@@ -32,6 +32,12 @@ public class Dojutsu {
             "chinoike", "ketsuryugan"
     );
 
+    // Sharingan evolution chain: key = new level, value = prerequisite level it replaces
+    public static final Map<String, String> SHARINGAN_UPGRADES = Map.of(
+            "2_tomoe_sharingan", "1_tomoe_sharingan",
+            "3_tomoe_sharingan", "2_tomoe_sharingan"
+    );
+
     // Map dojutsu type to icon texture name
     public static final Map<String, String> DOJUTSU_ICON = Map.of(
             "1_tomoe_sharingan", "1_tomoe_icon",
@@ -185,6 +191,20 @@ public class Dojutsu {
         } else if (rightEye.isEmpty()) {
             rightEye = dojutsu;
         }
+    }
+
+    /**
+     * Upgrades an existing dojutsu to the next evolution (e.g. 1_tomoe → 2_tomoe_sharingan).
+     * Replaces oldType with newType in the unlocked list and updates equipped eyes.
+     */
+    public void upgrade(String oldType, String newType) {
+        if (!hasUnlocked(oldType)) return;
+        List<String> list = new ArrayList<>(getUnlockedList());
+        int idx = list.indexOf(oldType);
+        if (idx >= 0) list.set(idx, newType);
+        this.unlockedList = String.join(",", list);
+        if (oldType.equals(leftEye)) leftEye = newType;
+        if (oldType.equals(rightEye)) rightEye = newType;
     }
 
     public void syncValue(ServerPlayer serverPlayer) {

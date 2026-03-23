@@ -23,6 +23,7 @@ public class ForgeDojutsuEyeRenderer {
         Minecraft mc = Minecraft.getInstance();
 
         if (player != mc.player) return;
+        if (mc.screen != null) return; // don't render while any GUI screen is open
 
         String leftEye = PlayerData.getDojutsuLeftEye();
         String rightEye = PlayerData.getDojutsuRightEye();

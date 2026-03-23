@@ -37,8 +37,9 @@ public class DojutsuEyeRenderer {
 
         poseStack.pushPose();
 
-        // Position at head center (approx 1.55 blocks above feet)
-        poseStack.translate(0, 1.55, 0);
+        // Position at eye level for current pose (1.62 standing, 1.27 crouching)
+        float headY = player.getEyeHeight(player.getPose());
+        poseStack.translate(0, headY, 0);
 
         // Rotate to match head facing direction
         float headYaw = Mth.lerp(partialTick, player.yHeadRotO, player.yHeadRot);
@@ -46,10 +47,10 @@ public class DojutsuEyeRenderer {
         poseStack.mulPose(Axis.YN.rotationDegrees(headYaw));
         poseStack.mulPose(Axis.XP.rotationDegrees(headPitch));
 
-        // Quad dimensions — covers the face area
-        float halfW = 0.16F;
-        float halfH = 0.16F;
-        float z = 0.26F; // slightly in front of head surface (+Z = forward)
+        // Quad dimensions — 1.3x size increase from original 0.16
+        float halfW = 0.208F;
+        float halfH = 0.208F;
+        float z = 0.28F; // slightly in front of head surface (+Z = forward)
 
         if (hasLeft && hasRight && leftEyeType.equals(rightEyeType)) {
             renderFaceQuad(poseStack, bufferSource, getEyeTexture(leftEyeType),

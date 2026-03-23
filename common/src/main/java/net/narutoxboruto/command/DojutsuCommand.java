@@ -28,7 +28,13 @@ public class DojutsuCommand {
                         player.getDisplayName(), Component.translatable("dojutsu." + type)));
                 continue;
             }
-            dojutsu.unlock(type);
+            // Check if this is a sharingan upgrade (replaces previous level)
+            String prerequisite = Dojutsu.SHARINGAN_UPGRADES.get(type);
+            if (prerequisite != null && dojutsu.hasUnlocked(prerequisite)) {
+                dojutsu.upgrade(prerequisite, type);
+            } else {
+                dojutsu.unlock(type);
+            }
             Services.PLATFORM.setDojutsu(player, dojutsu);
             dojutsu.syncValue(player);
         }

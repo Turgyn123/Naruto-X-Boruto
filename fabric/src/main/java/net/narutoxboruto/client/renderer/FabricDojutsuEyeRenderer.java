@@ -24,8 +24,9 @@ public class FabricDojutsuEyeRenderer {
         LocalPlayer player = mc.player;
         if (player == null) return;
 
-        // Only render in third-person
+        // Only render in third-person and when no GUI screen is open
         if (mc.options.getCameraType().isFirstPerson()) return;
+        if (mc.screen != null) return;
 
         String leftEye = PlayerData.getDojutsuLeftEye();
         String rightEye = PlayerData.getDojutsuRightEye();
