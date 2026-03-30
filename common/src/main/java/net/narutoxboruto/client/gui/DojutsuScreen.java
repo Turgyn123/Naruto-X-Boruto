@@ -21,7 +21,7 @@ public class DojutsuScreen extends Screen {
     private static final ResourceLocation BACKGROUND = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID,
             "textures/gui/shinobi_stats.png");
 
-    private static final int PANEL_WIDTH = 256;
+    private static final int PANEL_WIDTH = 260;
     private static final int PANEL_HEIGHT = 192;
 
     // Eye selection column centers (1/4 and 3/4 of panel)
@@ -125,13 +125,13 @@ public class DojutsuScreen extends Screen {
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        super.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
+        super.render(guiGraphics, mouseX, mouseY, partialTick);
 
         int left = (this.width - PANEL_WIDTH) / 2;
         int top = (this.height - PANEL_HEIGHT) / 2;
 
         // Draw background panel
-        guiGraphics.blit(BACKGROUND, left, top, 0, 0, 256, 192);
+        guiGraphics.blit(BACKGROUND, left, top, -10, 5, 256, 256, 256, 256);
 
         Dojutsu dojutsu = getDojutsu();
         List<String> unlockedList = dojutsu.getUnlockedList();
@@ -282,7 +282,7 @@ public class DojutsuScreen extends Screen {
         guiGraphics.drawString(this.font, "\u25C0", left + RIGHT_COL - 38, arrowY, rightPrevColor, false);
         guiGraphics.drawString(this.font, "\u25B6", left + RIGHT_COL + 30, arrowY, rightNextColor, false);
 
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
+
     }
 
     @Override
