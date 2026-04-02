@@ -171,6 +171,27 @@ public class FabricPacketHandler {
                         data.setDojutsu(dojutsu);
                         dojutsu.syncValue(serverPlayer);
                     }
+                } else if (action.startsWith("set_scale_eye:")) {
+                    float scale = Float.parseFloat(action.substring("set_scale_eye:".length()));
+                    var dojutsu = data.getDojutsu();
+                    dojutsu.setEyeScale(scale);
+                    data.setDojutsu(dojutsu);
+                    dojutsu.syncValue(serverPlayer);
+                } else if (action.startsWith("set_hide_eye:")) {
+                    var dojutsu = data.getDojutsu();
+                    dojutsu.setEyesVisible(false);
+                    data.setDojutsu(dojutsu);
+                    dojutsu.syncValue(serverPlayer);
+                } else if (action.startsWith("set_show_eye:")) {
+                    var dojutsu = data.getDojutsu();
+                    dojutsu.setEyesVisible(true);
+                    data.setDojutsu(dojutsu);
+                    dojutsu.syncValue(serverPlayer);
+                } else if (action.startsWith("set_reset_eye:")) {
+                    var dojutsu = data.getDojutsu();
+                    dojutsu.resetEyeVisuals();
+                    data.setDojutsu(dojutsu);
+                    dojutsu.syncValue(serverPlayer);
                 }
             }
         }

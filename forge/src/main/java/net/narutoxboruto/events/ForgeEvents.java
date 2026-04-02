@@ -40,15 +40,6 @@ public class ForgeEvents {
 
             giveClanStatBonuses(serverPlayer);
 
-            // Grant initial dojutsu for eligible clans
-            String clanDojutsu = Dojutsu.getDojutsuForClan(randomClan);
-            if (clanDojutsu != null) {
-                Dojutsu dojutsu = data.getDojutsu();
-                dojutsu.unlock(clanDojutsu);
-                data.setDojutsu(dojutsu);
-                dojutsu.syncValue(serverPlayer);
-            }
-
             serverPlayer.addItem(new ItemStack(ModItems.CHAKRA_PAPER_ITEM));
         }
     }

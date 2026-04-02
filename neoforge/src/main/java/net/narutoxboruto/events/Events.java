@@ -39,15 +39,6 @@ public class Events {
 
             giveClanStatBonuses(serverPlayer);
 
-            // Grant initial dojutsu for eligible clans (e.g., Uchiha starts with 1 tomoe)
-            String clanDojutsu = Dojutsu.getDojutsuForClan(randomClan);
-            if (clanDojutsu != null) {
-                Dojutsu dojutsu = serverPlayer.getData(DOJUTSU);
-                dojutsu.unlock(clanDojutsu);
-                serverPlayer.setData(DOJUTSU, dojutsu);
-                dojutsu.syncValue(serverPlayer);
-            }
-
             serverPlayer.addItem(new ItemStack(ModItems.CHAKRA_PAPER_ITEM));
         }
     }

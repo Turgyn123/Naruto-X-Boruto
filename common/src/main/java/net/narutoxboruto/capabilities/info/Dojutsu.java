@@ -17,6 +17,8 @@ public class Dojutsu {
     private int leftEyeOffsetY;
     private int rightEyeOffsetX;
     private int rightEyeOffsetY;
+    private float eyeScale = 1.0F;
+    private boolean eyesVisible = true;
 
     public static final int REQUIRED_TICKS = 36000; // 30 minutes at 20 TPS
     public static final int MAX_DOJUTSU = 2;
@@ -47,13 +49,22 @@ public class Dojutsu {
             "ketsuryugan", "ketsuryugan_icon"
     );
 
-    // Map dojutsu type to eye texture name
-    public static final Map<String, String> DOJUTSU_EYES = Map.of(
-            "1_tomoe_sharingan", "1_tomoe_eyes",
-            "2_tomoe_sharingan", "2_tomoe_eyes",
-            "3_tomoe_sharingan", "3_tomoe_eyes",
-            "byakugan", "byakugan_eyes",
-            "ketsuryugan", "ketsuryugan_eyes"
+    // Map dojutsu type to left eye texture name
+    public static final Map<String, String> DOJUTSU_LEFT_EYE = Map.of(
+            "1_tomoe_sharingan", "left_eye_1_tomoe",
+            "2_tomoe_sharingan", "left_eye_2_tomoe",
+            "3_tomoe_sharingan", "left_eye_3_tomoe",
+            "byakugan", "left_eye_byakugan",
+            "ketsuryugan", "left_eye_ketsuryugan"
+    );
+
+    // Map dojutsu type to right eye texture name
+    public static final Map<String, String> DOJUTSU_RIGHT_EYE = Map.of(
+            "1_tomoe_sharingan", "right_eye_1_tomoe",
+            "2_tomoe_sharingan", "right_eye_2_tomoe",
+            "3_tomoe_sharingan", "right_eye_3_tomoe",
+            "byakugan", "right_eye_byakugan",
+            "ketsuryugan", "right_eye_ketsuryugan"
     );
 
     public static final Codec<Dojutsu> CODEC = CompoundTag.CODEC.xmap(
@@ -75,7 +86,10 @@ public class Dojutsu {
         this.timer = timer;
     }
 
-    public static final int MAX_EYE_OFFSET = 5;
+    public static final int MAX_EYE_OFFSET = 20;
+    public static final float MIN_EYE_SCALE = 0.5F;
+    public static final float MAX_EYE_SCALE = 3.0F;
+    public static final float EYE_SCALE_STEP = 0.25F;
 
     // NBT serialization
     public CompoundTag toNbt() {
@@ -88,6 +102,8 @@ public class Dojutsu {
         tag.putInt("left_eye_offset_y", leftEyeOffsetY);
         tag.putInt("right_eye_offset_x", rightEyeOffsetX);
         tag.putInt("right_eye_offset_y", rightEyeOffsetY);
+        tag.putFloat("eye_scale", eyeScale);
+        tag.putBoolean("eyes_visible", eyesVisible);
         return tag;
     }
 
@@ -102,6 +118,8 @@ public class Dojutsu {
             d.leftEyeOffsetY = tag.getInt("left_eye_offset_y");
             d.rightEyeOffsetX = tag.getInt("right_eye_offset_x");
             d.rightEyeOffsetY = tag.getInt("right_eye_offset_y");
+            d.eyeScale = tag.contains("eye_scale") ? tag.getFloat("eye_scale") : 1.0F;
+            d.eyesVisible = !tag.contains("eyes_visible") || tag.getBoolean("eyes_visible");
         }
         return d;
     }
@@ -115,6 +133,8 @@ public class Dojutsu {
     public int getLeftEyeOffsetY() { return leftEyeOffsetY; }
     public int getRightEyeOffsetX() { return rightEyeOffsetX; }
     public int getRightEyeOffsetY() { return rightEyeOffsetY; }
+    public float getEyeScale() { return eyeScale; }
+    public boolean areEyesVisible() { return eyesVisible; }
 
     public List<String> getUnlockedList() {
         if (unlockedList == null || unlockedList.isEmpty()) return Collections.emptyList();
@@ -161,6 +181,22 @@ public class Dojutsu {
     public void setRightEyeOffset(int x, int y) {
         this.rightEyeOffsetX = Math.max(-MAX_EYE_OFFSET, Math.min(MAX_EYE_OFFSET, x));
         this.rightEyeOffsetY = Math.max(-MAX_EYE_OFFSET, Math.min(MAX_EYE_OFFSET, y));
+    }
+
+    public void setEyeScale(float scale) {
+        this.eyeScale = Math.max(MIN_EYE_SCALE, Math.min(MAX_EYE_SCALE, scale));
+    }
+
+    public void setEyesVisible(boolean visible) {
+        this.eyesVisible = visible;
+    }
+
+    public void resetEyeVisuals() {
+        this.leftEyeOffsetX = 0;
+        this.leftEyeOffsetY = 0;
+        this.rightEyeOffsetX = 0;
+        this.rightEyeOffsetY = 0;
+        this.eyeScale = 1.0F;
     }
 
     public void incrementTimer() {

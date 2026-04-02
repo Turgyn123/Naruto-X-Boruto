@@ -21,6 +21,7 @@ public class DojutsuCommand {
             return 0;
         }
 
+        int successCount = 0;
         for (ServerPlayer player : targets) {
             Dojutsu dojutsu = Services.PLATFORM.getDojutsu(player);
             if (dojutsu.hasUnlocked(type)) {
@@ -35,17 +36,24 @@ public class DojutsuCommand {
             } else {
                 dojutsu.unlock(type);
             }
+            dojutsu.resetTimer();
             Services.PLATFORM.setDojutsu(player, dojutsu);
             dojutsu.syncValue(player);
+            successCount++;
         }
 
-        if (targets.size() == 1) {
+        if (successCount == 0) {
+            return 0;
+        }
+
+        if (targets.size() == 1 && successCount == 1) {
             source.sendSuccess(() -> Component.translatable("command.dojutsu.give.single",
                     targets.iterator().next().getDisplayName(),
                     Component.translatable("dojutsu." + type)), true);
-        } else {
+        } else if (successCount > 0) {
+            final int count = successCount;
             source.sendSuccess(() -> Component.translatable("command.dojutsu.give.multiple",
-                    targets.size(), Component.translatable("dojutsu." + type)), true);
+                    count, Component.translatable("dojutsu." + type)), true);
         }
         return 1;
     }

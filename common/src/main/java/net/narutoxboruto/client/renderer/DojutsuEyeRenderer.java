@@ -15,7 +15,6 @@ import org.joml.Matrix4f;
 
 /**
  * Shared renderer for dojutsu eye overlays on the player model.
- * Works in entity-local world-aligned coordinates (Y=0 at feet, Y up).
  */
 public class DojutsuEyeRenderer {
 
@@ -24,14 +23,19 @@ public class DojutsuEyeRenderer {
     /**
      * Renders dojutsu eye textures on the player's face in third-person.
      * PoseStack should be at entity position (entity-local, world-aligned).
+     * Coordinates match the DojutsuScreen GUI positioning system exactly.
      */
     public static void renderEyes(PoseStack poseStack, MultiBufferSource bufferSource,
                                    Player player, float partialTick,
-                                   String leftEyeType, String rightEyeType) {
+                                   String leftEyeType, String rightEyeType,
+                                   Dojutsu dojutsu) {
+        // If eyes are hidden, don't render
+        if (dojutsu != null && !dojutsu.areEyesVisible()) return;
+
         boolean hasLeft = leftEyeType != null && !leftEyeType.isEmpty()
-                && Dojutsu.DOJUTSU_EYES.containsKey(leftEyeType);
+                && Dojutsu.DOJUTSU_LEFT_EYE.containsKey(leftEyeType);
         boolean hasRight = rightEyeType != null && !rightEyeType.isEmpty()
-                && Dojutsu.DOJUTSU_EYES.containsKey(rightEyeType);
+                && Dojutsu.DOJUTSU_RIGHT_EYE.containsKey(rightEyeType);
 
         if (!hasLeft && !hasRight) return;
 
@@ -41,42 +45,73 @@ public class DojutsuEyeRenderer {
         float headY = player.getEyeHeight(player.getPose());
         poseStack.translate(0, headY, 0);
 
-        // Rotate to match head facing direction
+        // Rotate to match head facing direction (YP for correct yaw direction)
         float headYaw = Mth.lerp(partialTick, player.yHeadRotO, player.yHeadRot);
         float headPitch = Mth.lerp(partialTick, player.xRotO, player.getXRot());
-        poseStack.mulPose(Axis.YN.rotationDegrees(headYaw));
+        poseStack.mulPose(Axis.YP.rotationDegrees(headYaw));
         poseStack.mulPose(Axis.XP.rotationDegrees(headPitch));
 
-        // Quad dimensions — 1.3x size increase from original 0.16
-        float halfW = 0.208F;
-        float halfH = 0.208F;
-        float z = 0.28F; // slightly in front of head surface (+Z = forward)
+        // --- Map GUI coordinates to world coordinates ---
+        // GUI entity scale 110 with player height ~1.8 → ~61 GUI pixels per block
+        float guiToWorld = 1.0F / 61.0F;
+        float scale = dojutsu != null ? dojutsu.getEyeScale() : 1.0F;
 
-        if (hasLeft && hasRight && leftEyeType.equals(rightEyeType)) {
-            renderFaceQuad(poseStack, bufferSource, getEyeTexture(leftEyeType),
-                    z, -halfW, -halfH, halfW, halfH,
+        // Eye quad size in world blocks (GUI: 14 * scale wide, 5 * scale tall)
+        float eyeW = 14.0F * scale * guiToWorld;
+        float eyeH = 5.0F * scale * guiToWorld;
+
+        // Z = slightly in front of head face surface
+        float z = 0.26F;
+
+        // Base positions from GUI: left eye at faceX - 16, right eye at faceX + 2
+        // After YP rotation: +X = entity's left. Looking at entity's face:
+        //   viewer's left = entity's right = -X
+        //   viewer's right = entity's left = +X
+        // GUI "left eye" at faceX - 16 (16px viewer's left = -X direction)
+        float leftBaseX = -16.0F * guiToWorld;
+        float rightBaseX = 2.0F * guiToWorld;
+        // Center eyes vertically at eye level (quad goes from -eyeH/2 to +eyeH/2)
+        float baseY = -eyeH / 2.0F;
+
+        if (hasLeft) {
+            float ox = dojutsu != null ? dojutsu.getLeftEyeOffsetX() * guiToWorld : 0;
+            float oy = dojutsu != null ? -dojutsu.getLeftEyeOffsetY() * guiToWorld : 0;
+            float ex = leftBaseX + ox;
+            float ey = baseY + oy;
+            renderFaceQuad(poseStack, bufferSource, getLeftEyeTexture(leftEyeType),
+                    z, ex, ey, ex + eyeW, ey + eyeH,
                     0.0F, 0.0F, 1.0F, 1.0F);
-        } else {
-            if (hasLeft) {
-                // Viewer's left half = +X side, texture U 0.0-0.5
-                renderFaceQuad(poseStack, bufferSource, getEyeTexture(leftEyeType),
-                        z, 0.0F, -halfH, halfW, halfH,
-                        0.0F, 0.0F, 0.5F, 1.0F);
-            }
-            if (hasRight) {
-                // Viewer's right half = -X side, texture U 0.5-1.0
-                renderFaceQuad(poseStack, bufferSource, getEyeTexture(rightEyeType),
-                        z, -halfW, -halfH, 0.0F, halfH,
-                        0.5F, 0.0F, 1.0F, 1.0F);
-            }
+        }
+        if (hasRight) {
+            float ox = dojutsu != null ? dojutsu.getRightEyeOffsetX() * guiToWorld : 0;
+            float oy = dojutsu != null ? -dojutsu.getRightEyeOffsetY() * guiToWorld : 0;
+            float ex = rightBaseX + ox;
+            float ey = baseY + oy;
+            renderFaceQuad(poseStack, bufferSource, getRightEyeTexture(rightEyeType),
+                    z, ex, ey, ex + eyeW, ey + eyeH,
+                    0.0F, 0.0F, 1.0F, 1.0F);
         }
 
         poseStack.popPose();
     }
 
-    private static ResourceLocation getEyeTexture(String dojutsuType) {
+    /**
+     * Overload for backward compatibility — renders without offset/scale.
+     */
+    public static void renderEyes(PoseStack poseStack, MultiBufferSource bufferSource,
+                                   Player player, float partialTick,
+                                   String leftEyeType, String rightEyeType) {
+        renderEyes(poseStack, bufferSource, player, partialTick, leftEyeType, rightEyeType, null);
+    }
+
+    private static ResourceLocation getLeftEyeTexture(String dojutsuType) {
         return ResourceLocation.fromNamespaceAndPath(Main.MOD_ID,
-                "textures/dojutsu/eyes/" + Dojutsu.DOJUTSU_EYES.get(dojutsuType) + ".png");
+                "textures/dojutsu/eyes/" + Dojutsu.DOJUTSU_LEFT_EYE.get(dojutsuType) + ".png");
+    }
+
+    private static ResourceLocation getRightEyeTexture(String dojutsuType) {
+        return ResourceLocation.fromNamespaceAndPath(Main.MOD_ID,
+                "textures/dojutsu/eyes/" + Dojutsu.DOJUTSU_RIGHT_EYE.get(dojutsuType) + ".png");
     }
 
     /**

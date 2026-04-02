@@ -43,6 +43,14 @@ public class EquipDojutsuPacket implements CustomPacketPayload {
                             dojutsu.setRightEyeOffset(ox, oy);
                         }
                     }
+                } else if ("scale".equals(slot)) {
+                    dojutsu.setEyeScale(Float.parseFloat(dojutsuType));
+                } else if ("hide".equals(slot)) {
+                    dojutsu.setEyesVisible(false);
+                } else if ("show".equals(slot)) {
+                    dojutsu.setEyesVisible(true);
+                } else if ("reset".equals(slot)) {
+                    dojutsu.resetEyeVisuals();
                 } else if ("left".equals(slot)) {
                     dojutsu.setLeftEye(dojutsuType);
                 } else if ("right".equals(slot)) {

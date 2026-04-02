@@ -155,8 +155,8 @@ public abstract class MixinPlayer extends LivingEntity implements ModeHandler {
                         serverPlayer.displayClientMessage(
                                 net.minecraft.network.chat.Component.translatable("dojutsu.acquired",
                                         net.minecraft.network.chat.Component.translatable("dojutsu." + clanDojutsu)), false);
-                    } else if (dojutsu.getTimer() % 1200 == 0) {
-                        // Sync every 60 seconds to keep client timer updated
+                    } else if (dojutsu.getTimer() % 20 == 0) {
+                        // Sync every second to keep client timer updated
                         dojutsu.syncValue(serverPlayer);
                     }
                 }

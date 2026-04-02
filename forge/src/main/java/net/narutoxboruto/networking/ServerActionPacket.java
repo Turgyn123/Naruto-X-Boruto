@@ -108,6 +108,27 @@ public class ServerActionPacket {
                         data.setDojutsu(dojutsu);
                         dojutsu.syncValue(serverPlayer);
                     }
+                } else if (msg.action.startsWith("set_scale_eye:")) {
+                    float scale = Float.parseFloat(msg.action.substring("set_scale_eye:".length()));
+                    Dojutsu dojutsu = data.getDojutsu();
+                    dojutsu.setEyeScale(scale);
+                    data.setDojutsu(dojutsu);
+                    dojutsu.syncValue(serverPlayer);
+                } else if (msg.action.startsWith("set_hide_eye:")) {
+                    Dojutsu dojutsu = data.getDojutsu();
+                    dojutsu.setEyesVisible(false);
+                    data.setDojutsu(dojutsu);
+                    dojutsu.syncValue(serverPlayer);
+                } else if (msg.action.startsWith("set_show_eye:")) {
+                    Dojutsu dojutsu = data.getDojutsu();
+                    dojutsu.setEyesVisible(true);
+                    data.setDojutsu(dojutsu);
+                    dojutsu.syncValue(serverPlayer);
+                } else if (msg.action.startsWith("set_reset_eye:")) {
+                    Dojutsu dojutsu = data.getDojutsu();
+                    dojutsu.resetEyeVisuals();
+                    data.setDojutsu(dojutsu);
+                    dojutsu.syncValue(serverPlayer);
                 }
             }
         }

@@ -6,9 +6,10 @@ import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.world.phys.Vec3;
+import net.narutoxboruto.capabilities.info.Dojutsu;
 import net.narutoxboruto.client.PlayerData;
+import net.narutoxboruto.main.platform.Services;
 
 /**
  * Fabric world render callback that renders dojutsu eye textures on the player's face.
@@ -24,7 +25,6 @@ public class FabricDojutsuEyeRenderer {
         LocalPlayer player = mc.player;
         if (player == null) return;
 
-        // Only render in third-person and when no GUI screen is open
         if (mc.options.getCameraType().isFirstPerson()) return;
         if (mc.screen != null) return;
 
@@ -47,7 +47,8 @@ public class FabricDojutsuEyeRenderer {
         );
 
         MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
-        DojutsuEyeRenderer.renderEyes(poseStack, bufferSource, player, partialTick, leftEye, rightEye);
+        Dojutsu dojutsu = Services.PLATFORM.getDojutsu(player);
+        DojutsuEyeRenderer.renderEyes(poseStack, bufferSource, player, partialTick, leftEye, rightEye, dojutsu);
         bufferSource.endLastBatch();
 
         poseStack.popPose();

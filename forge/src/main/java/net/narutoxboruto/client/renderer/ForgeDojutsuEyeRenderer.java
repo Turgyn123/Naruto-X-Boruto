@@ -4,8 +4,10 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.world.entity.player.Player;
+import net.narutoxboruto.capabilities.info.Dojutsu;
 import net.narutoxboruto.client.PlayerData;
 import net.narutoxboruto.main.Main;
+import net.narutoxboruto.main.platform.Services;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RenderPlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -23,7 +25,8 @@ public class ForgeDojutsuEyeRenderer {
         Minecraft mc = Minecraft.getInstance();
 
         if (player != mc.player) return;
-        if (mc.screen != null) return; // don't render while any GUI screen is open
+        if (mc.screen != null) return;
+        if (mc.options.getCameraType().isFirstPerson()) return;
 
         String leftEye = PlayerData.getDojutsuLeftEye();
         String rightEye = PlayerData.getDojutsuRightEye();
@@ -31,8 +34,9 @@ public class ForgeDojutsuEyeRenderer {
 
         PoseStack poseStack = event.getPoseStack();
         MultiBufferSource bufferSource = event.getMultiBufferSource();
+        Dojutsu dojutsu = Services.PLATFORM.getDojutsu(player);
 
         DojutsuEyeRenderer.renderEyes(poseStack, bufferSource, player,
-                event.getPartialTick(), leftEye, rightEye);
+                event.getPartialTick(), leftEye, rightEye, dojutsu);
     }
 }
