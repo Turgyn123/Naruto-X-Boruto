@@ -20,8 +20,24 @@ public class Dojutsu {
     private float eyeScale = 1.0F;
     private boolean eyesVisible = true;
 
+    // ── Sharingan progression (Uchiha clan only) ─────────────────────────
+    /** Total ticks the player has spent in the Uchiha clan. Includes time before 1-tomoe. */
+    private int sharinganClanPlaytime = 0;
+    /** True once the player has been at NEAR_DEATH_HP_THRESHOLD or lower for NEAR_DEATH_DURATION_TICKS while having 1-tomoe unlocked. */
+    private boolean nearDeathWith1Tomoe = false;
+    /** True once the player has been at NEAR_DEATH_HP_THRESHOLD or lower for NEAR_DEATH_DURATION_TICKS while having 2-tomoe unlocked. */
+    private boolean nearDeathWith2Tomoe = false;
+    /** Transient (server-only) running count of consecutive low-HP ticks. Not persisted. */
+    private transient int lowHpTicks = 0;
+
     public static final int REQUIRED_TICKS = 36000; // 30 minutes at 20 TPS
     public static final int MAX_DOJUTSU = 2;
+
+    // Sharingan upgrade thresholds (Uchiha-only). 20 ticks per second.
+    public static final int SHARINGAN_2_TOMOE_PLAYTIME_TICKS = 3 * 60 * 60 * 20; // 3 hours
+    public static final int SHARINGAN_3_TOMOE_PLAYTIME_TICKS = 8 * 60 * 60 * 20; // 8 hours
+    public static final float NEAR_DEATH_HP_THRESHOLD = 4.0F; // 2 hearts
+    public static final int NEAR_DEATH_DURATION_TICKS = 100; // 5 seconds
 
     public static final List<String> DOJUTSU_TYPES = Arrays.asList(
             "1_tomoe_sharingan", "2_tomoe_sharingan", "3_tomoe_sharingan",
@@ -104,6 +120,9 @@ public class Dojutsu {
         tag.putInt("right_eye_offset_y", rightEyeOffsetY);
         tag.putFloat("eye_scale", eyeScale);
         tag.putBoolean("eyes_visible", eyesVisible);
+        tag.putInt("sharingan_playtime", sharinganClanPlaytime);
+        tag.putBoolean("near_death_1_tomoe", nearDeathWith1Tomoe);
+        tag.putBoolean("near_death_2_tomoe", nearDeathWith2Tomoe);
         return tag;
     }
 
@@ -120,6 +139,9 @@ public class Dojutsu {
             d.rightEyeOffsetY = tag.getInt("right_eye_offset_y");
             d.eyeScale = tag.contains("eye_scale") ? tag.getFloat("eye_scale") : 1.0F;
             d.eyesVisible = !tag.contains("eyes_visible") || tag.getBoolean("eyes_visible");
+            d.sharinganClanPlaytime = tag.getInt("sharingan_playtime");
+            d.nearDeathWith1Tomoe = tag.getBoolean("near_death_1_tomoe");
+            d.nearDeathWith2Tomoe = tag.getBoolean("near_death_2_tomoe");
         }
         return d;
     }
@@ -260,4 +282,19 @@ public class Dojutsu {
     public static boolean isClanEligible(String clan) {
         return CLAN_DOJUTSU.containsKey(clan);
     }
+
+    // ── Sharingan progression accessors ──────────────────────────────────
+    public int getSharinganPlaytime() { return sharinganClanPlaytime; }
+    public void setSharinganPlaytime(int ticks) { this.sharinganClanPlaytime = Math.max(0, ticks); }
+    public void incrementSharinganPlaytime() { this.sharinganClanPlaytime++; }
+
+    public boolean hasNearDeathWith1Tomoe() { return nearDeathWith1Tomoe; }
+    public void markNearDeathWith1Tomoe() { this.nearDeathWith1Tomoe = true; }
+
+    public boolean hasNearDeathWith2Tomoe() { return nearDeathWith2Tomoe; }
+    public void markNearDeathWith2Tomoe() { this.nearDeathWith2Tomoe = true; }
+
+    public int getLowHpTicks() { return lowHpTicks; }
+    public void incrementLowHpTicks() { this.lowHpTicks++; }
+    public void resetLowHpTicks() { this.lowHpTicks = 0; }
 }

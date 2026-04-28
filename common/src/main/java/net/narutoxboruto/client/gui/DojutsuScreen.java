@@ -67,7 +67,7 @@ public class DojutsuScreen extends Screen {
     }
 
     // --- Custom clickable control bounds ---
-    private static final int CONTROLS_Y_OFFSET = 114;
+    private static final int CONTROLS_Y_OFFSET = 130;
     private static final int CTRL_H = 12;
 
     private record ClickArea(int x, int y, int w, int h) {
@@ -158,7 +158,7 @@ public class DojutsuScreen extends Screen {
     private String getArrowAt(double mouseX, double mouseY) {
         int left = (this.width - PANEL_WIDTH) / 2;
         int top = (this.height - PANEL_HEIGHT) / 2;
-        int arrowY = top + 170;
+        int arrowY = top + 186;
         int arrowH = 9;
         int arrowW = 8;
 
@@ -278,7 +278,7 @@ public class DojutsuScreen extends Screen {
         int left = (this.width - PANEL_WIDTH) / 2;
         int top = (this.height - PANEL_HEIGHT) / 2;
         int faceX = left + 128;
-        int faceY = top + 78;
+        int faceY = top + 94;
         Dojutsu dojutsu = getDojutsu();
         float scale = dojutsu.getEyeScale();
         int eyeW = Math.round(14 * scale);
@@ -321,7 +321,7 @@ public class DojutsuScreen extends Screen {
         // Title
         drawCenteredNoShadow(guiGraphics,
                 Component.translatable("gui.narutoxboruto.dojutsu_menu"),
-                left + 128, top + 8, 0x404040);
+                left + 128, top + 14, 0x404040);
 
         // --- Timer / status ---
         String clan = getClan();
@@ -336,11 +336,11 @@ public class DojutsuScreen extends Screen {
                 drawCenteredNoShadow(guiGraphics,
                         Component.translatable("dojutsu.already_obtained",
                                 Component.translatable("dojutsu." + clanDojutsu)),
-                        left + 128, top + 18, 0x226622);
+                        left + 128, top + 26, 0x226622);
             } else if (unlockedList.size() >= Dojutsu.MAX_DOJUTSU) {
                 drawCenteredNoShadow(guiGraphics,
                         Component.translatable("dojutsu.max_reached"),
-                        left + 128, top + 18, 0x662222);
+                        left + 128, top + 26, 0x662222);
             } else {
                 int remaining = Math.max(0, Dojutsu.REQUIRED_TICKS - timer);
                 int totalSeconds = remaining / 20;
@@ -349,16 +349,16 @@ public class DojutsuScreen extends Screen {
                 drawCenteredNoShadow(guiGraphics,
                         Component.translatable("dojutsu.timer_line1",
                                 Component.translatable("dojutsu." + clanDojutsu)),
-                        left + 128, top + 18, 0x664400);
+                        left + 128, top + 26, 0x664400);
                 drawCenteredNoShadow(guiGraphics,
                         Component.translatable("dojutsu.timer_line2",
                                 String.format("%dm %02ds", minutes, seconds)),
-                        left + 128, top + 28, 0x664400);
+                        left + 128, top + 36, 0x664400);
             }
         } else {
             drawCenteredNoShadow(guiGraphics,
                     Component.translatable("dojutsu.not_eligible"),
-                    left + 128, top + 18, 0x555555);
+                    left + 128, top + 26, 0x555555);
         }
 
         // --- Unlocked dojutsu with count ---
@@ -371,7 +371,7 @@ public class DojutsuScreen extends Screen {
         int unlockedStartX = left + 128 - totalWidth / 2;
 
         guiGraphics.drawString(this.font, unlockedLabel,
-                unlockedStartX, top + 38, 0x404040, false);
+                unlockedStartX, top + 52, 0x404040, false);
 
         int iconStartX = unlockedStartX + labelWidth;
         if (!unlockedList.isEmpty()) {
@@ -380,20 +380,20 @@ public class DojutsuScreen extends Screen {
                 if (Dojutsu.DOJUTSU_ICON.containsKey(dj)) {
                     ResourceLocation icon = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID,
                             "textures/dojutsu/icons/" + Dojutsu.DOJUTSU_ICON.get(dj) + ".png");
-                    guiGraphics.blit(icon, iconStartX + i * 14, top + 36,
+                    guiGraphics.blit(icon, iconStartX + i * 14, top + 50,
                             11, 11, 0.0F, 0.0F, 32, 32, 32, 32);
                 }
             }
         } else {
             guiGraphics.drawString(this.font, Component.translatable("shinobiStat.dojutsu_none"),
-                    iconStartX, top + 38, 0x888888, false);
+                    iconStartX, top + 52, 0x888888, false);
         }
 
         // --- Character model display (face close-up, static pose) ---
         int entityLeft = left + 88;
-        int entityTop = top + 48;
+        int entityTop = top + 64;
         int entityRight = left + 168;
-        int entityBottom = top + 112;
+        int entityBottom = top + 128;
         int lookX = (entityLeft + entityRight) / 2;
         int lookY = entityTop + 10;
         InventoryScreen.renderEntityInInventoryFollowsMouse(
@@ -455,17 +455,17 @@ public class DojutsuScreen extends Screen {
 
         // --- Equipped Dojutsu section header ---
         drawCenteredNoShadow(guiGraphics,
-                Component.literal("-- Equipped Dojutsu --"), left + 128, top + 140, 0x404040);
+                Component.literal("-- Equipped Dojutsu --"), left + 128, top + 156, 0x404040);
 
         // --- Eye selection labels ---
         drawCenteredNoShadow(guiGraphics,
-                Component.translatable("dojutsu.left_eye"), left + LEFT_COL, top + 152, 0x404040);
+                Component.translatable("dojutsu.left_eye"), left + LEFT_COL, top + 168, 0x404040);
         drawCenteredNoShadow(guiGraphics,
-                Component.translatable("dojutsu.right_eye"), left + RIGHT_COL, top + 152, 0x404040);
+                Component.translatable("dojutsu.right_eye"), left + RIGHT_COL, top + 168, 0x404040);
 
         // --- Eye type names with ◀ ▶ arrows (hover-highlighted) ---
         hoveredArrow = getArrowAt(mouseX, mouseY);
-        int arrowY = top + 170;
+        int arrowY = top + 186;
 
         // Left eye selector: ◀ name ▶
         String leftEye = dojutsu.getLeftEye();
@@ -476,7 +476,7 @@ public class DojutsuScreen extends Screen {
         if (leftEye != null && !leftEye.isEmpty() && Dojutsu.DOJUTSU_LEFT_EYE.containsKey(leftEye)) {
             ResourceLocation leftIcon = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID,
                     "textures/dojutsu/eyes/" + Dojutsu.DOJUTSU_LEFT_EYE.get(leftEye) + ".png");
-            guiGraphics.blit(leftIcon, left + LEFT_COL - 10, top + 183, 19, 6, 0.0F, 0.0F, 152, 47, 152, 47);
+            guiGraphics.blit(leftIcon, left + LEFT_COL - 10, top + 199, 19, 6, 0.0F, 0.0F, 152, 47, 152, 47);
         }
         int leftPrevColor = "left_prev".equals(hoveredArrow) ? 0xFFFFFF : 0x606060;
         int leftNextColor = "left_next".equals(hoveredArrow) ? 0xFFFFFF : 0x606060;
@@ -492,7 +492,7 @@ public class DojutsuScreen extends Screen {
         if (rightEye != null && !rightEye.isEmpty() && Dojutsu.DOJUTSU_RIGHT_EYE.containsKey(rightEye)) {
             ResourceLocation rightIcon = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID,
                     "textures/dojutsu/eyes/" + Dojutsu.DOJUTSU_RIGHT_EYE.get(rightEye) + ".png");
-            guiGraphics.blit(rightIcon, left + RIGHT_COL - 10, top + 183, 19, 6, 0.0F, 0.0F, 152, 47, 152, 47);
+            guiGraphics.blit(rightIcon, left + RIGHT_COL - 10, top + 199, 19, 6, 0.0F, 0.0F, 152, 47, 152, 47);
         }
         int rightPrevColor = "right_prev".equals(hoveredArrow) ? 0xFFFFFF : 0x606060;
         int rightNextColor = "right_next".equals(hoveredArrow) ? 0xFFFFFF : 0x606060;

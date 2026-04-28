@@ -13,6 +13,7 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.narutoxboruto.capabilities.info.Dojutsu;
 import net.narutoxboruto.client.PlayerData;
+import net.narutoxboruto.client.gui.DojutsuScreen;
 import net.narutoxboruto.main.Main;
 import net.narutoxboruto.main.platform.Services;
 import org.joml.Matrix4f;
@@ -47,7 +48,9 @@ public class DojutsuEyeLayer extends RenderLayer<AbstractClientPlayer, PlayerMod
 
         Minecraft mc = Minecraft.getInstance();
         if (player != mc.player) return;
-        if (mc.screen != null) return;
+        // Only hide eyes when the Dojutsu menu itself is open (it has its own eye preview / drag UI).
+        // Other screens (chat, inventory, pause, etc.) should keep the eyes visible on the player model.
+        if (mc.screen instanceof DojutsuScreen) return;
         if (mc.options.getCameraType().isFirstPerson()) return;
 
         Dojutsu dojutsu = Services.PLATFORM.getDojutsu(player);

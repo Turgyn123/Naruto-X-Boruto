@@ -1,6 +1,5 @@
 package net.narutoxboruto.mixin;
 
-import com.google.common.collect.ImmutableList;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.ModelPart;
@@ -34,13 +33,5 @@ public abstract class MixinPlayerModel <T extends LivingEntity> extends Humanoid
 
     public void prepareMobModel(T pEntity, float pLimbSwing, float pLimbSwingAmount, float pPartialTick) {
         super.prepareMobModel(pEntity, pLimbSwing, pLimbSwingAmount, pPartialTick);
-    }
-
-    protected Iterable<ModelPart> headParts() {
-        return ImmutableList.of(head, hat);
-    }
-
-    protected Iterable<ModelPart> bodyParts() {
-        return ImmutableList.of(body, rightArm, leftArm, rightLeg, leftLeg);
     }
 }

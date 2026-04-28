@@ -5,10 +5,12 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.narutoxboruto.client.gui.ShinobiStatsGui;
+import net.narutoxboruto.capabilities.info.Dojutsu;
 import net.narutoxboruto.items.swords.AbstractAbilitySword;
 import net.narutoxboruto.items.throwables.FumaShurikenItem;
 import net.narutoxboruto.items.throwables.ThrowableWeaponItem;
 import net.narutoxboruto.main.Main;
+import net.narutoxboruto.main.platform.Services;
 import net.narutoxboruto.networking.NeoForgePacketHandler;
 import net.narutoxboruto.networking.jutsu.OpenJutsuStoragePacket;
 import net.narutoxboruto.networking.info.RechargeChakra;
@@ -50,6 +52,25 @@ public class ClientEvents {
         }
         if (ModKeyBinds.DOJUTSU_MENU.consumeClick()) {
             minecraft.setScreen(new net.narutoxboruto.client.gui.DojutsuScreen());
+        }
+    }
+
+    @SubscribeEvent
+    public static void dojutsuToggleKeybind(InputEvent.Key event) {
+        Minecraft minecraft = Minecraft.getInstance();
+        LocalPlayer player = minecraft.player;
+        if (player == null || minecraft.screen != null) return;
+        if (ModKeyBinds.DOJUTSU_TOGGLE.consumeClick()) {
+            Dojutsu dojutsu = Services.PLATFORM.getDojutsu(player);
+            if (dojutsu != null) {
+                if (dojutsu.areEyesVisible()) {
+                    dojutsu.setEyesVisible(false);
+                    Services.PLATFORM.sendEquipDojutsu("hide", "");
+                } else {
+                    dojutsu.setEyesVisible(true);
+                    Services.PLATFORM.sendEquipDojutsu("show", "");
+                }
+            }
         }
     }
     
@@ -133,6 +154,7 @@ class ClientModBusEvents {
         event.register(ModKeyBinds.CHAKRA_CONTROL);
         event.register(ModKeyBinds.JUTSU_STORAGE);
         event.register(ModKeyBinds.DOJUTSU_MENU);
+        event.register(ModKeyBinds.DOJUTSU_TOGGLE);
     }
     
     @SubscribeEvent
