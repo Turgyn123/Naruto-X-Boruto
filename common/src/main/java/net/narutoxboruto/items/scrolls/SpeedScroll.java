@@ -25,8 +25,12 @@ public class SpeedScroll extends Item {
 
         if (!pLevel.isClientSide() && pPlayer instanceof ServerPlayer serverPlayer) {
             Speed speed = Services.PLATFORM.getSpeed(serverPlayer);
+            int before = speed.getValue();
             speed.incrementValue(2, serverPlayer);
-            Services.PLATFORM.getShinobiPoints(serverPlayer).incrementValue(2, serverPlayer);
+            int gained = speed.getValue() - before;
+            if (gained > 0) {
+                Services.PLATFORM.getShinobiPoints(serverPlayer).incrementValue(gained, serverPlayer);
+            }
 
             // Consume the item
             if (!pPlayer.getAbilities().instabuild) {

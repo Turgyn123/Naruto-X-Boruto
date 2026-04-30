@@ -51,7 +51,11 @@ public class ShinobiStatCommand {
                 }
                 case "speed" -> {
                     Speed stat = Services.PLATFORM.getSpeed(serverPlayer);
+                    int before = stat.getValue();
                     stat.addValue(pValue, serverPlayer);
+                    int gained = stat.getValue() - before;
+                    Services.PLATFORM.getShinobiPoints(serverPlayer).addValue(gained, serverPlayer);
+                    continue;
                 }
                 case "summoning" -> {
                     Summoning stat = Services.PLATFORM.getSummoning(serverPlayer);
@@ -165,7 +169,11 @@ public class ShinobiStatCommand {
                 }
                 case "speed" -> {
                     Speed stat = Services.PLATFORM.getSpeed(serverPlayer);
+                    int before = stat.getValue();
                     stat.setValue(pValue, serverPlayer);
+                    int gained = Math.max(0, stat.getValue() - before);
+                    Services.PLATFORM.getShinobiPoints(serverPlayer).addValue(gained, serverPlayer);
+                    continue;
                 }
                 case "summoning" -> {
                     Summoning stat = Services.PLATFORM.getSummoning(serverPlayer);

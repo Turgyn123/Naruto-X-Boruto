@@ -6,7 +6,7 @@ import net.narutoxboruto.main.platform.Services;
 
 public class Speed {
     private int value;
-    private static final int MAX_VALUE = 500;
+    private static final int MAX_VALUE = 20;
 
     public static final Codec<Speed> CODEC = Codec.INT.xmap(Speed::new, Speed::getValue);
 
