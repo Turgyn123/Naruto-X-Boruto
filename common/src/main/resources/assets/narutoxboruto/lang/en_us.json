@@ -239,6 +239,12 @@
   "dojutsu.max_reached": "Maximum dōjutsu limit reached",
   "dojutsu.not_eligible": "Your clan cannot awaken a dōjutsu",
   "dojutsu.acquired": "You have awakened the %s!",
+  "dojutsu.progression.next": "Next tier: %s",
+  "dojutsu.progression.playtime": "Training: %s / %s",
+  "dojutsu.progression.near_death": "Near-death trial: %s",
+  "dojutsu.progression.near_death_complete": "complete",
+  "dojutsu.progression.near_death_pending": "drop below 2 hearts for 5s",
+  "dojutsu.progression.ready": "Conditions met \u2014 awakening soon!",
 
   "command.dojutsu.give.success": "Gave %s the %s dōjutsu",
   "command.dojutsu.give.already": "%s already has %s",

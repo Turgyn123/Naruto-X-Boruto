@@ -94,23 +94,9 @@ public class FabricStatEvents {
             for (ServerPlayer serverPlayer : server.getPlayerList().getPlayers()) {
                 PlayerCapData data = PlayerDataManager.get(serverPlayer);
 
-                // Speed bonuses
-                if (!LightningChakraMode.isActive(serverPlayer)) {
-                    Speed speed = data.getSpeed();
-                    int speedLevel = speed.getValue() / 10;
-
-                    if (speedLevel > 0) {
-                        MobEffectInstance currentEffect = serverPlayer.getEffect(MobEffects.MOVEMENT_SPEED);
-                        if (currentEffect == null || currentEffect.getAmplifier() != speedLevel - 1) {
-                            serverPlayer.removeEffect(MobEffects.MOVEMENT_SPEED);
-                            serverPlayer.addEffect(
-                                    new MobEffectInstance(MobEffects.MOVEMENT_SPEED, -1, speedLevel - 1,
-                                            false, false, true));
-                        }
-                    } else {
-                        serverPlayer.removeEffect(MobEffects.MOVEMENT_SPEED);
-                    }
-                }
+                // Speed bonuses — applied as an attribute modifier so it stacks additively with
+                // potions, beacons, dojutsu buffs and Lightning Chakra Mode instead of overwriting them.
+                net.narutoxboruto.util.StatSpeed.tickSpeedAttribute(serverPlayer);
 
                 // Chakra regen every 6000 ticks
                 if (serverPlayer.tickCount % 6000 == 0) {

@@ -109,24 +109,9 @@ public class ForgeStatEvents {
     @SubscribeEvent
     public static void addStatBonuses(TickEvent.PlayerTickEvent.Post event) {
         if (event.player instanceof ServerPlayer serverPlayer) {
-            if (LightningChakraMode.isActive(serverPlayer)) {
-                return;
-            }
-
-            Speed speed = PlayerDataManager.get(serverPlayer).getSpeed();
-            int speedLevel = speed.getValue() / 10;
-
-            if (speedLevel > 0) {
-                MobEffectInstance currentEffect = serverPlayer.getEffect(MobEffects.MOVEMENT_SPEED);
-                if (currentEffect == null || currentEffect.getAmplifier() != speedLevel - 1) {
-                    serverPlayer.removeEffect(MobEffects.MOVEMENT_SPEED);
-                    serverPlayer.addEffect(
-                            new MobEffectInstance(MobEffects.MOVEMENT_SPEED, -1, speedLevel - 1,
-                                    false, false, true));
-                }
-            } else {
-                serverPlayer.removeEffect(MobEffects.MOVEMENT_SPEED);
-            }
+            // Apply stat-based speed as an attribute modifier so it stacks additively with
+            // potions, beacons, dojutsu buffs and Lightning Chakra Mode instead of overwriting them.
+            net.narutoxboruto.util.StatSpeed.tickSpeedAttribute(serverPlayer);
         }
     }
 

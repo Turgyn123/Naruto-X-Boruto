@@ -19,6 +19,7 @@ import net.narutoxboruto.items.NeoForgeItems;
 import net.narutoxboruto.items.swords.Kiba;
 import net.narutoxboruto.items.jutsus.LightningChakraMode;
 import net.narutoxboruto.util.ModUtil;
+import net.narutoxboruto.util.StatSpeed;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.ProjectileImpactEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
@@ -139,28 +140,9 @@ public class StatEvents {
     @SubscribeEvent
     public static void addStatBonuses(PlayerTickEvent.Post event) {
         if (event.getEntity() instanceof ServerPlayer serverPlayer) {
-            // Skip stat-based speed if Lightning Chakra Mode is active
-            // Let the jutsu handle speed effects instead
-            if (LightningChakraMode.isActive(serverPlayer)) {
-                return;
-            }
-            
-            Speed speed = serverPlayer.getData(NeoForgeCapabilities.SPEED);
-            int speedLevel = speed.getValue() / 10;
-
-            // Only apply effect if we have a positive level
-            if (speedLevel > 0) {
-                MobEffectInstance currentEffect = serverPlayer.getEffect(MobEffects.MOVEMENT_SPEED);
-
-                if (currentEffect == null || currentEffect.getAmplifier() != speedLevel - 1) {
-                    serverPlayer.removeEffect(MobEffects.MOVEMENT_SPEED);
-                    serverPlayer.addEffect(
-                            new MobEffectInstance(MobEffects.MOVEMENT_SPEED, -1, speedLevel - 1,
-                                    false, false, true));
-                }
-            } else if (speedLevel == 0) {
-                serverPlayer.removeEffect(MobEffects.MOVEMENT_SPEED);
-            }
+            // Apply stat-based speed as an attribute modifier so it stacks additively with
+            // potions, beacons, dojutsu buffs and Lightning Chakra Mode instead of overwriting them.
+            StatSpeed.tickSpeedAttribute(serverPlayer);
         }
     }
 

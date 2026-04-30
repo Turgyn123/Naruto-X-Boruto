@@ -283,6 +283,21 @@ public class Dojutsu {
         return CLAN_DOJUTSU.containsKey(clan);
     }
 
+    /**
+     * True if the player already owns any tier in the evolution family of the dojutsu the given
+     * clan grants. Prevents re-awakening a fresh 1_tomoe_sharingan when the player has already
+     * upgraded to 2- or 3-tomoe and re-acquires the Uchiha clan.
+     */
+    public boolean hasClanDojutsuFamily(String clan) {
+        String base = getDojutsuForClan(clan);
+        if (base == null) return false;
+        if (hasUnlocked(base)) return true;
+        if ("uchiha".equals(clan)) {
+            return hasUnlocked("2_tomoe_sharingan") || hasUnlocked("3_tomoe_sharingan");
+        }
+        return false;
+    }
+
     // ── Sharingan progression accessors ──────────────────────────────────
     public int getSharinganPlaytime() { return sharinganClanPlaytime; }
     public void setSharinganPlaytime(int ticks) { this.sharinganClanPlaytime = Math.max(0, ticks); }

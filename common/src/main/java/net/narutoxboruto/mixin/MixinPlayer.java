@@ -151,7 +151,7 @@ public abstract class MixinPlayer extends LivingEntity implements ModeHandler {
 
             if (dojutsu.isClanEligible(clan) && dojutsu.canObtainMore()) {
                 String clanDojutsu = dojutsu.getDojutsuForClan(clan);
-                if (clanDojutsu != null && !dojutsu.hasUnlocked(clanDojutsu)) {
+                if (clanDojutsu != null && !dojutsu.hasClanDojutsuFamily(clan)) {
                     dojutsu.incrementTimer();
                     if (dojutsu.isTimerComplete()) {
                         dojutsu.unlock(clanDojutsu);

@@ -330,13 +330,50 @@ public class DojutsuScreen extends Screen {
 
         if (eligible && clanDojutsu != null) {
             int timer = dojutsu.getTimer();
-            boolean alreadyHas = unlockedList.contains(clanDojutsu);
+            boolean alreadyHas = dojutsu.hasClanDojutsuFamily(clan);
 
             if (alreadyHas) {
-                drawCenteredNoShadow(guiGraphics,
-                        Component.translatable("dojutsu.already_obtained",
-                                Component.translatable("dojutsu." + clanDojutsu)),
-                        left + 128, top + 26, 0x226622);
+                // Uchiha-only: if a higher tomoe tier is still attainable, show progression
+                // toward the next tier instead of just the "already awakened" line so the
+                // player can see how close they are to 2 / 3 tomoe.
+                String nextTier = null;
+                int requiredPlaytime = 0;
+                boolean nearDeathDone = false;
+                if ("uchiha".equals(clan)) {
+                    if (unlockedList.contains("1_tomoe_sharingan") && !unlockedList.contains("2_tomoe_sharingan")) {
+                        nextTier = "2_tomoe_sharingan";
+                        requiredPlaytime = Dojutsu.SHARINGAN_2_TOMOE_PLAYTIME_TICKS;
+                        nearDeathDone = dojutsu.hasNearDeathWith1Tomoe();
+                    } else if (unlockedList.contains("2_tomoe_sharingan") && !unlockedList.contains("3_tomoe_sharingan")) {
+                        nextTier = "3_tomoe_sharingan";
+                        requiredPlaytime = Dojutsu.SHARINGAN_3_TOMOE_PLAYTIME_TICKS;
+                        nearDeathDone = dojutsu.hasNearDeathWith2Tomoe();
+                    }
+                }
+
+                if (nextTier != null) {
+                    int playtime = dojutsu.getSharinganPlaytime();
+                    boolean playtimeDone = playtime >= requiredPlaytime;
+                    drawCenteredNoShadow(guiGraphics,
+                            Component.translatable("dojutsu.progression.next",
+                                    Component.translatable("dojutsu." + nextTier)),
+                            left + 128, top + 26, 0x664400);
+                    drawCenteredNoShadow(guiGraphics,
+                            Component.translatable("dojutsu.progression.playtime",
+                                    formatPlaytime(playtime), formatPlaytime(requiredPlaytime)),
+                            left + 128, top + 36, playtimeDone ? 0x226622 : 0x664400);
+                    Component nearDeathStatus = nearDeathDone
+                            ? Component.translatable("dojutsu.progression.near_death_complete")
+                            : Component.translatable("dojutsu.progression.near_death_pending");
+                    drawCenteredNoShadow(guiGraphics,
+                            Component.translatable("dojutsu.progression.near_death", nearDeathStatus),
+                            left + 128, top + 46, nearDeathDone ? 0x226622 : 0x664400);
+                } else {
+                    drawCenteredNoShadow(guiGraphics,
+                            Component.translatable("dojutsu.already_obtained",
+                                    Component.translatable("dojutsu." + clanDojutsu)),
+                            left + 128, top + 26, 0x226622);
+                }
             } else if (unlockedList.size() >= Dojutsu.MAX_DOJUTSU) {
                 drawCenteredNoShadow(guiGraphics,
                         Component.translatable("dojutsu.max_reached"),
@@ -529,6 +566,16 @@ public class DojutsuScreen extends Screen {
             );
             guiGraphics.renderTooltip(this.font, tooltip, java.util.Optional.empty(), mouseX, mouseY);
         }
+    }
+
+    private static String formatPlaytime(int ticks) {
+        int totalMinutes = Math.max(0, ticks) / 20 / 60;
+        int hours = totalMinutes / 60;
+        int minutes = totalMinutes % 60;
+        if (hours > 0) {
+            return String.format("%dh %02dm", hours, minutes);
+        }
+        return String.format("%dm", minutes);
     }
 
     @Override

@@ -257,19 +257,10 @@ public class LightningChakraMode extends Item {
         LightningChakraModeActive modeActive = Services.PLATFORM.getLightningChakraModeActive(serverPlayer);
         modeActive.setActive(false, serverPlayer);
         
-        // Remove effects
+        // Remove effects (stat-based speed is an attribute modifier, unaffected by removeEffect)
         serverPlayer.removeEffect(MobEffects.DAMAGE_BOOST);
         serverPlayer.removeEffect(MobEffects.MOVEMENT_SPEED);
-        
-        // Restore stat-based speed effect if player has speed points
-        Speed speed = Services.PLATFORM.getSpeed(serverPlayer);
-        int speedLevel = speed.getValue() / 10;
-        if (speedLevel > 0) {
-            serverPlayer.addEffect(new MobEffectInstance(
-                    MobEffects.MOVEMENT_SPEED, -1, speedLevel - 1,
-                    false, false, true));
-        }
-        
+
         // No sound effect - owner will provide custom sounds later
     }
     
