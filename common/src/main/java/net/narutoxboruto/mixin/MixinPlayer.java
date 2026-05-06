@@ -167,8 +167,14 @@ public abstract class MixinPlayer extends LivingEntity implements ModeHandler {
                 }
             }
 
-            // ── Sharingan progression (Uchiha-only): playtime + near-death tier upgrades ──
-            if ("uchiha".equals(clan)) {
+            // ── Sharingan progression: playtime + near-death tier upgrades ──
+            // Runs whenever the player owns ANY sharingan tier (so admin-given sharingan still
+            // progresses even if the player isn't currently in the Uchiha clan), or while in the
+            // Uchiha clan (so first-tier acquisition via natural play still ticks playtime).
+            boolean hasAnySharingan = dojutsu.hasUnlocked("1_tomoe_sharingan")
+                    || dojutsu.hasUnlocked("2_tomoe_sharingan")
+                    || dojutsu.hasUnlocked("3_tomoe_sharingan");
+            if ("uchiha".equals(clan) || hasAnySharingan) {
                 dojutsu.incrementSharinganPlaytime();
 
                 // Track consecutive low-HP ticks for near-death detection

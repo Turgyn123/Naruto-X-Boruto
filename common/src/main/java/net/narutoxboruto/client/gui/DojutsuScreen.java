@@ -408,7 +408,7 @@ public class DojutsuScreen extends Screen {
         int unlockedStartX = left + 128 - totalWidth / 2;
 
         guiGraphics.drawString(this.font, unlockedLabel,
-                unlockedStartX, top + 52, 0x404040, false);
+                unlockedStartX, top + 60, 0x404040, false);
 
         int iconStartX = unlockedStartX + labelWidth;
         if (!unlockedList.isEmpty()) {
@@ -417,13 +417,13 @@ public class DojutsuScreen extends Screen {
                 if (Dojutsu.DOJUTSU_ICON.containsKey(dj)) {
                     ResourceLocation icon = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID,
                             "textures/dojutsu/icons/" + Dojutsu.DOJUTSU_ICON.get(dj) + ".png");
-                    guiGraphics.blit(icon, iconStartX + i * 14, top + 50,
+                    guiGraphics.blit(icon, iconStartX + i * 14, top + 58,
                             11, 11, 0.0F, 0.0F, 32, 32, 32, 32);
                 }
             }
         } else {
             guiGraphics.drawString(this.font, Component.translatable("shinobiStat.dojutsu_none"),
-                    iconStartX, top + 52, 0x888888, false);
+                    iconStartX, top + 60, 0x888888, false);
         }
 
         // --- Character model display (face close-up, static pose) ---

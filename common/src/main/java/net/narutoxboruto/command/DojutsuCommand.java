@@ -34,6 +34,11 @@ public class DojutsuCommand {
             if (prerequisite != null && dojutsu.hasUnlocked(prerequisite)) {
                 dojutsu.upgrade(prerequisite, type);
             } else {
+                if (!dojutsu.canObtainMore()) {
+                    source.sendFailure(Component.translatable("command.dojutsu.too_many",
+                            player.getDisplayName()));
+                    continue;
+                }
                 dojutsu.unlock(type);
             }
             dojutsu.resetTimer();

@@ -252,5 +252,6 @@
   "command.dojutsu.give.single": "Gave %s the %s dōjutsu",
   "command.dojutsu.give.multiple": "Gave %s players the %s dōjutsu",
   "command.dojutsu.invalid": "Unknown dōjutsu type: %s",
-  "command.dojutsu.already_has": "%s already has %s"
+  "command.dojutsu.already_has": "%s already has %s",
+  "command.dojutsu.too_many": "%s already has the maximum number of dōjutsu"
 }
