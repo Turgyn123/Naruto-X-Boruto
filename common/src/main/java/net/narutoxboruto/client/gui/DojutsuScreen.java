@@ -328,52 +328,48 @@ public class DojutsuScreen extends Screen {
         String clanDojutsu = Dojutsu.getDojutsuForClan(clan);
         boolean eligible = Dojutsu.isClanEligible(clan);
 
-        if (eligible && clanDojutsu != null) {
+        // Sharingan progression display: show whenever the player owns any sharingan tier,
+        // regardless of current clan, so non-Uchiha holders (admin-given, or left clan after
+        // awakening) can see their progress toward 2 / 3 tomoe.
+        String sharinganNextTier = null;
+        int sharinganRequiredPlaytime = 0;
+        boolean sharinganNearDeathDone = false;
+        if (unlockedList.contains("1_tomoe_sharingan") && !unlockedList.contains("2_tomoe_sharingan")) {
+            sharinganNextTier = "2_tomoe_sharingan";
+            sharinganRequiredPlaytime = Dojutsu.SHARINGAN_2_TOMOE_PLAYTIME_TICKS;
+            sharinganNearDeathDone = dojutsu.hasNearDeathWith1Tomoe();
+        } else if (unlockedList.contains("2_tomoe_sharingan") && !unlockedList.contains("3_tomoe_sharingan")) {
+            sharinganNextTier = "3_tomoe_sharingan";
+            sharinganRequiredPlaytime = Dojutsu.SHARINGAN_3_TOMOE_PLAYTIME_TICKS;
+            sharinganNearDeathDone = dojutsu.hasNearDeathWith2Tomoe();
+        }
+
+        if (sharinganNextTier != null) {
+            int playtime = dojutsu.getSharinganPlaytime();
+            boolean playtimeDone = playtime >= sharinganRequiredPlaytime;
+            drawCenteredNoShadow(guiGraphics,
+                    Component.translatable("dojutsu.progression.next",
+                            Component.translatable("dojutsu." + sharinganNextTier)),
+                    left + 128, top + 24, 0x664400);
+            drawCenteredNoShadow(guiGraphics,
+                    Component.translatable("dojutsu.progression.playtime",
+                            formatPlaytime(playtime), formatPlaytime(sharinganRequiredPlaytime)),
+                    left + 128, top + 34, playtimeDone ? 0x226622 : 0x664400);
+            Component nearDeathStatus = sharinganNearDeathDone
+                    ? Component.translatable("dojutsu.progression.near_death_complete")
+                    : Component.translatable("dojutsu.progression.near_death_pending");
+            drawCenteredNoShadow(guiGraphics,
+                    Component.translatable("dojutsu.progression.near_death", nearDeathStatus),
+                    left + 128, top + 44, sharinganNearDeathDone ? 0x226622 : 0x664400);
+        } else if (eligible && clanDojutsu != null) {
             int timer = dojutsu.getTimer();
             boolean alreadyHas = dojutsu.hasClanDojutsuFamily(clan);
 
             if (alreadyHas) {
-                // Uchiha-only: if a higher tomoe tier is still attainable, show progression
-                // toward the next tier instead of just the "already awakened" line so the
-                // player can see how close they are to 2 / 3 tomoe.
-                String nextTier = null;
-                int requiredPlaytime = 0;
-                boolean nearDeathDone = false;
-                if ("uchiha".equals(clan)) {
-                    if (unlockedList.contains("1_tomoe_sharingan") && !unlockedList.contains("2_tomoe_sharingan")) {
-                        nextTier = "2_tomoe_sharingan";
-                        requiredPlaytime = Dojutsu.SHARINGAN_2_TOMOE_PLAYTIME_TICKS;
-                        nearDeathDone = dojutsu.hasNearDeathWith1Tomoe();
-                    } else if (unlockedList.contains("2_tomoe_sharingan") && !unlockedList.contains("3_tomoe_sharingan")) {
-                        nextTier = "3_tomoe_sharingan";
-                        requiredPlaytime = Dojutsu.SHARINGAN_3_TOMOE_PLAYTIME_TICKS;
-                        nearDeathDone = dojutsu.hasNearDeathWith2Tomoe();
-                    }
-                }
-
-                if (nextTier != null) {
-                    int playtime = dojutsu.getSharinganPlaytime();
-                    boolean playtimeDone = playtime >= requiredPlaytime;
-                    drawCenteredNoShadow(guiGraphics,
-                            Component.translatable("dojutsu.progression.next",
-                                    Component.translatable("dojutsu." + nextTier)),
-                            left + 128, top + 26, 0x664400);
-                    drawCenteredNoShadow(guiGraphics,
-                            Component.translatable("dojutsu.progression.playtime",
-                                    formatPlaytime(playtime), formatPlaytime(requiredPlaytime)),
-                            left + 128, top + 36, playtimeDone ? 0x226622 : 0x664400);
-                    Component nearDeathStatus = nearDeathDone
-                            ? Component.translatable("dojutsu.progression.near_death_complete")
-                            : Component.translatable("dojutsu.progression.near_death_pending");
-                    drawCenteredNoShadow(guiGraphics,
-                            Component.translatable("dojutsu.progression.near_death", nearDeathStatus),
-                            left + 128, top + 46, nearDeathDone ? 0x226622 : 0x664400);
-                } else {
-                    drawCenteredNoShadow(guiGraphics,
-                            Component.translatable("dojutsu.already_obtained",
-                                    Component.translatable("dojutsu." + clanDojutsu)),
-                            left + 128, top + 26, 0x226622);
-                }
+                drawCenteredNoShadow(guiGraphics,
+                        Component.translatable("dojutsu.already_obtained",
+                                Component.translatable("dojutsu." + clanDojutsu)),
+                        left + 128, top + 26, 0x226622);
             } else if (unlockedList.size() >= Dojutsu.MAX_DOJUTSU) {
                 drawCenteredNoShadow(guiGraphics,
                         Component.translatable("dojutsu.max_reached"),
@@ -408,7 +404,7 @@ public class DojutsuScreen extends Screen {
         int unlockedStartX = left + 128 - totalWidth / 2;
 
         guiGraphics.drawString(this.font, unlockedLabel,
-                unlockedStartX, top + 60, 0x404040, false);
+                unlockedStartX, top + 54, 0x404040, false);
 
         int iconStartX = unlockedStartX + labelWidth;
         if (!unlockedList.isEmpty()) {
@@ -417,13 +413,13 @@ public class DojutsuScreen extends Screen {
                 if (Dojutsu.DOJUTSU_ICON.containsKey(dj)) {
                     ResourceLocation icon = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID,
                             "textures/dojutsu/icons/" + Dojutsu.DOJUTSU_ICON.get(dj) + ".png");
-                    guiGraphics.blit(icon, iconStartX + i * 14, top + 58,
+                    guiGraphics.blit(icon, iconStartX + i * 14, top + 52,
                             11, 11, 0.0F, 0.0F, 32, 32, 32, 32);
                 }
             }
         } else {
             guiGraphics.drawString(this.font, Component.translatable("shinobiStat.dojutsu_none"),
-                    iconStartX, top + 60, 0x888888, false);
+                    iconStartX, top + 54, 0x888888, false);
         }
 
         // --- Character model display (face close-up, static pose) ---
