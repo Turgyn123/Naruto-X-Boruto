@@ -62,8 +62,8 @@ public final class DojutsuBuffs {
         if (pair.size() == 1) {
             return switch (pair.iterator().next()) {
                 case "1_tomoe_sharingan" -> new Buffs(1, false);
-                case "2_tomoe_sharingan" -> new Buffs(1, true);
-                case "3_tomoe_sharingan" -> new Buffs(2, true);
+                case "2_tomoe_sharingan" -> new Buffs(2, true);
+                case "3_tomoe_sharingan" -> new Buffs(3, true);
                 case "byakugan"          -> new Buffs(3, true);
                 case "ketsuryugan"       -> new Buffs(2, true);
                 default -> Buffs.NONE;
