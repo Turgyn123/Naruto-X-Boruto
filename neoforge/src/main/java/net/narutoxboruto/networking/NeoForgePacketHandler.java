@@ -47,7 +47,6 @@ public class NeoForgePacketHandler {
         registrar.playToClient(SyncKibaActive.TYPE, SyncKibaActive.STREAM_CODEC, (payload, context) -> payload.handle(context));
         registrar.playToClient(SyncLightningChakraModeActive.TYPE, SyncLightningChakraModeActive.STREAM_CODEC, (payload, context) -> payload.handle(context));
         // DISABLED - Wall running postponed to a future update
-        // registrar.playToClient(SyncWallRunning.TYPE, SyncWallRunning.STREAM_CODEC, SyncWallRunning::handle);
 
         //Serverbound packets
         registrar.playToServer(ToggleSwordAbility.TYPE, ToggleSwordAbility.STREAM_CODEC, (payload, context) -> payload.handle(context));

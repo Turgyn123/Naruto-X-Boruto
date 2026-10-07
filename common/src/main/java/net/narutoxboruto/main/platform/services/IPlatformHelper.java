@@ -5,7 +5,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.narutoxboruto.capabilities.climber.ClimberComponent;
 import net.narutoxboruto.capabilities.info.*;
 import net.narutoxboruto.capabilities.jutsu.JutsuStorage;
 import net.narutoxboruto.capabilities.release.*;
@@ -49,8 +48,6 @@ public interface IPlatformHelper {
     KibaActive getKibaActive(Player player);
     LightningChakraModeActive getLightningChakraModeActive(Player player);
     NarutoRun getNarutoRun(Player player);
-    WallRunning getWallRunning(Player player);
-    ClimberComponent getClimberComponent(Player player);
 
     //Capability - Release Lists
     EarthList getEarthList(Player player);

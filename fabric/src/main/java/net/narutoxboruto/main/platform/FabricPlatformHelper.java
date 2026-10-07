@@ -4,7 +4,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.narutoxboruto.capabilities.PlayerDataManager;
-import net.narutoxboruto.capabilities.climber.ClimberComponent;
 import net.narutoxboruto.capabilities.info.*;
 import net.narutoxboruto.capabilities.jutsu.JutsuStorage;
 import net.narutoxboruto.capabilities.release.*;
@@ -71,8 +70,6 @@ public class FabricPlatformHelper implements IPlatformHelper {
     @Override public KibaActive getKibaActive(Player player) { return PlayerDataManager.get(player).getKibaActive(); }
     @Override public LightningChakraModeActive getLightningChakraModeActive(Player player) { return PlayerDataManager.get(player).getLightningChakraModeActive(); }
     @Override public NarutoRun getNarutoRun(Player player) { return PlayerDataManager.get(player).getNarutoRun(); }
-    @Override public WallRunning getWallRunning(Player player) { return PlayerDataManager.get(player).getWallRunning(); }
-    @Override public ClimberComponent getClimberComponent(Player player) { return PlayerDataManager.get(player).getClimberComponent(); }
 
     // Set data
     @Override public void setChakra(ServerPlayer player, Chakra chakra) {
