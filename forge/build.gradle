@@ -15,11 +15,12 @@ base {
 }
 mixin {
     config("narutoxboruto.mixins.json")
+    config("narutoxboruto.wallwalk.mixins.json")
     config("narutoxboruto.forge.mixins.json")
 }
 jar {
     manifest {
-        attributes["MixinConfigs"] = "${mod_id}.mixins.json,${mod_id}.forge.mixins.json"
+        attributes["MixinConfigs"] = "${mod_id}.mixins.json,${mod_id}.wallwalk.mixins.json,${mod_id}.forge.mixins.json"
     }
 }
 

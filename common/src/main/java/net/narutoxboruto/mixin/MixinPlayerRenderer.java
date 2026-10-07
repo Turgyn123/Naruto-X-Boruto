@@ -3,6 +3,7 @@ package net.narutoxboruto.mixin;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.entity.player.PlayerRenderer;
+import net.narutoxboruto.client.WallFrame;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -17,7 +18,8 @@ public class MixinPlayerRenderer {
     @Inject(method = "setupRotations", at = @At("TAIL"))
     private void onSetupRotations(AbstractClientPlayer player, PoseStack poseStack, 
             float ageInTicks, float rotationYaw, float partialTicks, float scale, CallbackInfo ci) {
-        // Reserved for future pose adjustments
+        // Walking on a wall with Chakra Control: the model turns with the player (the local player only)
+        WallFrame.transformModel(poseStack, player, rotationYaw, partialTicks);
     }
 }
 

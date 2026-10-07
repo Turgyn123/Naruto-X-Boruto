@@ -24,6 +24,7 @@
     },
     "mixins": [
         "narutoxboruto.mixins.json",
+        "narutoxboruto.wallwalk.mixins.json",
         "narutoxboruto.fabric.mixins.json"
     ],
     "depends": {
