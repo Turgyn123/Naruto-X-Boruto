@@ -76,7 +76,8 @@ public class CloakLightningRenderer {
 
     // ------------------------------------------------------------------ per-player state
 
-    private static final class Arc {
+    /** One bolt: a polyline in the PoseStack frame. Package-private so the Kiba sword renderer can draw the same bolts. */
+    static final class Arc {
         final float[] pts;   // x,y,z triples, already in the PoseStack frame
         final int count;
         final long birth;
@@ -127,20 +128,56 @@ public class CloakLightningRenderer {
         prune(now);
 
         VertexConsumer consumer = buffer.getBuffer(RenderType.lightning());
-        Matrix4f matrix = poseStack.last().pose();
+        Matrix4f matrix = new Matrix4f(poseStack.last().pose());
+        applyBodyPose(matrix, player);
 
         for (Arc arc : state.arcs) {
             if (firstPerson && arc.maxY > FIRST_PERSON_MAX_Y) continue;
 
-            long life = arc.expire - arc.birth;
-            long remaining = arc.expire - now;
-            // Electric blink: longer-lived arcs drop out on some ticks (never on their first tick).
-            if (life >= 3 && now != arc.birth && (arc.seed + now) % 3 == 0) continue;
-            // Hard cut, with a dimmer last frame instead of a smooth fade.
-            float fade = (life > 1 && remaining == 1) ? 0.55f : 1.0f;
-
-            drawArc(consumer, matrix, arc, fade);
+            drawAnimated(consumer, matrix, arc, now);
         }
+    }
+
+    /**
+     * The arcs are built around an upright body. When the player swims, crawls or glides the model is
+     * tipped forward, so tip the arcs with it, the same way PlayerRenderer.setupRotations does:
+     * about the horizontal axis across the body, around the player's feet.
+     */
+    private static void applyBodyPose(Matrix4f matrix, Player player) {
+        float pitch = player.getXRot();
+        float tilt; // degrees from upright towards the facing direction
+        boolean prone = false;
+
+        if (player.isFallFlying()) {
+            float t = player.getFallFlyingTicks();
+            float amount = Math.min(1f, t * t / 100f);
+            tilt = amount * (90f + pitch);
+        } else {
+            float swim = player.getSwimAmount(1.0f);
+            if (swim <= 0f) return;
+            // In water the body follows where the player looks, otherwise it lies flat.
+            tilt = swim * (90f + (player.isInWater() ? pitch : 0f));
+            prone = player.isVisuallySwimming();
+        }
+
+        float yaw = (float) Math.toRadians(player.yBodyRot);
+        matrix.rotateY(-yaw).rotateX((float) Math.toRadians(tilt));
+        if (prone) {
+            matrix.translate(0f, -1f, -0.3f); // the model is also lowered while swimming
+        }
+        matrix.rotateY(yaw);
+    }
+
+    /** Draws a bolt with the shared look: blinks out on some ticks and dims on its last one. */
+    static void drawAnimated(VertexConsumer consumer, Matrix4f matrix, Arc arc, long now) {
+        long life = arc.expire - arc.birth;
+        long remaining = arc.expire - now;
+        // Electric blink: longer-lived arcs drop out on some ticks (never on their first tick).
+        if (life >= 3 && now != arc.birth && (arc.seed + now) % 3 == 0) return;
+        // Hard cut, with a dimmer last frame instead of a smooth fade.
+        float fade = (life > 1 && remaining == 1) ? 0.55f : 1.0f;
+
+        drawArc(consumer, matrix, arc, fade);
     }
 
     private static void drawArc(VertexConsumer vc, Matrix4f m, Arc a, float fade) {
