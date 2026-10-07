@@ -68,7 +68,7 @@ public class JutsuStorageScreen extends AbstractContainerScreen<JutsuStorageMenu
         }).bounds(x + imageWidth + 5, y + 60, 20, 20).build();
         
         // The search bar, above the storage: slots that do not match are dimmed
-        searchBox = new EditBox(this.font, x + 28, y - 18, 120, 14, Component.translatable("gui.narutoxboruto.jutsu_search"));
+        searchBox = new EditBox(this.font, x + 23, y - 18, 130, 14, Component.translatable("gui.narutoxboruto.jutsu_search"));
         searchBox.setMaxLength(32);
         searchBox.setHint(Component.translatable("gui.narutoxboruto.jutsu_search").withStyle(net.minecraft.ChatFormatting.GRAY));
         searchBox.setValue(searchText);

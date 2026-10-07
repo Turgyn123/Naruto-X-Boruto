@@ -58,6 +58,8 @@ public class ShinobiStatsGui extends Screen {
     public void render(GuiGraphics guiGraphics, int pMouseX, int pMouseY, float pPartialTick) {
         super.renderBackground(guiGraphics, pMouseX, pMouseY, pPartialTick);
         guiGraphics.blit(BACKGROUND, (this.width - 234) / 2, (this.height - 192) / 2, 0, 0, 256, 192);
+        guiGraphics.drawString(this.font, this.title, (this.width - this.font.width(this.title)) / 2,
+                (this.height - 192) / 2 + 6, 0x2B1D14, false);
         this.renderInfo(guiGraphics);
         this.drawReleaseIcons(guiGraphics, 95, 16);
         this.drawKekkeiGenkai(guiGraphics, 95);
