@@ -1,14 +1,20 @@
 package net.narutoxboruto.client.renderer.entity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.narutoxboruto.client.model.WaterDragonModel;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.narutoxboruto.entities.jutsus.WaterDragonEntity;
+import net.narutoxboruto.entities.jutsus.WaterDragonParts;
 import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.renderer.GeoEntityRenderer;
 
@@ -55,6 +61,37 @@ public class WaterDragonRenderer extends GeoEntityRenderer<WaterDragonEntity> {
         float yaw = Mth.rotLerp(partialTick, entity.yRotO, entity.getYRot());
         float pitch = Mth.lerp(partialTick, entity.xRotO, entity.getXRot());
         poseStack.mulPose(Axis.YP.rotationDegrees(180f - yaw));
-        poseStack.mulPose(Axis.XP.rotationDegrees(pitch));
+        // The model's nose points to -z, so a positive pitch (looking down) has to turn it the other way
+        poseStack.mulPose(Axis.XP.rotationDegrees(-pitch));
+    }
+
+    /**
+     * With F3+B the dragon shows a box per part (head, neck, body and tail segments), the same ones it
+     * uses to hit things, next to the single box vanilla draws for the entity itself.
+     */
+    @Override
+    public void render(WaterDragonEntity entity, float entityYaw, float partialTick, PoseStack poseStack,
+                       MultiBufferSource bufferSource, int packedLight) {
+        super.render(entity, entityYaw, partialTick, poseStack, bufferSource, packedLight);
+
+        if (!Minecraft.getInstance().getEntityRenderDispatcher().shouldRenderHitBoxes() || entity.isInvisible()) return;
+
+        Vec3 position = entity.getPosition(partialTick);
+        float yaw = Mth.rotLerp(partialTick, entity.yRotO, entity.getYRot());
+        float pitch = Mth.lerp(partialTick, entity.xRotO, entity.getXRot());
+        AABB[] boxes = WaterDragonParts.boxes(position, yaw, pitch, entity.getFlatness(partialTick));
+
+        VertexConsumer lines = bufferSource.getBuffer(RenderType.lines());
+        for (int i = 0; i < boxes.length; i++) {
+            // Head red, body blue, tail cyan
+            boolean head = i == WaterDragonParts.HEAD;
+            boolean tail = WaterDragonParts.name(i).startsWith("tail");
+            LevelRenderer.renderLineBox(poseStack, lines,
+                    boxes[i].move(-position.x, -position.y, -position.z),
+                    head ? 1.0F : tail ? 0.3F : 0.4F,
+                    head ? 0.3F : tail ? 1.0F : 0.7F,
+                    head ? 0.3F : 1.0F,
+                    1.0F);
+        }
     }
 }

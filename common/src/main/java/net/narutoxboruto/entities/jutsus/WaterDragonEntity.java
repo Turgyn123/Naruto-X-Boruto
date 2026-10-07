@@ -29,7 +29,6 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.util.Mth;
 import net.narutoxboruto.entities.ModEntities;
 import net.minecraft.world.entity.projectile.Projectile;
-import net.minecraft.world.entity.projectile.ProjectileUtil;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animation.*;
@@ -95,8 +94,6 @@ public class WaterDragonEntity extends Projectile implements GeoEntity {
     private static final int LOCK_DELAY_TICKS = 25;      // In flight, it flies straight this long (about 12 blocks) before it can lock on
     private static final double FLIGHT_HEIGHT = 1.5;     // The whole dragon starts this many blocks above the ground (the puddle in the geo file sits 16 model units per 3 blocks below: -8 for 1.5)
     private static final double BODY_HEIGHT = 0.3;       // Height of the middle of the body above the entity's position
-    private static final double HIT_FORWARD = 1.5;       // The hit zone sits this far ahead of the entity, around the front of the body
-    private static final double HIT_RADIUS = 1.6;        // Blocks around that point that count as a hit (the model is far bigger than its box)
     private static final float BOX_WIDTH = 3.0F;         // Size of the entity's own box (shown with F3+B)
     private static final float BOX_HEIGHT = 2.0F;
     private static final double MIN_AIM_AHEAD = 2.0;     // The crosshair point must be this far in front of the launch point to aim at it
@@ -218,21 +215,27 @@ public class WaterDragonEntity extends Projectile implements GeoEntity {
             return;
         }
         
-        // The model is far bigger than the entity's box, so anything close to its front counts as hit
-        LivingEntity inFront = this.findEntityInFront();
-        if (inFront != null) {
-            this.onHit(new EntityHitResult(inFront));
+        // The dragon is about ten blocks long, so it has a hitbox per part (see WaterDragonParts). Anything
+        // touching one of them is hit, and blocks are checked from the head, not from the entity's position.
+        AABB[] parts = WaterDragonParts.boxes(this.position(), this.getYRot(), this.getXRot(), 1.0);
+        Vec3 head = parts[WaterDragonParts.HEAD].getCenter();
+
+        LivingEntity touched = this.findEntityTouching(parts);
+        if (touched != null) {
+            this.setPos(head.x, head.y, head.z);
+            this.onHit(new EntityHitResult(touched));
             return;
         }
-
-        // Hit detection (entity hits always, block hits only after grace period)
-        HitResult hitResult = ProjectileUtil.getHitResultOnMoveVector(this, this::canHitEntity);
-        if (hitResult.getType() == HitResult.Type.ENTITY) {
-            this.onHit(hitResult);
-            return;
-        } else if (hitResult.getType() == HitResult.Type.BLOCK && !this.noPhysics) {
-            this.onHit(hitResult);
-            return;
+        Vec3 heading = this.getDeltaMovement();
+        if (!this.noPhysics && heading.lengthSqr() > 1.0e-6) {
+            double reach = parts[WaterDragonParts.HEAD].getXsize() / 2.0 + heading.length();
+            BlockHitResult blockHit = this.level().clip(new ClipContext(head,
+                    head.add(heading.normalize().scale(reach)), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this));
+            if (blockHit.getType() == HitResult.Type.BLOCK) {
+                this.setPos(blockHit.getLocation().x, blockHit.getLocation().y, blockHit.getLocation().z);
+                this.onHit(blockHit);
+                return;
+            }
         }
         
         // Update position
@@ -252,11 +255,11 @@ public class WaterDragonEntity extends Projectile implements GeoEntity {
         if (this.lockedTarget != null && this.lockedTarget.isAlive()) {
             desired = this.lockedTarget.position()
                     .add(0, this.lockedTarget.getBbHeight() * 0.5, 0)
-                    .subtract(this.position());
+                    .subtract(head);
         }
         Vec3 direction = JutsuSteering.turnToward(velocity, desired, TURN_RATE_TARGET);
         if (flightAge > LAUNCH_GRACE_TICKS) {
-            direction = JutsuSteering.avoidTerrain(this, direction, TERRAIN_LOOKAHEAD);
+            direction = JutsuSteering.avoidTerrain(this, head, direction, TERRAIN_LOOKAHEAD);
         }
         this.setDeltaMovement(direction.scale(SPEED));
         
@@ -357,27 +360,30 @@ public class WaterDragonEntity extends Projectile implements GeoEntity {
     }
 
     /**
-     * The nearest living thing around the front of the dragon, as far as it moves this tick. The model is
-     * a long body with a head, so this is a zone around the head rather than the (much smaller) box.
+     * The first living thing that touches one of the parts as far as the dragon moves this tick. The head
+     * is checked first, then the neck, the body and the tail.
      */
-    private LivingEntity findEntityInFront() {
+    private LivingEntity findEntityTouching(AABB[] parts) {
         Vec3 movement = this.getDeltaMovement();
-        if (movement.lengthSqr() < 1.0e-6) return null;
+        AABB everything = parts[0];
+        for (AABB part : parts) everything = everything.minmax(part);
 
-        Vec3 front = this.position().add(movement.normalize().scale(HIT_FORWARD)).add(0.0, BODY_HEIGHT, 0.0);
-        AABB zone = new AABB(front, front).inflate(HIT_RADIUS).expandTowards(movement);
+        List<LivingEntity> candidates = this.level().getEntitiesOfClass(LivingEntity.class,
+                everything.expandTowards(movement), e -> e.isAlive() && !e.isSpectator() && this.canHitEntity(e));
+        if (candidates.isEmpty()) return null;
 
-        LivingEntity best = null;
-        double bestDistance = Double.MAX_VALUE;
-        for (LivingEntity candidate : this.level().getEntitiesOfClass(LivingEntity.class, zone,
-                e -> e.isAlive() && !e.isSpectator() && this.canHitEntity(e))) {
-            double distance = candidate.distanceToSqr(front);
-            if (distance < bestDistance) {
-                bestDistance = distance;
-                best = candidate;
+        for (AABB part : parts) {
+            AABB swept = part.expandTowards(movement);
+            for (LivingEntity candidate : candidates) {
+                if (candidate.getBoundingBox().intersects(swept)) return candidate;
             }
         }
-        return best;
+        return null;
+    }
+
+    /** 0 while the dragon is upright and 1 once the attack animation has swung it flat. */
+    public double getFlatness(float partialTick) {
+        return Mth.clamp((this.age + partialTick - PHASE2_END) / (double) ATTACK_ANIM_TICKS, 0.0, 1.0);
     }
 
     /**
