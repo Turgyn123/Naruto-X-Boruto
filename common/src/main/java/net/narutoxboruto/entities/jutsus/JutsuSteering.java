@@ -64,7 +64,9 @@ public final class JutsuSteering {
         if (direction.lengthSqr() < 1.0e-8) return direction;
 
         Vec3 dir = direction.normalize();
-        Vec3 start = projectile.position();
+        // From the middle of the body: a projectile whose position is at ground level would otherwise
+        // see the ground right under it as an obstacle and climb away.
+        Vec3 start = projectile.getBoundingBox().getCenter();
         BlockHitResult hit = projectile.level().clip(new ClipContext(
                 start, start.add(dir.scale(lookAhead)), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, projectile));
         if (hit.getType() == HitResult.Type.MISS) return direction;

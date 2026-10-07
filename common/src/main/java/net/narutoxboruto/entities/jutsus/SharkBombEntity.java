@@ -61,6 +61,8 @@ public class SharkBombEntity extends Projectile implements GeoEntity {
     private static final double AIM_DISTANCE = 40.0;    // How far ahead the crosshair is followed
     private static final double TERRAIN_LOOKAHEAD = 3.5; // Blocks ahead checked for terrain to climb over
     private static final int RETARGET_INTERVAL = 5;     // Ticks between looking for a new target
+    private static final int LOCK_DELAY_TICKS = 15;     // It flies free for this long before it can lock on (0.75s)
+    private static final double LOCK_RANGE = 20.0;      // It only locks onto targets this close to the shark
     private static final float AOE_RADIUS = 3.0F;       // Splash damage radius
     private static final float EXPLOSION_POWER = 2.0F;  // Visual explosion power
     
@@ -78,11 +80,7 @@ public class SharkBombEntity extends Projectile implements GeoEntity {
         this.setPos(spawnPos.x, spawnPos.y, spawnPos.z);
         this.startPos = this.position();
         
-        // Find target and launch immediately (no charge phase)
-        if (shooter instanceof Player player) {
-            this.targetEntity = findBestTarget(player);
-        }
-        
+        // It does not lock on at launch: it flies free first and locks on later, see steer()
         // Set velocity toward target or look direction
         Vec3 launchDir;
         if (this.targetEntity != null) {
@@ -162,7 +160,8 @@ public class SharkBombEntity extends Projectile implements GeoEntity {
         boolean targetLost = this.targetEntity != null
                 && (!this.targetEntity.isAlive() || this.targetEntity.distanceTo(this) > HOMING_RANGE);
         if (targetLost) this.targetEntity = null;
-        if (this.targetEntity == null && this.age % RETARGET_INTERVAL == 0 && caster instanceof Player player) {
+        if (this.targetEntity == null && this.age >= LOCK_DELAY_TICKS
+                && this.age % RETARGET_INTERVAL == 0 && caster instanceof Player player) {
             this.targetEntity = findBestTarget(player);
         }
 
@@ -209,7 +208,7 @@ public class SharkBombEntity extends Projectile implements GeoEntity {
         for (LivingEntity entity : nearbyEntities) {
             Vec3 toEntity = entity.position().add(0, entity.getBbHeight() * 0.5, 0).subtract(playerPos);
             double distance = toEntity.length();
-            if (distance < 0.5) continue;
+            if (distance < 0.5 || entity.distanceTo(this) > LOCK_RANGE) continue;
             double dot = playerLook.dot(toEntity.scale(1.0 / distance));
             if (dot < LOCK_CONE) continue;
             
