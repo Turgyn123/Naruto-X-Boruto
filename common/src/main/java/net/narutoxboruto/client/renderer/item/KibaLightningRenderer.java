@@ -47,6 +47,9 @@ public final class KibaLightningRenderer {
     private static boolean cachedFirstPerson;
     private static List<Vector3f> cachedVertices = List.of();
     private static final Vector3f CACHED_CENTER = new Vector3f();
+    /** The vertices grouped from one end of the blade to the other, so bolts can be spread along its length. */
+    private static List<List<Vector3f>> cachedBins = List.of();
+    private static final int LENGTH_BINS = 12;
 
     /** Call after the sword itself has been drawn. Does nothing unless this is an active Kiba held in a hand. */
     public static void render(ItemStack stack, ItemDisplayContext context, PoseStack poseStack,
@@ -90,7 +93,7 @@ public final class KibaLightningRenderer {
 
     private static void tick(List<Vector3f> vertices, long now, boolean burst) {
         ARCS.removeIf(a -> now >= a.expire || a.expire > now + 40);
-        if (vertices.size() < 2) return;
+        if (vertices.size() < 2 || cachedBins.isEmpty()) return;
 
         int mult = burst ? 3 : 1;
 
@@ -154,14 +157,27 @@ public final class KibaLightningRenderer {
     }
 
     private static void strand(List<Vector3f> vertices, long now) {
-        Vector3f a = pick(vertices);
-        Vector3f b = partner(vertices, a, 0.4f, Float.MAX_VALUE);
-        if (b == null) return;
+        // One end near the start of the blade, the other near the far end, so it spans most of it.
+        Vector3f a = pickBetween(0.0f, 0.35f);
+        Vector3f b = pickBetween(0.65f, 1.0f);
         addBolt(a, b, 7, 0.02f, now, 2, 0.0045f, 0.9f);
     }
 
+    /**
+     * A random point on the blade, evenly spread along its length. Picking a random vertex instead
+     * bunches the bolts where the model has the most detail, which is near the hilt.
+     */
     private static Vector3f pick(List<Vector3f> vertices) {
-        return vertices.get(RANDOM.nextInt(vertices.size()));
+        return pickBetween(0.0f, 1.0f);
+    }
+
+    /** A random point from the part of the blade between two fractions of its length (0 to 1). */
+    private static Vector3f pickBetween(float from, float to) {
+        int n = cachedBins.size();
+        int first = Math.min(n - 1, (int) Math.floor(from * n));
+        int last = Math.max(first, Math.min(n - 1, (int) Math.ceil(to * n) - 1));
+        List<Vector3f> bin = cachedBins.get(first + RANDOM.nextInt(last - first + 1));
+        return bin.get(RANDOM.nextInt(bin.size()));
     }
 
     /** A random other vertex between min and max distance from {@code a}, or null if a few tries find none. */
@@ -231,10 +247,44 @@ public final class KibaLightningRenderer {
             CACHED_CENTER.div(vertices.size());
         }
 
+        cachedBins = binAlongBlade(vertices);
         cachedModel = model;
         cachedFirstPerson = firstPerson;
         cachedVertices = vertices;
         return vertices;
+    }
+
+    /**
+     * Splits the vertices into equal slices along the blade's long axis, dropping empty slices. The axis
+     * is found from two far-apart vertices, so it works whatever way the model is turned.
+     */
+    private static List<List<Vector3f>> binAlongBlade(List<Vector3f> vertices) {
+        if (vertices.size() < 2) return List.of();
+
+        Vector3f start = vertices.get(0);
+        for (Vector3f v : vertices) {
+            if (v.distanceSquared(vertices.get(0)) > start.distanceSquared(vertices.get(0))) start = v;
+        }
+        Vector3f end = start;
+        for (Vector3f v : vertices) {
+            if (v.distanceSquared(start) > end.distanceSquared(start)) end = v;
+        }
+
+        Vector3f axis = new Vector3f(end).sub(start);
+        float lengthSq = axis.lengthSquared();
+        if (lengthSq < 1.0e-6f) return List.of(new ArrayList<>(vertices));
+
+        List<List<Vector3f>> bins = new ArrayList<>();
+        for (int i = 0; i < LENGTH_BINS; i++) {
+            bins.add(new ArrayList<>());
+        }
+        for (Vector3f v : vertices) {
+            float t = new Vector3f(v).sub(start).dot(axis) / lengthSq;
+            int index = Math.max(0, Math.min(LENGTH_BINS - 1, (int) (t * LENGTH_BINS)));
+            bins.get(index).add(v);
+        }
+        bins.removeIf(List::isEmpty);
+        return bins;
     }
 
     private static void collect(BakedQuad quad, List<Vector3f> out, float clampY, boolean firstPerson) {

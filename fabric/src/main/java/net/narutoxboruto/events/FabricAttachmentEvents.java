@@ -55,6 +55,15 @@ public class FabricAttachmentEvents {
             syncAllData(player, data);
         });
 
+        // Save everyone whenever the world saves (autosave, "Save and Quit", server stop). Progress used to
+        // be written only when a player disconnected, so anything that ended the world without a clean
+        // disconnect lost everything since login.
+        net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.BEFORE_SAVE.register((server, flush, force) -> {
+            for (ServerPlayer onlinePlayer : server.getPlayerList().getPlayers()) {
+                PlayerDataManager.save(onlinePlayer);
+            }
+        });
+
         // Player logged out
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
             ServerPlayer serverPlayer = handler.getPlayer();
