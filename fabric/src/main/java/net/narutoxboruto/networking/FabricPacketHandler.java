@@ -5,22 +5,13 @@ import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.SimpleMenuProvider;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.item.ItemStack;
-import net.narutoxboruto.capabilities.PlayerCapData;
 import net.narutoxboruto.capabilities.PlayerDataManager;
-import net.narutoxboruto.capabilities.info.Chakra;
-import net.narutoxboruto.capabilities.info.ChakraControl;
 import net.narutoxboruto.capabilities.jutsu.JutsuStorage;
 import net.narutoxboruto.client.PlayerData;
-import net.narutoxboruto.items.swords.AbstractAbilitySword;
-import net.narutoxboruto.items.throwables.FumaShurikenItem;
-import net.narutoxboruto.items.throwables.ThrowableWeaponItem;
 import net.narutoxboruto.networking.jutsu.JutsuStorageMenu;
 import net.narutoxboruto.util.JutsuGrantHelper;
+import net.narutoxboruto.util.ServerActions;
 
 public class FabricPacketHandler {
 
@@ -103,97 +94,18 @@ public class FabricPacketHandler {
     }
 
     private static void handleServerAction(String action, ServerPlayer serverPlayer) {
-        PlayerCapData data = PlayerDataManager.get(serverPlayer);
-
-        switch (action) {
-            case "toggle_sword_ability" -> {
-                ItemStack stack = serverPlayer.getItemInHand(InteractionHand.MAIN_HAND);
-                if (stack.getItem() instanceof AbstractAbilitySword sword) {
-                    sword.toggleAbility(serverPlayer);
-                }
-            }
-            case "recharge_chakra" -> {
-                Chakra chakra = data.getChakra();
-                chakra.addValue(1, serverPlayer);
-                serverPlayer.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 10, 1, false, true));
-            }
-            case "toggle_chakra_control" -> {
-                Chakra chakra = data.getChakra();
-                if (chakra.getValue() > 0) {
-                    ChakraControl control = data.getChakraControl();
-                    control.setValue(!control.isActive(), serverPlayer);
-                } else {
-                    serverPlayer.displayClientMessage(Component.translatable("msg.no_chakra"), true);
-                }
-            }
-            case "special_throw" -> {
-                ItemStack stack = serverPlayer.getItemInHand(InteractionHand.MAIN_HAND);
-                if (stack.getItem() instanceof ThrowableWeaponItem throwableItem &&
-                        !(stack.getItem() instanceof FumaShurikenItem)) {
-                    throwableItem.performSpecialThrow(serverPlayer, stack);
-                }
-            }
-            case "open_jutsu_storage" -> {
-                JutsuGrantHelper.cleanupDuplicateJutsus(serverPlayer);
-                JutsuStorage storage = data.getJutsuStorage();
-                serverPlayer.openMenu(new SimpleMenuProvider(
-                        (containerId, playerInventory, player) ->
-                                new JutsuStorageMenu(containerId, playerInventory, storage),
-                        Component.translatable("container.narutoxboruto.jutsu_storage")
-                ));
-            }
-            default -> {
-                if (action.startsWith("set_left_eye:")) {
-                    String type = action.substring("set_left_eye:".length());
-                    var dojutsu = data.getDojutsu();
-                    dojutsu.setLeftEye(type);
-                    data.setDojutsu(dojutsu);
-                    dojutsu.syncValue(serverPlayer);
-                } else if (action.startsWith("set_right_eye:")) {
-                    String type = action.substring("set_right_eye:".length());
-                    var dojutsu = data.getDojutsu();
-                    dojutsu.setRightEye(type);
-                    data.setDojutsu(dojutsu);
-                    dojutsu.syncValue(serverPlayer);
-                } else if (action.startsWith("set_offset_left_eye:") || action.startsWith("set_offset_right_eye:")) {
-                    boolean isLeft = action.startsWith("set_offset_left_eye:");
-                    String coords = action.substring(action.indexOf(':') + 1);
-                    String[] parts = coords.split(",");
-                    if (parts.length == 2) {
-                        int ox = Integer.parseInt(parts[0]);
-                        int oy = Integer.parseInt(parts[1]);
-                        var dojutsu = data.getDojutsu();
-                        if (isLeft) {
-                            dojutsu.setLeftEyeOffset(ox, oy);
-                        } else {
-                            dojutsu.setRightEyeOffset(ox, oy);
-                        }
-                        data.setDojutsu(dojutsu);
-                        dojutsu.syncValue(serverPlayer);
-                    }
-                } else if (action.startsWith("set_scale_eye:")) {
-                    float scale = Float.parseFloat(action.substring("set_scale_eye:".length()));
-                    var dojutsu = data.getDojutsu();
-                    dojutsu.setEyeScale(scale);
-                    data.setDojutsu(dojutsu);
-                    dojutsu.syncValue(serverPlayer);
-                } else if (action.startsWith("set_hide_eye:")) {
-                    var dojutsu = data.getDojutsu();
-                    dojutsu.setEyesVisible(false);
-                    data.setDojutsu(dojutsu);
-                    dojutsu.syncValue(serverPlayer);
-                } else if (action.startsWith("set_show_eye:")) {
-                    var dojutsu = data.getDojutsu();
-                    dojutsu.setEyesVisible(true);
-                    data.setDojutsu(dojutsu);
-                    dojutsu.syncValue(serverPlayer);
-                } else if (action.startsWith("set_reset_eye:")) {
-                    var dojutsu = data.getDojutsu();
-                    dojutsu.resetEyeVisuals();
-                    data.setDojutsu(dojutsu);
-                    dojutsu.syncValue(serverPlayer);
-                }
-            }
+        if ("open_jutsu_storage".equals(action)) {
+            JutsuGrantHelper.cleanupDuplicateJutsus(serverPlayer);
+            JutsuStorage storage = PlayerDataManager.get(serverPlayer).getJutsuStorage();
+            serverPlayer.openMenu(new SimpleMenuProvider(
+                    (containerId, playerInventory, player) ->
+                            new JutsuStorageMenu(containerId, playerInventory, storage),
+                    Component.translatable("container.narutoxboruto.jutsu_storage")
+            ));
+            return;
         }
+
+        // Everything else is shared with the other loaders and validated there.
+        ServerActions.handleAction(serverPlayer, action);
     }
 }

@@ -206,6 +206,7 @@ public class Dojutsu {
     }
 
     public void setEyeScale(float scale) {
+        if (Float.isNaN(scale)) return;
         this.eyeScale = Math.max(MIN_EYE_SCALE, Math.min(MAX_EYE_SCALE, scale));
     }
 

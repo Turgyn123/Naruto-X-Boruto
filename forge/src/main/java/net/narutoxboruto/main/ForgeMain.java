@@ -50,6 +50,10 @@ public class ForgeMain {
             EarthWave.onServerTick();
             WaterPrison.onServerTick();
         });
+        MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.server.ServerStoppingEvent event) -> {
+            WaterPrison.shutdown();
+            EarthWave.clear();
+        });
 
         // Register event handlers on MOD bus (registration events)
         eventBus.register(ForgeSpawnEvents.class);
@@ -76,6 +80,9 @@ public class ForgeMain {
             ModEntities.SHARK_BOMB = ForgeEntities.SHARK_BOMB.get();
             ModEntities.WATER_DRAGON = ForgeEntities.WATER_DRAGON.get();
             ModEntities.LIGHTNING_ARC = ForgeEntities.LIGHTNING_ARC.get();
+            ModEntities.ZABUZA_MOMOCHI = ForgeEntities.ZABUZA_MOMOCHI.get();
+            ModEntities.JINPACHI_MUNASHI = ForgeEntities.JINPACHI_MUNASHI.get();
+            ModEntities.KISAME_HOSHIGAKI = ForgeEntities.KISAME_HOSHIGAKI.get();
 
             ModItems.SHURIKEN_ITEM = ForgeItems.SHURIKEN.get();
             ModItems.FUMA_SHURIKEN_ITEM = ForgeItems.FUMA_SHURIKEN.get();

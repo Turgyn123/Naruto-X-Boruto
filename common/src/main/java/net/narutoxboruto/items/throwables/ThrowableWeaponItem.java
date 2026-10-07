@@ -27,7 +27,8 @@ public class ThrowableWeaponItem extends Item implements PreventSlow {
 
     // Track special throw cooldowns per player (server-side)
     private static final Map<UUID, Long> specialThrowCooldowns = new HashMap<>();
-    private static final long SPECIAL_THROW_COOLDOWN_MS = 2000; // 2 seconds
+    /** Game ticks, not wall-clock time, so pausing the game or lagging doesn't skip the cooldown. */
+    private static final long SPECIAL_THROW_COOLDOWN_TICKS = 40; // 2 seconds
 
     public ThrowableWeaponItem(Properties props, String name) {
         super(props);
@@ -113,11 +114,11 @@ public class ThrowableWeaponItem extends Item implements PreventSlow {
      */
     public void performSpecialThrow(ServerPlayer serverPlayer, ItemStack stack) {
         UUID playerUUID = serverPlayer.getUUID();
-        long currentTime = System.currentTimeMillis();
+        long currentTime = serverPlayer.level().getGameTime();
 
         // Check if special throw is on cooldown
         Long lastUseTime = specialThrowCooldowns.get(playerUUID);
-        if (lastUseTime != null && (currentTime - lastUseTime) < SPECIAL_THROW_COOLDOWN_MS) {
+        if (lastUseTime != null && (currentTime - lastUseTime) < SPECIAL_THROW_COOLDOWN_TICKS) {
             return; // Still on cooldown
         }
 
@@ -148,7 +149,7 @@ public class ThrowableWeaponItem extends Item implements PreventSlow {
 
         // Clean up old entries to prevent memory leak
         specialThrowCooldowns.entrySet().removeIf(entry ->
-                (currentTime - entry.getValue()) > SPECIAL_THROW_COOLDOWN_MS * 2
+                (currentTime - entry.getValue()) > SPECIAL_THROW_COOLDOWN_TICKS * 2
         );
     }
 

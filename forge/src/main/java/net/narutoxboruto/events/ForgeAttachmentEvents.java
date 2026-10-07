@@ -54,6 +54,7 @@ public class ForgeAttachmentEvents {
         if (event.getEntity() instanceof ServerPlayer serverPlayer) {
             PlayerDataManager.save(serverPlayer);
             PlayerDataManager.remove(serverPlayer.getUUID());
+            net.narutoxboruto.util.StatProgression.forget(serverPlayer.getUUID());
         }
     }
 

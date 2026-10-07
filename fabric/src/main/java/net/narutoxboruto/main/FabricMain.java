@@ -3,6 +3,7 @@ package net.narutoxboruto.main;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
+import net.narutoxboruto.entities.shinobis.AbstractShinobiMob;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.SpawnPlacementTypes;
 import net.minecraft.world.entity.SpawnPlacements;
@@ -55,6 +56,9 @@ public class FabricMain implements ModInitializer {
         ModEntities.SHARK_BOMB = FabricEntities.SHARK_BOMB;
         ModEntities.WATER_DRAGON = FabricEntities.WATER_DRAGON;
         ModEntities.LIGHTNING_ARC = FabricEntities.LIGHTNING_ARC;
+        ModEntities.ZABUZA_MOMOCHI = FabricEntities.ZABUZA_MOMOCHI;
+        ModEntities.JINPACHI_MUNASHI = FabricEntities.JINPACHI_MUNASHI;
+        ModEntities.KISAME_HOSHIGAKI = FabricEntities.KISAME_HOSHIGAKI;
 
         ModItems.SHURIKEN_ITEM = FabricItems.SHURIKEN;
         ModItems.FUMA_SHURIKEN_ITEM = FabricItems.FUMA_SHURIKEN;
@@ -76,14 +80,18 @@ public class FabricMain implements ModInitializer {
         FabricJutsuItemEvents.register();
 
         // Register spawn placements for custom mobs
-        SpawnPlacements.register(FabricEntities.ZABUZA_MOMOCHI, SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, Mob::checkMobSpawnRules);
-        SpawnPlacements.register(FabricEntities.JINPACHI_MUNASHI, SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, Mob::checkMobSpawnRules);
-        SpawnPlacements.register(FabricEntities.KISAME_HOSHIGAKI, SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, Mob::checkMobSpawnRules);
+        SpawnPlacements.register(FabricEntities.ZABUZA_MOMOCHI, SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, AbstractShinobiMob::checkBossSpawnRules);
+        SpawnPlacements.register(FabricEntities.JINPACHI_MUNASHI, SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, AbstractShinobiMob::checkBossSpawnRules);
+        SpawnPlacements.register(FabricEntities.KISAME_HOSHIGAKI, SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, AbstractShinobiMob::checkBossSpawnRules);
 
         // Server tick for EarthWave and WaterPrison
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             EarthWave.onServerTick();
             WaterPrison.onServerTick();
+        });
+        net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
+            WaterPrison.shutdown();
+            EarthWave.clear();
         });
 
         // Use Fabric to bootstrap the Common mod.

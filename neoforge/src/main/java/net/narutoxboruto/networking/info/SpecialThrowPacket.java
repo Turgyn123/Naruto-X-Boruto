@@ -5,10 +5,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.item.ItemStack;
-import net.narutoxboruto.items.throwables.FumaShurikenItem;
-import net.narutoxboruto.items.throwables.ThrowableWeaponItem;
+import net.narutoxboruto.util.ServerActions;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 public class SpecialThrowPacket implements CustomPacketPayload {
@@ -25,12 +22,8 @@ public class SpecialThrowPacket implements CustomPacketPayload {
 
     public void handle(IPayloadContext context) {
         context.enqueueWork(() -> {
-            ServerPlayer serverPlayer = (ServerPlayer) context.player();
-            ItemStack stack = serverPlayer.getItemInHand(InteractionHand.MAIN_HAND);
-
-            if (stack.getItem() instanceof ThrowableWeaponItem throwableItem &&
-                !(stack.getItem() instanceof FumaShurikenItem)) {
-                throwableItem.performSpecialThrow(serverPlayer, stack);
+            if (context.player() instanceof ServerPlayer serverPlayer) {
+                ServerActions.specialThrow(serverPlayer);
             }
         });
     }

@@ -1,6 +1,10 @@
 package net.narutoxboruto.entities.shinobis;
 
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.core.BlockPos;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.LevelAccessor;
+import net.narutoxboruto.entities.BossSpawner;
+import net.narutoxboruto.entities.ai.ShinobiGoToLandGoal;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.DifficultyInstance;
@@ -36,16 +40,30 @@ public class AbstractShinobiMob extends PathfinderMob implements RangedAttackMob
 
     public AbstractShinobiMob(EntityType<? extends PathfinderMob> pEntityType, Level pLevel) {
         super(pEntityType, pLevel);
-        this.maxUpStep();
         this.moveControl = new AbstractShinobiMobMoveControl(this);
         this.blocksBuilding = true;
-        this.setPathfindingMalus(PathType.BLOCKED.WATER, 0.0F);
+        // Shinobi walk on the water surface (see MixinLiquidBlock), so water counts as free to path over.
+        this.setPathfindingMalus(PathType.WATER, 0.0F);
     }
 
     @Nullable
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData, @Nullable CompoundTag pDataTag) {
+    @Override
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData) {
         this.setItemInHand(InteractionHand.MAIN_HAND, this.getWeapon());
         return super.finalizeSpawn(pLevel, pDifficulty, pReason, pSpawnData);
+    }
+
+    /**
+     * Placement rule for the shinobi bosses. They never spawn from the vanilla natural spawner, which
+     * rolls many times per second and can't be made rare with a spawn weight. {@link BossSpawner}
+     * decides when a boss shows up. Spawn eggs, commands and spawners still work.
+     */
+    public static boolean checkBossSpawnRules(EntityType<? extends AbstractShinobiMob> type, LevelAccessor level,
+                                              MobSpawnType spawnType, BlockPos pos, RandomSource random) {
+        if (spawnType == MobSpawnType.NATURAL || spawnType == MobSpawnType.CHUNK_GENERATION) {
+            return false;
+        }
+        return Mob.checkMobSpawnRules(type, level, spawnType, pos, random);
     }
 
     protected ItemStack getWeapon() {
@@ -63,11 +81,13 @@ public class AbstractShinobiMob extends PathfinderMob implements RangedAttackMob
 
     @Override
     protected void registerGoals() {
-        this.goalSelector.addGoal(1, new MeleeAttackGoal(this, 2, false)); // Higher priority for attacking
-        this.goalSelector.addGoal(2, new LookAtPlayerGoal(this, Player.class, 60F));
-        this.goalSelector.addGoal(3, new ShinobiSwimUpGoal(this));
+        // Lower number = higher priority. Throwing from range beats melee, which beats wandering.
+        this.goalSelector.addGoal(0, new ShinobiSwimUpGoal(this));
+        this.goalSelector.addGoal(1, new ShinobiRangedAttackGoal<>(this, 1.5, 30, 50, 25));
+        this.goalSelector.addGoal(2, new MeleeAttackGoal(this, 2, false));
+        this.goalSelector.addGoal(3, new ShinobiGoToLandGoal(this, 1.0D));
         this.goalSelector.addGoal(5, new RandomStrollGoal(this, 1.5));
-        this.goalSelector.addGoal(2, new ShinobiRangedAttackGoal<>(this, 1.5, 30, 50, 25));
+        this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 60F));
         this.targetSelector.addGoal(0, new NearestAttackableTargetGoal<>(this, Player.class, true));
         this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Villager.class, true));
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, IronGolem.class, true));
@@ -141,13 +161,14 @@ public class AbstractShinobiMob extends PathfinderMob implements RangedAttackMob
         this.searchingForLand = p_32399_;
     }
 
+    /** They chase targets underwater, so they must not drown. */
     @Override
-    public boolean isInWater() {
-        return false; // Treat the entity as if it's not in water
+    public boolean canBreatheUnderwater() {
+        return true;
     }
 
     @Override
     public boolean isSwimming() {
-        return false; // Prevent the entity from acting like it's swimming
+        return false; // Never use the swimming pose.
     }
 }

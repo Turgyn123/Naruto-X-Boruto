@@ -24,6 +24,7 @@ import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.tags.FluidTags;
+import net.narutoxboruto.main.Main;
 import net.narutoxboruto.main.platform.Services;
 
 import java.util.*;
@@ -116,6 +117,26 @@ public class WaterPrison extends AbstractJutsuItem {
         }
     }
     
+    /**
+     * Ends every active prison and puts the world back. Call when the server is stopping.
+     *
+     * The prisons only exist in memory, so without this a stop in the middle of one leaves the water
+     * cube in the world for good, and any trapped mob or player keeps the no-gravity flag, which is
+     * saved with the entity. It also drops the references to the old world so a new one starts clean.
+     */
+    public static void shutdown() {
+        for (PrisonData prison : ACTIVE_PRISONS_QUEUE) {
+            try {
+                removePrison(prison);
+            } catch (RuntimeException e) {
+                Main.LOG.error("Could not remove water prison at {}", prison.center, e);
+            }
+        }
+        ACTIVE_PRISONS_QUEUE.clear();
+        PLAYER_PRISONS.clear();
+        TRAPPED_ENTITIES.clear();
+    }
+
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);

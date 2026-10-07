@@ -5,10 +5,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
-import net.narutoxboruto.capabilities.NeoForgeCapabilities;
-import net.narutoxboruto.capabilities.info.Chakra;
+import net.narutoxboruto.util.ServerActions;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 public class RechargeChakra implements CustomPacketPayload {
@@ -24,9 +21,7 @@ public class RechargeChakra implements CustomPacketPayload {
     public void handle(IPayloadContext context) {
         context.enqueueWork(() -> {
             if (context.player() instanceof ServerPlayer serverPlayer) {
-                Chakra chakra = serverPlayer.getData(NeoForgeCapabilities.CHAKRA);
-                chakra.addValue(1, serverPlayer);
-                serverPlayer.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 10, 1, false, true));
+                ServerActions.rechargeChakra(serverPlayer);
             }
         });
     }

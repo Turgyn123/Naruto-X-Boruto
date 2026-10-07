@@ -14,7 +14,7 @@ public class ShinobiGoToLandGoal extends MoveToBlockGoal {
     }
 
     public boolean canUse() {
-        return super.canUse() && this.drowned.isInWater();
+        return this.drowned.isInWater() && !this.drowned.wantsToSwim() && super.canUse();
     }
 
     public boolean canContinueToUse() {

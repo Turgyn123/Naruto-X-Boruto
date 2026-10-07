@@ -1,115 +1,78 @@
 # Naruto x Boruto Mod
 
-Welcome to the **Naruto x Boruto** mod for Minecraft!
-This mod brings elements from the popular anime series Naruto and Boruto into the world of Minecraft, allowing you to experience ninja life, abilities, and battles like never before.
+A Naruto and Boruto mod for Minecraft **1.21.1**. Pick a clan, train your stats, grow your chakra and
+learn jutsu, wield the Seven Swordsmen's blades and hunt the shinobi bosses.
+
+Available on **NeoForge**, **Fabric** and **Forge**, built from one shared codebase.
 
 
 ## Table of Contents
 
-- [Introduction](#introduction)
 - [Features](#features)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Compatibility](#compatibility)
+- [Building](#building)
+- [Project layout](#project-layout)
 - [Contributing](#contributing)
 - [Issues](#issues)
 - [License](#license)
-
-
-## Introduction
-
-The **Naruto x Boruto** mod is designed to give players a unique gameplay experience by adding characters, weapons, jutsus, and more from the Naruto and Boruto series.
-Whether you want to become a ninja, master various jutsus, or battle your way through the world, this mod has something for every fan.
+- [Credits](#credits)
 
 
 ## Features
 
-- **Ninja Weapons**: Use iconic weapons like kunai, shuriken, and more.
-- **Jutsus**: Master different jutsus and unleash powerful attacks.
-- **Characters**: Meet familiar characters and villains from the Naruto and Boruto series.
-- **Ninja Villages**: Explore ninja villages and hidden locations.
-- **Custom Items**: Craft and use special items from the series.
-- **Quests & Missions**: Take on quests to earn rewards and progress your ninja skills.
+- **Chakra and stats**: ten trainable stats (Taijutsu, Ninjutsu, Genjutsu, Kenjutsu, Kinjutsu, Medical,
+  Senjutsu, Shurikenjutsu, Speed and Summoning). Most are trained by playing: hitting things, getting hit,
+  sprinting, throwing weapons. Scrolls give them a boost. Ninjutsu raises your maximum chakra, Medical your
+  health, Taijutsu your damage and Speed your movement speed. You earn Shinobi Points as stats grow.
+- **Clans, ranks and villages**: you are assigned a clan on your first join (Fuma, Nara, Shiin, Shirogane,
+  Uzumaki, Uchiha, Hyuuga or Chinoike) along with a rank and a hidden village. Each clan changes your
+  stats and chakra growth.
+- **Doujutsu**: the Sharingan (with its tomoe stages), Byakugan and Ketsuryugan, with their own buffs and
+  a screen to equip them and adjust how the eyes look.
+- **Jutsu**: Fire Ball, Earth Wall, Earth Wave, Water Dragon, Water Prison, Shark Bomb and Lightning Chakra
+  Mode. They need the matching nature release, cost chakra, and live in a jutsu storage that is bound to you.
+- **Swords**: Kubikiribocho, Samehada, Kabutowari, Kiba, Shibuki and Nuibari. Their special abilities need
+  Kenjutsu and chakra, and are toggled with the Special Action key.
+- **Throwing weapons**: shuriken, kunai, explosive kunai, senbon, poison senbon and the Fuma shuriken.
+- **Bosses**: Zabuza Momochi, Jinpachi Munashi and Kisame Hoshigaki walk on water and use throwing weapons.
+  They are rare: each player gets one roll every few minutes (see `BossSpawner`).
+- **Commands**: `/clan`, `/rank`, `/affiliation`, `/dojutsu`, `/shinobi_stat` and `/shinobi_info`.
+  Setting values needs operator permission.
 
 
-## Installation
+## Building
 
-### Prerequisites
+You need **Java 21**.
 
-- **Minecraft Version**: 1.21+
-- **Java Version**: Ensure you have Java 21 installed.
-- **Git**: Make sure you have Git installed to clone the repository. You can download it [here](https://git-scm.com/).
+```
+./gradlew build
+```
 
-### Steps
+Each loader writes its jar to its own folder:
 
-1. **Clone the Naruto x Boruto Mod Repository**:
-    - Open a terminal and run:
-      ```
-      git clone https://github.com/Turgyn123/Naruto-x-Boruto.git
-      ```
-      
-    - Navigate into the project directory:
-      ```
-      cd Naruto-x-Boruto
-      ```
+| Loader   | Jar                    |
+|----------|------------------------|
+| NeoForge | `neoforge/build/libs/` |
+| Fabric   | `fabric/build/libs/`   |
+| Forge    | `forge/build/libs/`    |
 
-2. **Build the Mod**:
-    - Use Gradle to build the mod. In the terminal, run:
-      ```
-      ./gradlew build
-      ```
-      
-    - After the build completes, the `.jar` file will be generated in the `build/libs` directory.
-
-3. **Install Forge**:
-    - Make sure you have Minecraft Forge installed. Follow the instructions provided on the Forge website to install it.
-
-4. **Place the Mod File**:
-    - Copy the generated `.jar` file from the `build/libs` directory into the `mods` folder located in your Minecraft directory.
-    Typically, this folder can be found at:
-        - **Windows**: `C:\Users\<Your Username>\AppData\Roaming\.minecraft\mods`
-        - **Mac**: `~/Library/Application Support/minecraft/mods`
-        - **Linux**: `~/.minecraft/mods`
-
-5. **Launch Minecraft**:
-    - Open Minecraft Launcher, choose the Forge profile, and click **Play**.
-
-### Running the Mod Locally for Development
-
-1. **Open Project in Your IDE**:
-    - Import the project as a Gradle project in your IDE (e.g., IntelliJ IDEA or Eclipse).
-
-2. **Use the Gradle Task to Run Client**:
-    - To run the mod directly for testing, use the Gradle task:
-      ```
-      ./gradlew runClient
-      ```
-    - This will start a local Minecraft instance with your mod loaded, allowing you to test and develop without building the `.jar` file each time.
-
-3. **Making Changes and Testing**:
-    - As you make changes to the mod, you can re-run the `runClient` Gradle task to see your updates immediately.
-
-TODO: Having the project in WSL and running runClient from there seems to bug out.
-Client opens and game starts but mouse controls (at least) seem to not work.
+Put the jar for your loader in the `mods` folder of a Minecraft 1.21.1 profile. To test in a development
+client, run `./gradlew :neoforge:runClient` (or `:fabric:runClient`, `:forge:runClient`).
 
 
-## Usage
+## Project layout
 
-- **Access Ninja Skills**: After installing the mod, you can start accessing new ninja tools, jutsus, and items directly in-game.
-- **Crafting & Recipes**: Use the in-game crafting table to create special items and weapons.
-- **Jutsus**: Learn different jutsus by ...
+The project follows the MultiLoader template:
 
-TODO: More information about gameplay mechanics, how to access specific features, other quick setups
+- `common/`: the mod itself. Game logic, items, entities, stats, commands, GUIs and assets.
+  It never calls a loader directly. It goes through `Services.PLATFORM` (`IPlatformHelper`).
+- `neoforge/`, `fabric/`, `forge/`: per-loader glue only. Registries, event hooks, networking and the
+  platform helper that stores player data.
+
+Keep gameplay logic in `common`. The loader modules should just forward events into it, as the stat events
+do through `StatProgression` and the client requests through `ServerActions`. That way a fix lands once
+for all three loaders.
 
 
-## Compatibility
-
-- **Minecraft Version**: 1.21+
-- **Mod Dependencies**: This mod requires Minecraft Either Forge, NeoForge or Fabric for 1.21+. Ensure other mods installed are also compatible with this version of Minecraft.
-- **Known Issues**:
-    - <Describe any known compatibility issues or conflicts with other mods>
-
-    
 ## Contributing
 
 We welcome contributions to the **Naruto x Boruto** mod! If you have ideas, feature requests, or bug fixes, feel free to contribute.
