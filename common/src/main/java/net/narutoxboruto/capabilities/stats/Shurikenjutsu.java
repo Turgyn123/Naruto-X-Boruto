@@ -4,36 +4,20 @@ import com.mojang.serialization.Codec;
 import net.minecraft.server.level.ServerPlayer;
 import net.narutoxboruto.main.platform.Services;
 
-public class Shurikenjutsu {
-    private int value;
-    private static final int MAX_VALUE = 500;
+public class Shurikenjutsu extends AbstractStat {
 
     public static final Codec<Shurikenjutsu> CODEC = Codec.INT.xmap(Shurikenjutsu::new, Shurikenjutsu::getValue);
 
-    public Shurikenjutsu() { this.value = 0; }
-    public Shurikenjutsu(int value) { this.value = value; }
+    public Shurikenjutsu() {
+        this(0);
+    }
 
-    public int getValue() { return value; }
+    public Shurikenjutsu(int value) {
+        super(value, DEFAULT_MAX_VALUE);
+    }
 
-    public void setValue(int value) { this.value = value; }
-
-    public void setValue(int value, ServerPlayer player) {
-        this.value = Math.min(value, MAX_VALUE);
-        this.syncValue(player);
-    }
-    public void addValue(int amount, ServerPlayer player) {
-        this.value = Math.min(this.value + amount, MAX_VALUE);
-        this.syncValue(player);
-    }
-    public void subValue(int amount, ServerPlayer player) {
-        this.value = Math.max(this.value - amount, 0);
-        this.syncValue(player);
-    }
-    public void incrementValue(int amount, ServerPlayer player) {
-        this.value = Math.min(this.value + amount, MAX_VALUE);
-        this.syncValue(player);
-    }
+    @Override
     public void syncValue(ServerPlayer player) {
-        Services.PLATFORM.syncShurikenjutsu(player, this.value);
+        Services.PLATFORM.syncShurikenjutsu(player, getValue());
     }
 }

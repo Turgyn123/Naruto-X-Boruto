@@ -6,69 +6,44 @@ import net.narutoxboruto.capabilities.info.MaxChakra;
 import net.narutoxboruto.main.platform.Services;
 import net.narutoxboruto.util.ModUtil;
 
-public class Ninjutsu {
-    private int value;
-    private static final int MAX_VALUE = 500;
+/** Every Ninjutsu point also raises the player's maximum chakra. */
+public class Ninjutsu extends AbstractStat {
+
+    private static final int CHAKRA_PER_POINT = 5;
 
     public static final Codec<Ninjutsu> CODEC = Codec.INT.xmap(Ninjutsu::new, Ninjutsu::getValue);
 
-    public Ninjutsu() { this.value = 0; }
-    public Ninjutsu(int value) { this.value = value; }
-
-    public int getValue() { return value; }
-
-    public void setValue(int value) { this.value = value; }
-
-    public void setValue(int value, ServerPlayer player) {
-        int oldValue = this.value;
-        this.value = Math.min(value, MAX_VALUE);
-        int actualAdd = this.value - oldValue;
-        if (actualAdd > 0) {
-            growMaxChakra(actualAdd, player);
-        }
-        this.syncValue(player);
+    public Ninjutsu() {
+        this(0);
     }
 
-    public void addValue(int amount, ServerPlayer player) {
-        int oldValue = this.value;
-        this.value = Math.min(this.value + amount, MAX_VALUE);
-        int actualAdd = this.value - oldValue;
-        if (actualAdd > 0) {
-            growMaxChakra(actualAdd, player);
-        }
-        this.syncValue(player);
+    public Ninjutsu(int value) {
+        super(value, DEFAULT_MAX_VALUE);
     }
 
-    public void subValue(int amount, ServerPlayer player) {
-        int oldValue = this.value;
-        this.value = Math.max(this.value - amount, 0);
-        int pointsRemoved = oldValue - this.value;
-        if (pointsRemoved > 0) {
+    @Override
+    public void syncValue(ServerPlayer player) {
+        Services.PLATFORM.syncNinjutsu(player, getValue());
+    }
+
+    /** Only real gains grow max chakra, so a stat at its cap can't be farmed for chakra. */
+    @Override
+    protected void onChanged(ServerPlayer player, int delta) {
+        if (delta > 0) {
             MaxChakra maxChakra = Services.PLATFORM.getMaxChakra(player);
-            int multiplier = ModUtil.getChakraGrowthMultiplier(player);
-            maxChakra.subValue(pointsRemoved * 5 * multiplier, player);
+            maxChakra.addValue(delta * CHAKRA_PER_POINT * ModUtil.getChakraGrowthMultiplier(player), player);
+        }
+    }
+
+    /** Lowering Ninjutsu takes back the max chakra it gave. Setting it directly (admin commands) does not. */
+    @Override
+    public int subValue(int amount, ServerPlayer player) {
+        int delta = super.subValue(amount, player);
+        if (delta < 0) {
+            MaxChakra maxChakra = Services.PLATFORM.getMaxChakra(player);
+            maxChakra.subValue(-delta * CHAKRA_PER_POINT * ModUtil.getChakraGrowthMultiplier(player), player);
             ModUtil.capChakraToMax(player);
         }
-        this.syncValue(player);
-    }
-
-    public void incrementValue(int amount, ServerPlayer player) {
-        int oldValue = this.value;
-        this.value = Math.min(this.value + amount, MAX_VALUE);
-        int actualAdd = this.value - oldValue;
-        if (actualAdd > 0) {
-            growMaxChakra(actualAdd, player);
-        }
-        this.syncValue(player);
-    }
-
-    public void syncValue(ServerPlayer player) {
-        Services.PLATFORM.syncNinjutsu(player, this.value);
-    }
-
-    private void growMaxChakra(int ninjutsuGain, ServerPlayer player) {
-        MaxChakra maxChakra = Services.PLATFORM.getMaxChakra(player);
-        int multiplier = ModUtil.getChakraGrowthMultiplier(player);
-        maxChakra.addValue(ninjutsuGain * 5 * multiplier, player);
+        return delta;
     }
 }

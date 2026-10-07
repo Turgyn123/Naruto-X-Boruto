@@ -60,6 +60,7 @@ public class FabricAttachmentEvents {
             ServerPlayer serverPlayer = handler.getPlayer();
             PlayerDataManager.save(serverPlayer);
             PlayerDataManager.remove(serverPlayer.getUUID());
+            net.narutoxboruto.util.StatProgression.forget(serverPlayer.getUUID());
         });
 
         // Player respawn/clone
