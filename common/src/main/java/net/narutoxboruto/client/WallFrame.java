@@ -11,6 +11,10 @@ import net.minecraft.core.Direction;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.narutoxboruto.util.WallClimbing;
 import org.joml.Matrix3f;
@@ -18,18 +22,27 @@ import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 /**
- * Walking up a wall with Chakra Control, like a gravity mod: the wall becomes the floor. The player
- * stands on it with their head pointing away from the wall, the camera and the model turn with them,
- * W walks up the wall, S down and A/D along it, and the mouse looks around in that sideways world.
+ * Walking on walls with Chakra Control, like a gravity mod: whatever the player walks on becomes the
+ * floor. They stand on it with their head pointing away from it, the camera and the model turn with them,
+ * W walks forward on it, S back and A/D sideways, and the mouse looks around in that sideways world.
  *
- * Only the local player is flipped, and only on the client. The real hitbox stays upright against the
- * wall, and the player's rotation is always set to where they really look, so the server, the crosshair
- * and the jutsu see the right direction. The sideways world is called the frame: its "up" is the wall
- * normal (away from the wall) and its "forward" at yaw 0 is straight up the wall.
+ * <h3>Surfaces</h3>
+ * The surface is described by its normal: the direction from the surface toward the player. A wall has a
+ * horizontal normal, the underside of a ceiling has {@code DOWN}. The ordinary world is {@code UP}, which
+ * is simply "not active". Walking up a tall wall and into a ceiling turns the player onto the ceiling
+ * (an inner corner), and walking off the edge of a surface wraps the player around it onto the next face
+ * (an outer corner). On every turn the view swings along with the player, like the real mod.
  *
- * The frame is a plain rotation of Minecraft's usual axes: x' = n × up, y' = n, z' = up (north of the
- * frame is up the sky). Everything the game computes with yaw and pitch is done in the usual axes and
- * then rotated into the world with {@link #toWorld}.
+ * <h3>The frame</h3>
+ * For a normal n the frame is a plain rotation of Minecraft's usual axes: up is n, and forward at yaw 0 is
+ * straight up the sky for a wall, or south for a ceiling. Everything the game computes with yaw and pitch
+ * is done in the usual axes and rotated into the world with {@link #toWorld}.
+ *
+ * <h3>Rendering</h3>
+ * Only the local player is flipped, only on the client. The real hitbox stays upright against the surface,
+ * and the player's rotation fields always hold the direction they really look, so the server, the crosshair
+ * and the jutsu see the right direction. Everything the view needs (camera up, eye, model) is blended from
+ * a snapshot taken when the surface last changed to the current surface, so every change is smooth.
  *
  * The camera, mouse and eye hooks live in {@code mixin.wallwalk}, in their own optional mixin config.
  */
@@ -37,35 +50,51 @@ public final class WallFrame {
 
     private WallFrame() {}
 
-    /** Ticks the flip takes in each direction. */
+    /** Ticks every change of surface takes to turn the view. */
     private static final int BLEND_TICKS = 8;
-    /** Blocks per tick along the wall. */
+    /** Blocks per tick along a surface. */
     private static final double SPEED = 0.22D;
-    /** Pull toward the wall, so the body stays against it. */
+    /** Pull toward the surface, so the body stays against it. */
     private static final double STICK = 0.1D;
+    /** Blocks per tick and ticks to walk around the edge of a surface. */
+    private static final double WRAP_SPEED = 0.2D;
+    private static final int WRAP_TICKS = 8;
     /** Ticks to keep walking over the top of a wall after it ends. */
     private static final int LEDGE_TICKS = 10;
     private static final double LEDGE_PUSH = 0.12D;
-    /** Ticks after letting go before the wall can be grabbed again. */
+    /** Ticks after letting go before a wall can be grabbed again. */
     private static final int COOLDOWN_TICKS = 10;
-    /** Height of the middle of the player's box, and the distance from it to a wall it stands against. */
+    /** Height of the middle of the player's box. */
     private static final double CENTER = 0.9D;
-    private static final double HALF_WIDTH = 0.3D;
+    /** The third person camera's distance behind the player. */
+    private static final double CAMERA_DISTANCE = 4.0D;
+    private static final float MAX_PITCH = 89.5F;
 
+    // ---- the surface the player walks on
     private static boolean active;
-    /** Horizontal direction from the wall toward the player. */
+    /** Direction from the surface toward the player. */
     private static Direction normal = Direction.NORTH;
-    /** Where the player looks, in the frame. Yaw 0 and pitch 0 look straight up the wall. */
+    /** Where the player looks, in the frame. Yaw 0 and pitch 0 look straight ahead along the surface. */
     private static float yaw;
     private static float pitch;
-    private static int blendTicks;
+    private static int wrapTicks;
+    private static Vec3 wrapDir = Vec3.ZERO;
     private static int ledgeTicks;
-    private static int cooldown;
     private static Vec3 ledgeDir = Vec3.ZERO;
-    /** The look direction when the flip began, and the last look direction once it ended. */
-    private static Vec3 entryLook = new Vec3(0, 0, 1);
-    private static Vec3 lastLook = new Vec3(0, 0, 1);
+    private static int cooldown;
     private static boolean moving;
+
+    // ---- the view: from what it was when the surface last changed, to the surface now
+    private static boolean visible;
+    private static int blendTicks = BLEND_TICKS;
+    private static Vec3 fromUp = new Vec3(0, 1, 0);
+    private static Vec3 fromShift = Vec3.ZERO;
+    private static Vec3 fromFeet = Vec3.ZERO;
+    /** Null is the game's own upright orientation. */
+    private static Quaternionf fromQuat;
+    private static Vec3 fromLook = new Vec3(0, 0, 1);
+    /** The look direction once the player is back in the ordinary world. */
+    private static Vec3 lastLook = new Vec3(0, 0, 1);
 
     // ---------------------------------------------------------------- state
 
@@ -75,39 +104,46 @@ public final class WallFrame {
 
     /** Is the local player flipped, or still turning back? */
     public static boolean appliesTo(Entity entity) {
-        return blendTicks > 0 && entity == Minecraft.getInstance().player;
+        return visible && entity == Minecraft.getInstance().player;
     }
 
-    /** 0 upright, 1 fully on the wall, smooth in between. */
-    public static float blend(float partialTick) {
-        float t = (blendTicks + (active ? partialTick : -partialTick)) / BLEND_TICKS;
-        t = Mth.clamp(t, 0.0F, 1.0F);
+    private static float ease(float partialTick) {
+        float t = Mth.clamp((blendTicks + partialTick) / BLEND_TICKS, 0.0F, 1.0F);
         return t * t * (3.0F - 2.0F * t);
     }
 
     // ---------------------------------------------------------------- the frame
 
-    private static Vec3 normalVec() {
-        return new Vec3(normal.getStepX(), 0.0, normal.getStepZ());
+    private static Vec3 vec(Direction direction) {
+        return new Vec3(direction.getStepX(), direction.getStepY(), direction.getStepZ());
     }
 
-    /** The frame's x axis: normal × up. */
-    private static Vec3 frameX() {
-        return normalVec().cross(new Vec3(0, 1, 0));
+    /** Forward at yaw 0: up the sky on a wall, south on a floor or ceiling. */
+    private static Vec3 frameZ(Direction n) {
+        return n.getAxis() == Direction.Axis.Y ? new Vec3(0, 0, 1) : new Vec3(0, 1, 0);
+    }
+
+    private static Vec3 frameX(Direction n) {
+        return vec(n).cross(frameZ(n));
     }
 
     /** A vector in Minecraft's usual axes, rotated into the frame. */
-    private static Vec3 toWorld(Vec3 v) {
-        return frameX().scale(v.x).add(normalVec().scale(v.y)).add(0.0, v.z, 0.0);
+    private static Vec3 toWorld(Direction n, Vec3 v) {
+        return frameX(n).scale(v.x).add(vec(n).scale(v.y)).add(frameZ(n).scale(v.z));
     }
 
-    private static Quaternionf frameRotation() {
-        Vec3 x = frameX();
-        Vec3 n = normalVec();
+    private static Vec3 toFrame(Direction n, Vec3 world) {
+        return new Vec3(world.dot(frameX(n)), world.dot(vec(n)), world.dot(frameZ(n)));
+    }
+
+    private static Quaternionf frameRotation(Direction n) {
+        Vec3 x = frameX(n);
+        Vec3 y = vec(n);
+        Vec3 z = frameZ(n);
         Matrix3f matrix = new Matrix3f(
                 (float) x.x, (float) x.y, (float) x.z,
-                (float) n.x, (float) n.y, (float) n.z,
-                0.0F, 1.0F, 0.0F);
+                (float) y.x, (float) y.y, (float) y.z,
+                (float) z.x, (float) z.y, (float) z.z);
         return new Quaternionf().setFromNormalized(matrix);
     }
 
@@ -116,17 +152,96 @@ public final class WallFrame {
         double y = Math.toRadians(yaw);
         double p = Math.toRadians(pitch);
         double cp = Math.cos(p);
-        return toWorld(new Vec3(-Math.sin(y) * cp, -Math.sin(p), Math.cos(y) * cp));
+        return toWorld(normal, new Vec3(-Math.sin(y) * cp, -Math.sin(p), Math.cos(y) * cp));
     }
 
-    /** The world look direction: turning from the old look into the frame's while it flips. */
-    public static Vec3 lookDirection(float partialTick) {
-        if (!active) return lastLook;
-        Vec3 target = frameLook();
-        float b = blend(partialTick);
-        if (b >= 0.999F) return target;
-        Vec3 mix = entryLook.scale(1.0F - b).add(target.scale(b));
+    private static void setFrameLook(Direction n, Vec3 world) {
+        Vec3 s = toFrame(n, world.normalize());
+        yaw = (float) Math.toDegrees(Math.atan2(-s.x, s.z));
+        pitch = Mth.clamp((float) -Math.toDegrees(Math.asin(Mth.clamp(s.y, -1.0, 1.0))), -MAX_PITCH, MAX_PITCH);
+    }
+
+    /** Half the size of the player's box along the normal: how far the box middle is from the surface. */
+    private static double halfAlong(Direction n) {
+        return n.getAxis() == Direction.Axis.Y ? 0.9D : 0.3D;
+    }
+
+    /** Where the feet are, relative to the entity position: on the surface, below the middle of the box. */
+    private static Vec3 feetFor(Direction n) {
+        return new Vec3(0.0, CENTER, 0.0).subtract(vec(n).scale(halfAlong(n)));
+    }
+
+    /** Where the eye is, relative to where the game puts it: out from the surface, not above the head. */
+    private static Vec3 shiftFor(Direction n, double eyeHeight) {
+        return feetFor(n).add(vec(n).scale(eyeHeight)).subtract(0.0, eyeHeight, 0.0);
+    }
+
+    private static Quaternionf vanillaQuat(float bodyYaw) {
+        return new Quaternionf().rotationY((float) Math.toRadians(180.0 - bodyYaw));
+    }
+
+    // ---- the current target of the view, and the blend toward it
+
+    private static Vec3 toUp() {
+        return active ? vec(normal) : new Vec3(0, 1, 0);
+    }
+
+    private static Vec3 toShift(Entity entity) {
+        return active ? shiftFor(normal, entity.getEyeHeight()) : Vec3.ZERO;
+    }
+
+    private static Vec3 toFeet() {
+        return active ? feetFor(normal) : Vec3.ZERO;
+    }
+
+    private static Quaternionf toQuat(float bodyYaw) {
+        return active
+                ? frameRotation(normal).mul(new Quaternionf().rotationY((float) Math.toRadians(180.0 - yaw)), new Quaternionf())
+                : vanillaQuat(bodyYaw);
+    }
+
+    private static Vec3 targetLook(Entity entity, float partialTick) {
+        return active ? frameLook() : entity.getViewVector(partialTick);
+    }
+
+    /** The world look direction: turning from the old look into the target while the surface changes. */
+    private static Vec3 lookDirection(Entity entity, float partialTick) {
+        Vec3 target = targetLook(entity, partialTick);
+        float e = ease(partialTick);
+        if (e >= 0.999F) return target;
+        Vec3 mix = fromLook.scale(1.0F - e).add(target.scale(e));
         return mix.lengthSqr() < 1.0e-6 ? target : mix.normalize();
+    }
+
+    /** Blends two up vectors. Opposite ones (flipping from a ceiling to the floor) roll around the look direction. */
+    private static Vec3 mixUp(Vec3 a, Vec3 b, float e, Vec3 look) {
+        if (a.dot(b) > -0.98) {
+            Vec3 mix = a.scale(1.0F - e).add(b.scale(e));
+            return mix.lengthSqr() < 1.0e-6 ? b : mix.normalize();
+        }
+        double angle = Math.PI * e;
+        Vec3 k = look.normalize();
+        return a.scale(Math.cos(angle)).add(k.cross(a).scale(Math.sin(angle))).add(k.scale(k.dot(a) * (1.0 - Math.cos(angle))));
+    }
+
+    /** Remembers what the view looks like right now, to blend from it to the new surface. */
+    private static void snapshot(Entity entity, float bodyYaw) {
+        float e = ease(0.0F);
+        Vec3 look = lookDirection(entity, 0.0F);
+        Quaternionf a = fromQuat != null ? new Quaternionf(fromQuat) : vanillaQuat(bodyYaw);
+        Quaternionf mixed = a.slerp(toQuat(bodyYaw), e, new Quaternionf());
+
+        Vec3 up = mixUp(fromUp, toUp(), e, look);
+        Vec3 shift = fromShift.scale(1.0F - e).add(toShift(entity).scale(e));
+        Vec3 feet = fromFeet.scale(1.0F - e).add(toFeet().scale(e));
+
+        fromUp = up;
+        fromShift = shift;
+        fromFeet = feet;
+        fromQuat = mixed;
+        fromLook = look;
+        blendTicks = 0;
+        visible = true;
     }
 
     /** What the player's rotation fields hold: the real look direction, as yaw and pitch. */
@@ -146,7 +261,7 @@ public final class WallFrame {
     public static void tick(LocalPlayer player, Input input) {
         boolean allowed = WallClimbing.canCling(player);
         if (active && !allowed) {
-            exit(0, Vec3.ZERO);
+            leave(player, 0, Vec3.ZERO, lookDirection(player, 0.0F));
         }
 
         if (!active) {
@@ -165,41 +280,79 @@ public final class WallFrame {
             coast(player);
         }
 
-        blendTicks = Mth.clamp(blendTicks + (active ? 1 : -1), 0, BLEND_TICKS);
+        if (blendTicks < BLEND_TICKS) blendTicks++;
+        if (!active && blendTicks >= BLEND_TICKS && visible) {
+            // Back in the ordinary world for good
+            visible = false;
+            fromUp = new Vec3(0, 1, 0);
+            fromShift = Vec3.ZERO;
+            fromFeet = Vec3.ZERO;
+            fromQuat = null;
+        }
     }
 
     private static void enter(LocalPlayer player, Direction wallNormal) {
+        snapshot(player, player.yBodyRot);
         active = true;
         normal = wallNormal;
         yaw = 0.0F;
         pitch = 0.0F;
-        entryLook = player.getLookAngle();
+        wrapTicks = 0;
         ledgeTicks = 0;
     }
 
-    private static void exit(int ledge, Vec3 direction) {
-        lastLook = lookDirection(0.0F);
+    /** Back to the ordinary world, looking along {@code look}. */
+    private static void leave(LocalPlayer player, int ledge, Vec3 direction, Vec3 look) {
+        snapshot(player, player.yBodyRot);
         active = false;
+        wrapTicks = 0;
         ledgeTicks = ledge;
         ledgeDir = direction;
         moving = false;
+        lastLook = look;
+        applyLook(player, look);
+    }
+
+    /**
+     * Onto the next surface, turning the view with the player: the rotation that takes the old surface to
+     * the new one is applied to the look direction, so the player keeps looking "forward" along the new
+     * surface. {@code wrap} is the way to walk around an edge, or zero for a corner where the new surface
+     * is already against the body.
+     */
+    private static void changeSurface(LocalPlayer player, Direction newNormal, Vec3 wrap) {
+        Vec3 look = lookDirection(player, 0.0F);
+        Vec3 axis = vec(normal).cross(vec(newNormal));
+        Vec3 turned = axis.cross(look).add(axis.scale(axis.dot(look)));
+
+        if (newNormal == Direction.UP) {
+            // The top of a wall, or the floor: the ordinary world
+            leave(player, wrap.lengthSqr() > 0.0 ? LEDGE_TICKS : 0, wrap, turned);
+            return;
+        }
+
+        snapshot(player, player.yBodyRot);
+        fromLook = look;
+        normal = newNormal;
+        setFrameLook(newNormal, turned);
+        wrapTicks = wrap.lengthSqr() > 0.0 ? WRAP_TICKS : 0;
+        wrapDir = wrap;
+        applyLook(player, look);
     }
 
     private static void walk(LocalPlayer player, Input input) {
-        // Sneak lets go, jump hops off the wall
+        // Sneak lets go, jump hops off the surface
         if (player.isShiftKeyDown()) {
-            exit(0, Vec3.ZERO);
+            leave(player, 0, Vec3.ZERO, lookDirection(player, 0.0F));
             cooldown = COOLDOWN_TICKS;
             return;
         }
         if (input.jumping) {
-            player.setDeltaMovement(normal.getStepX() * 0.35, 0.35, normal.getStepZ() * 0.35);
-            exit(0, Vec3.ZERO);
+            Vec3 hop = vec(normal).scale(normal.getAxis() == Direction.Axis.Y ? 0.2 : 0.35);
+            player.setDeltaMovement(hop.x, normal.getAxis() == Direction.Axis.Y ? hop.y : 0.35, hop.z);
+            leave(player, 0, Vec3.ZERO, lookDirection(player, 0.0F));
             cooldown = COOLDOWN_TICKS;
             return;
         }
-
-        boolean touching = WallClimbing.hasWall(player, normal.getOpposite());
 
         // Move like the game does, in the frame: the keys give a direction relative to the frame's yaw
         float forward = input.forwardImpulse;
@@ -219,27 +372,53 @@ public final class WallFrame {
         }
         moving = length > 1.0e-4;
 
-        Vec3 velocity = toWorld(inFrame.scale(SPEED)).add(-normal.getStepX() * STICK, 0.0, -normal.getStepZ() * STICK);
-        boolean goingUp = velocity.y > 0.01;
-        boolean goingDown = velocity.y < -0.01;
+        Direction wallSide = normal.getOpposite();
+        Vec3 stick = vec(wallSide).scale(STICK);
+        Vec3 along = toWorld(normal, inFrame.scale(SPEED));
 
-        if (!touching) {
-            // The wall ended. Over the top: keep walking onto it. Off the side: just fall.
-            exit(goingUp ? LEDGE_TICKS : 0, new Vec3(-normal.getStepX(), 0.0, -normal.getStepZ()));
+        // Walking around the edge of the surface onto the next one
+        if (wrapTicks > 0) {
+            if (WallClimbing.touches(player, wallSide)) {
+                wrapTicks = 0;
+            } else {
+                wrapTicks--;
+                if (wrapTicks == 0) {
+                    leave(player, 0, Vec3.ZERO, lookDirection(player, 0.0F));
+                    return;
+                }
+                player.setDeltaMovement(wrapDir.scale(WRAP_SPEED).add(stick));
+                player.fallDistance = 0.0F;
+                applyLook(player, lookDirection(player, 0.0F));
+                return;
+            }
+        }
+
+        Direction heading = along.lengthSqr() > 0.0004 ? Direction.getNearest(along.x, along.y, along.z) : null;
+
+        // Something ahead to walk onto: a ceiling above, a wall in front, the floor below
+        if (heading != null && WallClimbing.blockedAhead(player, heading)) {
+            changeSurface(player, heading.getOpposite(), Vec3.ZERO);
             return;
         }
-        if (goingDown && player.onGround()) {
-            exit(0, Vec3.ZERO); // back on the floor
+
+        // The surface ends: around its edge onto the next face, which faces the way the player was walking
+        if (!WallClimbing.touches(player, wallSide)) {
+            if (heading != null) {
+                // Back toward the old surface, and on in the walking direction so the body slides past the corner
+                changeSurface(player, heading, vec(wallSide).add(vec(heading).scale(0.6)));
+            } else {
+                leave(player, 0, Vec3.ZERO, lookDirection(player, 0.0F));
+            }
             return;
         }
 
-        player.setDeltaMovement(velocity);
+        player.setDeltaMovement(along.add(stick));
         player.fallDistance = 0.0F;
         player.setSprinting(false);
-        applyLook(player, lookDirection(0.0F));
+        applyLook(player, lookDirection(player, 0.0F));
     }
 
-    /** Not on a wall: the last steps over the top of one. */
+    /** Not on a surface: the last steps over the top of a wall. */
     private static void coast(LocalPlayer player) {
         if (ledgeTicks <= 0) return;
         if (player.onGround()) {
@@ -257,38 +436,35 @@ public final class WallFrame {
     public static boolean turn(Entity entity, double yawDelta, double pitchDelta) {
         if (!active || !(entity instanceof LocalPlayer player)) return false;
         yaw = Mth.wrapDegrees(yaw + (float) (yawDelta * 0.15D));
-        pitch = Mth.clamp(pitch + (float) (pitchDelta * 0.15D), -90.0F, 90.0F);
-        applyLook(player, lookDirection(0.0F));
+        pitch = Mth.clamp(pitch + (float) (pitchDelta * 0.15D), -MAX_PITCH, MAX_PITCH);
+        applyLook(player, lookDirection(player, 0.0F));
         return true;
-    }
-
-    /** Where the eye is in the frame, relative to where the game puts it: out from the wall, not above the head. */
-    private static Vec3 eyeShift(Entity entity) {
-        Vec3 n = normalVec();
-        double eye = entity.getEyeHeight();
-        return new Vec3(0.0, CENTER, 0.0).subtract(n.scale(HALF_WIDTH)).add(n.scale(eye)).subtract(0.0, eye, 0.0);
     }
 
     /** The eye position for the crosshair and interactions. */
     public static Vec3 adjustEye(Entity entity, float partialTick, Vec3 vanillaEye) {
         if (!appliesTo(entity)) return vanillaEye;
-        float b = blend(partialTick);
-        return b <= 0.0F ? vanillaEye : vanillaEye.add(eyeShift(entity).scale(b));
+        float e = ease(partialTick);
+        Vec3 shift = fromShift.scale(1.0F - e).add(toShift(entity).scale(e));
+        return vanillaEye.add(shift);
     }
 
     /**
-     * The camera, after the game set it up: turn it to the frame's look and up, and move it out from the
-     * wall. Changes {@code rotation} and the three axis vectors in place, and returns the new position,
+     * The camera, after the game set it up: turn it to the frame's look and up, and place it out from the
+     * surface. Changes {@code rotation} and the three axis vectors in place, and returns the new position,
      * or null when nothing has to change.
+     *
+     * In third person the game has already backed the camera off along its own idea of "behind", which is
+     * wrong for a turned view (the ray hit the wall and the ground, and the camera jumped in close), so the
+     * back-off is done again here along the real direction.
      */
-    public static Vec3 adjustCamera(Entity entity, boolean reversed, float partialTick, Vec3 position,
-                                    Quaternionf rotation, Vector3f forwards, Vector3f up, Vector3f left) {
+    public static Vec3 adjustCamera(Entity entity, BlockGetter level, boolean detached, boolean reversed, float partialTick,
+                                    Vec3 position, Quaternionf rotation, Vector3f forwards, Vector3f up, Vector3f left) {
         if (!appliesTo(entity)) return null;
-        float b = blend(partialTick);
-        if (b <= 0.0F) return null;
+        float e = ease(partialTick);
 
-        Vec3 look = lookDirection(partialTick);
-        Vec3 wantedUp = new Vec3(0, 1, 0).scale(1.0F - b).add(normalVec().scale(b));
+        Vec3 look = lookDirection(entity, partialTick);
+        Vec3 wantedUp = mixUp(fromUp, toUp(), e, look);
         wantedUp = wantedUp.subtract(look.scale(wantedUp.dot(look)));
         if (wantedUp.lengthSqr() < 1.0e-6) return null;
         wantedUp = wantedUp.normalize();
@@ -311,24 +487,33 @@ public final class WallFrame {
         up.rotate(delta);
         left.rotate(delta);
 
-        return position.add(eyeShift(entity).scale(b));
+        // The eye, out from the surface; first person looks from there
+        Vec3 shift = fromShift.scale(1.0F - e).add(toShift(entity).scale(e));
+        Vec3 eye = entity.getPosition(partialTick).add(0.0, entity.getEyeHeight(), 0.0).add(shift);
+        if (!detached) return eye;
+
+        // Third person: back off from the eye along the real direction, stopping at blocks in the way
+        Vec3 back = target.scale(-1.0);
+        double distance = CAMERA_DISTANCE;
+        BlockHitResult hit = level.clip(new ClipContext(eye, eye.add(back.scale(distance + 0.3)),
+                ClipContext.Block.VISUAL, ClipContext.Fluid.NONE, entity));
+        if (hit.getType() != HitResult.Type.MISS) {
+            distance = Math.max(0.0, hit.getLocation().distanceTo(eye) - 0.3);
+        }
+        return eye.add(back.scale(distance));
     }
 
     /**
      * The player model, in the entity's frame at the end of the game's own rotations: undo the game's
-     * body yaw, then turn and move the model into the frame, blended with how it normally stands.
+     * body yaw, then turn and move the model onto the surface, blended with how it stood before.
      */
     public static void transformModel(PoseStack poseStack, AbstractClientPlayer player, float bodyYaw, float partialTick) {
         if (!appliesTo(player)) return;
-        float b = blend(partialTick);
+        float e = ease(partialTick);
 
-        Quaternionf upright = new Quaternionf().rotationY((float) Math.toRadians(180.0 - bodyYaw));
-        Quaternionf flipped = frameRotation().mul(
-                new Quaternionf().rotationY((float) Math.toRadians(180.0 - yaw)), new Quaternionf());
-        Quaternionf both = upright.slerp(flipped, b, new Quaternionf());
-
-        // The feet go on the wall, at the height of the middle of the box
-        Vec3 feet = new Vec3(0.0, CENTER, 0.0).subtract(normalVec().scale(HALF_WIDTH)).scale(b);
+        Quaternionf start = fromQuat != null ? new Quaternionf(fromQuat) : vanillaQuat(bodyYaw);
+        Quaternionf both = start.slerp(toQuat(bodyYaw), e, new Quaternionf());
+        Vec3 feet = fromFeet.scale(1.0F - e).add(toFeet().scale(e));
 
         poseStack.mulPose(Axis.YP.rotationDegrees(bodyYaw - 180.0F));
         poseStack.translate(feet.x, feet.y, feet.z);
@@ -338,6 +523,7 @@ public final class WallFrame {
     /** The head follows the frame's pitch, and the limbs swing while walking. */
     public static void poseModel(ModelPart head, ModelPart rightArm, ModelPart leftArm,
                                  ModelPart rightLeg, ModelPart leftLeg, float ageInTicks) {
+        if (!active) return;
         head.yRot = 0.0F;
         head.xRot = (float) Math.toRadians(pitch);
         if (moving) {

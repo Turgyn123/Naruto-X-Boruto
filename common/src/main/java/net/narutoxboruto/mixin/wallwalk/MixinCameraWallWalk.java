@@ -33,7 +33,7 @@ public abstract class MixinCameraWallWalk {
     @Inject(method = "setup", at = @At("RETURN"))
     private void nxb$wallWalk(BlockGetter level, Entity entity, boolean detached, boolean thirdPersonReverse,
                               float partialTick, CallbackInfo ci) {
-        Vec3 moved = WallFrame.adjustCamera(entity, detached && thirdPersonReverse, partialTick,
+        Vec3 moved = WallFrame.adjustCamera(entity, level, detached, detached && thirdPersonReverse, partialTick,
                 this.position, this.rotation, this.forwards, this.up, this.left);
         if (moved != null) {
             this.position = moved;
