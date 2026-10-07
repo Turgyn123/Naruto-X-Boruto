@@ -76,6 +76,10 @@ public class WaterDragonEntity extends Projectile implements GeoEntity {
     private static final int FLIGHT_SCAN_INTERVAL = 5;   // Re-scan for targets every N flight ticks
     private static final double TARGET_SCAN_RANGE = 30.0; // Range for in-flight target scanning
     private static final double TARGET_SCAN_CONE = 0.5;  // Dot product threshold for flight cone (cos ~60°)
+    private static final double TURN_RATE_TARGET = Math.toRadians(6.0); // Max turn per tick toward a locked target (a heavy dragon turns slowly)
+    private static final double TURN_RATE_AIM = Math.toRadians(4.0);    // Max turn per tick toward the caster's crosshair
+    private static final double AIM_DISTANCE = 40.0;     // How far ahead the crosshair is followed
+    private static final double TERRAIN_LOOKAHEAD = 4.0; // Blocks ahead checked for terrain to climb over
     
     public WaterDragonEntity(EntityType<? extends WaterDragonEntity> entityType, Level level) {
         super(entityType, level);
@@ -222,15 +226,23 @@ public class WaterDragonEntity extends Projectile implements GeoEntity {
             scanForFlightTarget();
         }
         
-        // Home toward locked target during flight
+        // Guided flight: turn by a limited angle each tick, toward the locked target if there is one,
+        // otherwise toward the point the caster is looking at, so the caster can steer the dragon.
+        Vec3 desired = velocity;
+        double turn = TURN_RATE_AIM;
         if (this.lockedTarget != null && this.lockedTarget.isAlive()) {
-            Vec3 toTarget = this.lockedTarget.getEyePosition().subtract(this.position()).normalize();
-            Vec3 currentDir = velocity.normalize();
-            // Blend 15% toward target each tick for responsive homing
-            Vec3 blended = currentDir.scale(0.85).add(toTarget.scale(0.15)).normalize();
-            this.setDeltaMovement(blended.scale(SPEED));
+            desired = this.lockedTarget.position()
+                    .add(0, this.lockedTarget.getBbHeight() * 0.5, 0)
+                    .subtract(this.position());
+            turn = TURN_RATE_TARGET;
+        } else if (owner instanceof LivingEntity caster) {
+            desired = JutsuSteering.aimPoint(caster, AIM_DISTANCE).subtract(this.position());
+            // Close to the aim point: stop turning so it does not circle around it.
+            if (desired.lengthSqr() < 9.0) desired = velocity;
         }
-        // No target: dragon keeps flying in its current direction (launchDir)
+        Vec3 direction = JutsuSteering.turnToward(velocity, desired, turn);
+        direction = JutsuSteering.avoidTerrain(this, direction, TERRAIN_LOOKAHEAD);
+        this.setDeltaMovement(direction.scale(SPEED));
         
         // Update yaw and pitch to face movement direction
         Vec3 vel = this.getDeltaMovement();

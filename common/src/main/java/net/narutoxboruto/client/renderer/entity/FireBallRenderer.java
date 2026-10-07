@@ -35,8 +35,8 @@ public class FireBallRenderer extends EntityRenderer<FireBallEntity> {
                        MultiBufferSource buffer, int packedLight) {
         poseStack.pushPose();
         
-        // Scale the fireball (4x original size)
-        float scale = 2.0F;
+        // Starts small and grows to full size just after launch
+        float scale = 1.0F + 1.5F * entity.getGrowth(partialTicks);
         poseStack.scale(scale, scale, scale);
         
         // Apply rotation for spinning effect on all axes

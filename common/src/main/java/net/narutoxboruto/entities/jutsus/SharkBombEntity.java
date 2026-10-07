@@ -49,11 +49,18 @@ public class SharkBombEntity extends Projectile implements GeoEntity {
     // === Configuration ===
     private static final float DAMAGE = 16.0F;         // Direct hit damage
     private static final float AOE_DAMAGE = 8.0F;      // AOE splash damage at center
-    private static final float SPEED = 0.8F;            // Flight speed (blocks/tick)
+    private static final float SPEED = 1.0F;            // Top flight speed (blocks/tick)
+    private static final float START_SPEED = 0.5F;      // Speed on launch, builds up to SPEED
+    private static final float SPEED_UP_PER_TICK = 0.05F;
     private static final int MAX_FLIGHT_TICKS = 120;    // 6s max flight
     private static final double MAX_RANGE = 50.0;       // Max travel distance from launch point
     private static final double HOMING_RANGE = 50.0;    // Target detection range
-    private static final double HOMING_STRENGTH = 0.3;  // How aggressively it steers (30% per tick)
+    private static final double LOCK_CONE = 0.88;       // How close to the crosshair a target must be to lock on (dot product, ~28 degrees)
+    private static final double TURN_RATE_TARGET = Math.toRadians(10.0); // Max turn per tick toward a locked target
+    private static final double TURN_RATE_AIM = Math.toRadians(7.0);     // Max turn per tick toward the crosshair
+    private static final double AIM_DISTANCE = 40.0;    // How far ahead the crosshair is followed
+    private static final double TERRAIN_LOOKAHEAD = 3.5; // Blocks ahead checked for terrain to climb over
+    private static final int RETARGET_INTERVAL = 5;     // Ticks between looking for a new target
     private static final float AOE_RADIUS = 3.0F;       // Splash damage radius
     private static final float EXPLOSION_POWER = 2.0F;  // Visual explosion power
     
@@ -83,7 +90,7 @@ public class SharkBombEntity extends Projectile implements GeoEntity {
         } else {
             launchDir = shooter.getLookAngle();
         }
-        this.setDeltaMovement(launchDir.scale(SPEED));
+        this.setDeltaMovement(launchDir.scale(START_SPEED));
         
         // Face the launch direction (negate atan2 to match MC yaw convention)
         double horizDist = launchDir.horizontalDistance();
@@ -120,8 +127,8 @@ public class SharkBombEntity extends Projectile implements GeoEntity {
             return;
         }
         
-        // Homing behavior - re-target every tick
-        updateHoming();
+        // Smooth guided flight toward the locked target or the caster's crosshair
+        steer();
         
         // Hit detection
         HitResult hitResult = ProjectileUtil.getHitResultOnMoveVector(this, this::canHitEntity);
@@ -143,36 +150,47 @@ public class SharkBombEntity extends Projectile implements GeoEntity {
     }
     
     /**
-     * Homing behavior - re-acquire target every tick and steer toward them.
-     * Based on reference mod's strong homing (30% steering per tick).
+     * Guides the shark. It turns by a limited angle each tick, so its path is a smooth arc rather
+     * than a snap toward the target: toward a locked target if there is one, otherwise toward the
+     * point the caster is looking at, so the caster can steer it. It also climbs over terrain.
      */
-    private void updateHoming() {
+    private void steer() {
         Entity owner = this.getOwner();
-        if (!(owner instanceof Player player)) return;
-        
-        // Re-target every tick if current target is invalid
-        if (this.targetEntity == null || !this.targetEntity.isAlive() ||
-            this.targetEntity.distanceTo(this) > HOMING_RANGE) {
+        if (!(owner instanceof LivingEntity caster)) return;
+
+        // Look for a target near the crosshair now and then, and again if the old one is gone.
+        boolean targetLost = this.targetEntity != null
+                && (!this.targetEntity.isAlive() || this.targetEntity.distanceTo(this) > HOMING_RANGE);
+        if (targetLost) this.targetEntity = null;
+        if (this.targetEntity == null && this.age % RETARGET_INTERVAL == 0 && caster instanceof Player player) {
             this.targetEntity = findBestTarget(player);
         }
-        
+
+        Vec3 current = this.getDeltaMovement();
+        Vec3 desired;
+        double turn;
         if (this.targetEntity != null) {
-            // Steer toward target's eye position
-            Vec3 toTarget = this.targetEntity.getEyePosition().subtract(this.position()).normalize();
-            Vec3 currentDir = this.getDeltaMovement().normalize();
-            
-            // Strong homing - 30% correction toward target each tick
-            Vec3 newDir = currentDir.scale(1.0 - HOMING_STRENGTH)
-                .add(toTarget.scale(HOMING_STRENGTH))
-                .normalize();
-            
-            this.setDeltaMovement(newDir.scale(SPEED));
+            desired = this.targetEntity.position()
+                    .add(0, this.targetEntity.getBbHeight() * 0.5, 0)
+                    .subtract(this.position());
+            turn = TURN_RATE_TARGET;
+        } else {
+            desired = JutsuSteering.aimPoint(caster, AIM_DISTANCE).subtract(this.position());
+            turn = TURN_RATE_AIM;
+            // Close to the aim point: stop turning so it does not circle around it.
+            if (desired.lengthSqr() < 4.0) desired = current;
         }
+
+        Vec3 direction = JutsuSteering.turnToward(current, desired, turn);
+        direction = JutsuSteering.avoidTerrain(this, direction, TERRAIN_LOOKAHEAD);
+
+        float speed = Math.min(SPEED, START_SPEED + SPEED_UP_PER_TICK * this.age);
+        this.setDeltaMovement(direction.scale(speed));
     }
     
     /**
-     * Find the best target to home in on.
-     * Prioritizes entities closest to the player's crosshair within 50 blocks.
+     * Find the entity closest to the player's crosshair, within range and within a cone around it.
+     * Anything outside the cone is ignored, so the shark does not swing round to something behind you.
      */
     private LivingEntity findBestTarget(Player player) {
         AABB searchBox = this.getBoundingBox().inflate(HOMING_RANGE);
@@ -182,9 +200,6 @@ public class SharkBombEntity extends Projectile implements GeoEntity {
             entity -> entity != player && entity.isAlive() && !entity.isSpectator()
         );
         
-        if (nearbyEntities.isEmpty()) return null;
-        
-        // Score by crosshair alignment (dot product) with distance penalty
         Vec3 playerLook = player.getLookAngle();
         Vec3 playerPos = player.getEyePosition();
         
@@ -192,11 +207,13 @@ public class SharkBombEntity extends Projectile implements GeoEntity {
         double bestScore = -1;
         
         for (LivingEntity entity : nearbyEntities) {
-            Vec3 toEntity = entity.position().subtract(playerPos).normalize();
-            double dot = playerLook.dot(toEntity);
-            double distance = entity.distanceTo(this);
-            double score = dot - (distance / HOMING_RANGE) * 0.3;
+            Vec3 toEntity = entity.position().add(0, entity.getBbHeight() * 0.5, 0).subtract(playerPos);
+            double distance = toEntity.length();
+            if (distance < 0.5) continue;
+            double dot = playerLook.dot(toEntity.scale(1.0 / distance));
+            if (dot < LOCK_CONE) continue;
             
+            double score = dot - (distance / HOMING_RANGE) * 0.3;
             if (score > bestScore) {
                 bestScore = score;
                 bestTarget = entity;
