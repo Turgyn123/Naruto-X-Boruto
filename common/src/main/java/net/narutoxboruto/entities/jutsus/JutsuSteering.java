@@ -61,12 +61,16 @@ public final class JutsuSteering {
      * returns the direction unchanged.
      */
     public static Vec3 avoidTerrain(Entity projectile, Vec3 direction, double lookAhead) {
+        // From the middle of the body: a projectile whose position is at ground level would otherwise
+        // see the ground right under it as an obstacle and climb away.
+        return avoidTerrain(projectile, projectile.getBoundingBox().getCenter(), direction, lookAhead);
+    }
+
+    /** Same, but looks from {@code start}: for a long projectile this is its front, not its middle. */
+    public static Vec3 avoidTerrain(Entity projectile, Vec3 start, Vec3 direction, double lookAhead) {
         if (direction.lengthSqr() < 1.0e-8) return direction;
 
         Vec3 dir = direction.normalize();
-        // From the middle of the body: a projectile whose position is at ground level would otherwise
-        // see the ground right under it as an obstacle and climb away.
-        Vec3 start = projectile.getBoundingBox().getCenter();
         BlockHitResult hit = projectile.level().clip(new ClipContext(
                 start, start.add(dir.scale(lookAhead)), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, projectile));
         if (hit.getType() == HitResult.Type.MISS) return direction;
