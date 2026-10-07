@@ -51,14 +51,15 @@ public final class WallFrame {
     private WallFrame() {}
 
     /** Ticks every change of surface takes to turn the view. */
-    private static final int BLEND_TICKS = 8;
+    private static final int BLEND_TICKS = 12;
     /** Blocks per tick along a surface. */
     private static final double SPEED = 0.22D;
     /** Pull toward the surface, so the body stays against it. */
     private static final double STICK = 0.1D;
-    /** Blocks per tick and ticks to walk around the edge of a surface. */
-    private static final double WRAP_SPEED = 0.2D;
-    private static final int WRAP_TICKS = 8;
+    /** Blocks per tick to walk around the edge of a surface, how far in onto the next face, and the longest it may take. */
+    private static final double WRAP_SPEED = 0.08D;
+    private static final double WRAP_DEPTH = 0.7D;
+    private static final int WRAP_TICKS = 24;
     /** Ticks to keep walking over the top of a wall after it ends. */
     private static final int LEDGE_TICKS = 10;
     private static final double LEDGE_PUSH = 0.12D;
@@ -78,7 +79,12 @@ public final class WallFrame {
     private static float yaw;
     private static float pitch;
     private static int wrapTicks;
-    private static Vec3 wrapDir = Vec3.ZERO;
+    /** Around an edge: toward the old surface, away from the old surface's end, and how far in so far. */
+    private static Vec3 wrapIn = Vec3.ZERO;
+    private static Vec3 wrapOut = Vec3.ZERO;
+    private static double wrapTravel;
+    /** How far the middle of the box really is from the surface it walks on. */
+    private static double reach = 0.3D;
     private static int ledgeTicks;
     private static Vec3 ledgeDir = Vec3.ZERO;
     private static int cooldown;
@@ -168,7 +174,37 @@ public final class WallFrame {
 
     /** Where the feet are, relative to the entity position: on the surface, below the middle of the box. */
     private static Vec3 feetFor(Direction n) {
-        return new Vec3(0.0, CENTER, 0.0).subtract(vec(n).scale(halfAlong(n)));
+        return new Vec3(0.0, CENTER, 0.0).subtract(vec(n).scale(reach));
+    }
+
+    /**
+     * How far the surface really is from the middle of the box, along the way it is walked on. Around an
+     * edge the body is not flat against the surface, and the model has to stay on it anyway.
+     */
+    private static double measureReach(Player player, Direction n) {
+        double fallback = halfAlong(n);
+        Direction wall = n.getOpposite();
+        Direction.Axis axis = wall.getAxis();
+        Vec3 center = player.getBoundingBox().getCenter();
+        double[][] offsets = {{0, 0}, {0.2, 0.2}, {0.2, -0.2}, {-0.2, 0.2}, {-0.2, -0.2}};
+        double best = Double.MAX_VALUE;
+        for (double[] o : offsets) {
+            int k = 0;
+            double dx = axis != Direction.Axis.X ? o[k++] : 0.0;
+            double dy = axis != Direction.Axis.Y ? o[k++] : 0.0;
+            double dz = axis != Direction.Axis.Z ? o[k] : 0.0;
+            Vec3 from = center.add(dx, dy, dz);
+            BlockHitResult hit = player.level().clip(new ClipContext(from, from.add(vec(wall).scale(1.5)),
+                    ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+            if (hit.getType() != HitResult.Type.MISS) best = Math.min(best, from.distanceTo(hit.getLocation()));
+        }
+        if (best == Double.MAX_VALUE) return fallback;
+        return Mth.clamp(best, fallback * 0.8, 1.3);
+    }
+
+    private static void trackReach(Player player, boolean immediate) {
+        double wanted = measureReach(player, normal);
+        reach = immediate ? wanted : reach + (wanted - reach) * 0.4;
     }
 
     /** Where the eye is, relative to where the game puts it: out from the surface, not above the head. */
@@ -295,6 +331,7 @@ public final class WallFrame {
         snapshot(player, player.yBodyRot);
         active = true;
         normal = wallNormal;
+        trackReach(player, true);
         yaw = 0.0F;
         pitch = 0.0F;
         wrapTicks = 0;
@@ -332,10 +369,14 @@ public final class WallFrame {
 
         snapshot(player, player.yBodyRot);
         fromLook = look;
+        boolean around = wrap.lengthSqr() > 0.0;
+        wrapIn = vec(normal.getOpposite());
+        wrapOut = vec(newNormal);
+        wrapTravel = 0.0;
         normal = newNormal;
+        trackReach(player, true);
         setFrameLook(newNormal, turned);
-        wrapTicks = wrap.lengthSqr() > 0.0 ? WRAP_TICKS : 0;
-        wrapDir = wrap;
+        wrapTicks = around ? WRAP_TICKS : 0;
         applyLook(player, look);
     }
 
@@ -376,18 +417,23 @@ public final class WallFrame {
         Vec3 stick = vec(wallSide).scale(STICK);
         Vec3 along = toWorld(normal, inFrame.scale(SPEED));
 
-        // Walking around the edge of the surface onto the next one
+        // Walking around the edge of the surface onto the next one: first clear the end of the old surface,
+        // then slowly in along the new face until the body stands on it
         if (wrapTicks > 0) {
-            if (WallClimbing.touches(player, wallSide)) {
+            wrapTicks--;
+            boolean held = WallClimbing.touches(player, wallSide);
+            if (held && wrapTravel >= WRAP_DEPTH) {
                 wrapTicks = 0;
+            } else if (wrapTicks == 0) {
+                leave(player, 0, Vec3.ZERO, lookDirection(player, 0.0F));
+                return;
             } else {
-                wrapTicks--;
-                if (wrapTicks == 0) {
-                    leave(player, 0, Vec3.ZERO, lookDirection(player, 0.0F));
-                    return;
-                }
-                player.setDeltaMovement(wrapDir.scale(WRAP_SPEED).add(stick));
+                Vec3 inward = wrapIn.scale(WRAP_SPEED);
+                boolean free = player.level().noCollision(player, player.getBoundingBox().move(inward));
+                if (free) wrapTravel += WRAP_SPEED;
+                player.setDeltaMovement(free ? inward : wrapOut.scale(WRAP_SPEED));
                 player.fallDistance = 0.0F;
+                trackReach(player, false);
                 applyLook(player, lookDirection(player, 0.0F));
                 return;
             }
@@ -415,6 +461,7 @@ public final class WallFrame {
         player.setDeltaMovement(along.add(stick));
         player.fallDistance = 0.0F;
         player.setSprinting(false);
+        trackReach(player, false);
         applyLook(player, lookDirection(player, 0.0F));
     }
 
