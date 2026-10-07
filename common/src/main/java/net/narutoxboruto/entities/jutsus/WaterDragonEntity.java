@@ -1,6 +1,7 @@
 package net.narutoxboruto.entities.jutsus;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -11,11 +12,14 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
@@ -60,7 +64,6 @@ public class WaterDragonEntity extends Projectile implements GeoEntity {
     
     private int age = 0;
     private boolean launched = false;
-    private double baseY = Double.NaN;  // Ground height the dragon rose from; it lifts off from here during the attack
     private Vec3 startPos;             // Set when launched, for range check
     private LivingEntity lockedTarget = null;  // Target it has locked onto in flight
     
@@ -86,11 +89,16 @@ public class WaterDragonEntity extends Projectile implements GeoEntity {
     private static final double TARGET_SCAN_CONE = 0.6;  // Dot product threshold for flight cone (cos ~53°)
     private static final double TURN_RATE_TARGET = Math.toRadians(6.0); // Max turn per tick toward a locked target (a heavy dragon turns slowly)
     private static final double AIM_DISTANCE = 50.0;     // How far along the look ray the caster is aiming
-    private static final double MAX_AIM_PITCH_UP = 12.0;  // Degrees above level an untargeted dragon can launch
+    private static final double MAX_AIM_PITCH_UP = 0.0;   // An untargeted dragon never climbs; it flies level or dives
     private static final double MAX_AIM_PITCH_DOWN = 30.0; // Degrees below level
     private static final double SPAWN_DISTANCE = 3.5;    // The dragon rises this far in front of the caster
     private static final int LOCK_DELAY_TICKS = 25;      // In flight, it flies straight this long (about 12 blocks) before it can lock on
-    private static final double FLIGHT_LIFT = 2.7;       // Blocks it lifts off the ground while swinging flat: the body then flies 3 blocks high
+    private static final double FLIGHT_HEIGHT = 3.0;     // The whole dragon starts this many blocks above the ground. Its tail hangs down to the puddle
+    private static final double BODY_HEIGHT = 0.3;       // Height of the middle of the body above the entity's position
+    private static final double HIT_FORWARD = 1.5;       // The hit zone sits this far ahead of the entity, around the front of the body
+    private static final double HIT_RADIUS = 1.6;        // Blocks around that point that count as a hit (the model is far bigger than its box)
+    private static final float BOX_WIDTH = 3.0F;         // Size of the entity's own box (shown with F3+B)
+    private static final float BOX_HEIGHT = 2.0F;
     private static final double MIN_AIM_AHEAD = 2.0;     // The crosshair point must be this far in front of the launch point to aim at it
     private static final float AIM_YAW_STEP = 30.0F;     // Max degrees per tick the dragon turns to follow where the caster looks
     private static final double TERRAIN_LOOKAHEAD = 4.0; // Blocks ahead checked for terrain to climb over
@@ -101,6 +109,13 @@ public class WaterDragonEntity extends Projectile implements GeoEntity {
         super(entityType, level);
         this.noPhysics = true; // No collision during windup
         this.noCulling = true; // Prevent frustum culling — scaled model extends far beyond the small entity hitbox
+        this.refreshDimensions(); // Pick up the box from getDimensions below
+    }
+
+    /** The registered size differs per loader and is far smaller than the dragon, so it is set here. */
+    @Override
+    public EntityDimensions getDimensions(Pose pose) {
+        return EntityDimensions.scalable(BOX_WIDTH, BOX_HEIGHT);
     }
     
     public WaterDragonEntity(Level level, LivingEntity shooter) {
@@ -112,7 +127,11 @@ public class WaterDragonEntity extends Projectile implements GeoEntity {
         // (bone11 starts at y=-37px and animates to rest position over 1s).
         // Rise a few blocks in front of the caster, not on top of them (the camera ended up inside the dragon).
         Vec3 ahead = Vec3.directionFromRotation(0.0F, shooter.getYHeadRot()).scale(SPAWN_DISTANCE);
-        this.setPos(shooter.getX() + ahead.x, shooter.getY(), shooter.getZ() + ahead.z);
+        // The whole dragon starts FLIGHT_HEIGHT above the ground there. Its tail reaches down to the
+        // puddle on the ground, and its body is already at flying height when it swings flat.
+        double x = shooter.getX() + ahead.x;
+        double z = shooter.getZ() + ahead.z;
+        this.setPos(x, findGroundY(level, x, shooter.getY(), z) + FLIGHT_HEIGHT, z);
         
         // It is aimed at where the caster looks from the very first tick, so it never has to turn around
         this.trackAim(shooter);
@@ -167,15 +186,11 @@ public class WaterDragonEntity extends Projectile implements GeoEntity {
         }
 
         // ==================== PHASE 3: ATTACK ====================
-        // The Attack animation swings the dragon from upright to flat while the entity itself lifts to
-        // flight height, so what you see is also what hits things. The aim is frozen from here on:
-        // looking at the dragon (or away from it) no longer changes where it goes.
+        // The Attack animation swings the dragon from upright to flat. It does not move up or down:
+        // it is already at flying height. The aim is frozen from here on: looking at the dragon (or
+        // away from it) no longer changes where it goes.
         if (this.age <= PHASE3_END) {
-            if (Double.isNaN(this.baseY)) {
-                this.baseY = this.getY() - FLIGHT_LIFT * attackProgress(this.age - 1);
-            }
             this.turnToAim(AIM_YAW_STEP);
-            this.setPos(this.getX(), this.baseY + FLIGHT_LIFT * attackProgress(this.age), this.getZ());
             return;
         }
         
@@ -203,6 +218,13 @@ public class WaterDragonEntity extends Projectile implements GeoEntity {
             return;
         }
         
+        // The model is far bigger than the entity's box, so anything close to its front counts as hit
+        LivingEntity inFront = this.findEntityInFront();
+        if (inFront != null) {
+            this.onHit(new EntityHitResult(inFront));
+            return;
+        }
+
         // Hit detection (entity hits always, block hits only after grace period)
         HitResult hitResult = ProjectileUtil.getHitResultOnMoveVector(this, this::canHitEntity);
         if (hitResult.getType() == HitResult.Type.ENTITY) {
@@ -255,13 +277,14 @@ public class WaterDragonEntity extends Projectile implements GeoEntity {
         Vec3 facing = Vec3.directionFromRotation(0.0F, this.getYRot());
         double x = this.getX() + facing.x * PUDDLE_OFFSET;
         double z = this.getZ() + facing.z * PUDDLE_OFFSET;
+        double ground = this.getY() - FLIGHT_HEIGHT;
 
         if (this.age == 1) {
-            level.playSound(null, x, this.getY(), z, SoundEvents.GENERIC_SPLASH, SoundSource.PLAYERS, 1.0F, 0.8F);
-            level.sendParticles(ParticleTypes.SPLASH, x, this.getY() + 0.1, z, 30, PUDDLE_RADIUS, 0.1, PUDDLE_RADIUS, 0.3);
+            level.playSound(null, x, ground, z, SoundEvents.GENERIC_SPLASH, SoundSource.PLAYERS, 1.0F, 0.8F);
+            level.sendParticles(ParticleTypes.SPLASH, x, ground + 0.1, z, 30, PUDDLE_RADIUS, 0.1, PUDDLE_RADIUS, 0.3);
         } else if (this.age % 2 == 0) {
             int count = this.age == PHASE2_END + 1 ? 24 : 4;
-            level.sendParticles(ParticleTypes.SPLASH, x, this.getY() + 0.1, z, count, PUDDLE_RADIUS, 0.05, PUDDLE_RADIUS, 0.1);
+            level.sendParticles(ParticleTypes.SPLASH, x, ground + 0.1, z, count, PUDDLE_RADIUS, 0.05, PUDDLE_RADIUS, 0.1);
         }
     }
 
@@ -321,9 +344,40 @@ public class WaterDragonEntity extends Projectile implements GeoEntity {
         this.setYRot(this.getYRot() + Mth.clamp(diff, -maxStep, maxStep));
     }
 
-    /** 0 at the start of the attack animation and 1 at its end. */
-    private static double attackProgress(int age) {
-        return Mth.clamp((age - PHASE2_END) / (double) ATTACK_ANIM_TICKS, 0.0, 1.0);
+    /** The top of the ground (or the water surface) just below the caster, at the spot the dragon rises. */
+    private static double findGroundY(Level level, double x, double fromY, double z) {
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos(Mth.floor(x), Mth.floor(fromY), Mth.floor(z));
+        for (int i = 0; i < 10; i++) {
+            BlockState state = level.getBlockState(pos);
+            if (!state.getCollisionShape(level, pos).isEmpty()) return pos.getY() + 1.0;
+            if (!state.getFluidState().isEmpty()) return pos.getY() + state.getFluidState().getHeight(level, pos);
+            pos.move(Direction.DOWN);
+        }
+        return fromY;
+    }
+
+    /**
+     * The nearest living thing around the front of the dragon, as far as it moves this tick. The model is
+     * a long body with a head, so this is a zone around the head rather than the (much smaller) box.
+     */
+    private LivingEntity findEntityInFront() {
+        Vec3 movement = this.getDeltaMovement();
+        if (movement.lengthSqr() < 1.0e-6) return null;
+
+        Vec3 front = this.position().add(movement.normalize().scale(HIT_FORWARD)).add(0.0, BODY_HEIGHT, 0.0);
+        AABB zone = new AABB(front, front).inflate(HIT_RADIUS).expandTowards(movement);
+
+        LivingEntity best = null;
+        double bestDistance = Double.MAX_VALUE;
+        for (LivingEntity candidate : this.level().getEntitiesOfClass(LivingEntity.class, zone,
+                e -> e.isAlive() && !e.isSpectator() && this.canHitEntity(e))) {
+            double distance = candidate.distanceToSqr(front);
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                best = candidate;
+            }
+        }
+        return best;
     }
 
     /**
@@ -336,7 +390,7 @@ public class WaterDragonEntity extends Projectile implements GeoEntity {
         if (this.level().isClientSide || !(owner instanceof LivingEntity shooter)) return;
 
         Vec3 look = shooter.getLookAngle();
-        Vec3 launchPoint = this.position().add(0.0, FLIGHT_LIFT, 0.0);
+        Vec3 launchPoint = this.position().add(0.0, BODY_HEIGHT, 0.0);
         Vec3 toAim = JutsuSteering.aimPoint(shooter, AIM_DISTANCE).subtract(launchPoint);
         Vec3 dir = toAim.dot(look) > MIN_AIM_AHEAD ? toAim.normalize() : look;
 
@@ -487,7 +541,6 @@ public class WaterDragonEntity extends Projectile implements GeoEntity {
         super.readAdditionalSaveData(compound);
         this.age = compound.getInt("Age");
         this.launched = compound.getBoolean("Launched");
-        if (compound.contains("BaseY")) this.baseY = compound.getDouble("BaseY");
     }
     
     @Override
@@ -495,7 +548,6 @@ public class WaterDragonEntity extends Projectile implements GeoEntity {
         super.addAdditionalSaveData(compound);
         compound.putInt("Age", this.age);
         compound.putBoolean("Launched", this.launched);
-        if (!Double.isNaN(this.baseY)) compound.putDouble("BaseY", this.baseY);
     }
     
     /**
