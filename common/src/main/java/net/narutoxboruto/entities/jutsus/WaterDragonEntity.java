@@ -3,6 +3,8 @@ package net.narutoxboruto.entities.jutsus;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.TickTask;
 import net.minecraft.server.level.ServerLevel;
@@ -29,6 +31,8 @@ import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animation.*;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
+import org.joml.Vector3f;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -47,14 +51,18 @@ import java.util.List;
  * - Impact: Massive AOE explosion + water damage + temporary water blocks.
  */
 public class WaterDragonEntity extends Projectile implements GeoEntity {
+
+    /** Where the dragon will go, as a unit vector. The server updates it and the client just reads it. */
+    private static final EntityDataAccessor<Vector3f> DATA_AIM =
+            SynchedEntityData.defineId(WaterDragonEntity.class, EntityDataSerializers.VECTOR3);
     
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
     
     private int age = 0;
     private boolean launched = false;
-    private Vec3 launchDir = null;     // Direction to launch, calculated during idle/attack
+    private double baseY = Double.NaN;  // Ground height the dragon rose from; it lifts off from here during the attack
     private Vec3 startPos;             // Set when launched, for range check
-    private LivingEntity lockedTarget = null;  // Target locked on when entering idle phase
+    private LivingEntity lockedTarget = null;  // Target it has locked onto in flight
     
     // === Configuration ===
     private static final float DAMAGE = 20.0F;          // Direct hit damage
@@ -74,14 +82,17 @@ public class WaterDragonEntity extends Projectile implements GeoEntity {
     private static final float EXPLOSION_POWER = 0.5F;   // Visual-only explosion (low power to avoid extra knockback)
     private static final int LAUNCH_GRACE_TICKS = 5;     // Ticks after launch to ignore block collisions
     private static final int FLIGHT_SCAN_INTERVAL = 5;   // Re-scan for targets every N flight ticks
-    private static final double TARGET_SCAN_RANGE = 30.0; // Range for in-flight target scanning
-    private static final double TARGET_SCAN_CONE = 0.5;  // Dot product threshold for flight cone (cos ~60°)
+    private static final double TARGET_SCAN_RANGE = 24.0; // Range for in-flight target scanning
+    private static final double TARGET_SCAN_CONE = 0.6;  // Dot product threshold for flight cone (cos ~53°)
     private static final double TURN_RATE_TARGET = Math.toRadians(6.0); // Max turn per tick toward a locked target (a heavy dragon turns slowly)
     private static final double AIM_DISTANCE = 50.0;     // How far along the look ray the caster is aiming
     private static final double MAX_AIM_PITCH_UP = 12.0;  // Degrees above level an untargeted dragon can launch
     private static final double MAX_AIM_PITCH_DOWN = 30.0; // Degrees below level
     private static final double SPAWN_DISTANCE = 3.5;    // The dragon rises this far in front of the caster
-    private static final int LOCK_DELAY_TICKS = 10;      // In flight, it flies straight this long before it can lock on
+    private static final int LOCK_DELAY_TICKS = 25;      // In flight, it flies straight this long (about 12 blocks) before it can lock on
+    private static final double FLIGHT_LIFT = 2.7;       // Blocks it lifts off the ground while swinging flat: the body then flies 3 blocks high
+    private static final double MIN_AIM_AHEAD = 2.0;     // The crosshair point must be this far in front of the launch point to aim at it
+    private static final float AIM_YAW_STEP = 30.0F;     // Max degrees per tick the dragon turns to follow where the caster looks
     private static final double TERRAIN_LOOKAHEAD = 4.0; // Blocks ahead checked for terrain to climb over
     private static final double PUDDLE_OFFSET = 0.65;    // Blocks from the entity to the middle of the puddle in the model
     private static final double PUDDLE_RADIUS = 1.4;     // Blocks, roughly the size of the puddle
@@ -103,8 +114,9 @@ public class WaterDragonEntity extends Projectile implements GeoEntity {
         Vec3 ahead = Vec3.directionFromRotation(0.0F, shooter.getYHeadRot()).scale(SPAWN_DISTANCE);
         this.setPos(shooter.getX() + ahead.x, shooter.getY(), shooter.getZ() + ahead.z);
         
-        // Face the same direction as the shooter initially
-        this.setYRot(shooter.getYHeadRot());
+        // It is aimed at where the caster looks from the very first tick, so it never has to turn around
+        this.trackAim(shooter);
+        this.setYRot(aimYaw());
         this.setXRot(0);
         this.yRotO = this.getYRot();
         this.xRotO = this.getXRot();
@@ -115,7 +127,7 @@ public class WaterDragonEntity extends Projectile implements GeoEntity {
     
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
-        // No additional synced data needed
+        builder.define(DATA_AIM, new Vector3f(0.0F, 0.0F, 1.0F));
     }
     
     @Override
@@ -144,50 +156,26 @@ public class WaterDragonEntity extends Projectile implements GeoEntity {
             sprayPuddle(serverLevel);
         }
 
-        // ==================== PHASE 1: RISING ====================
-        // Entity stays at spawn position. The Spawn animation handles the
-        // visual rise (bone11 starts underground and animates to rest pose).
-        if (this.age <= RISE_TICKS) {
-            return;
-        }
-        
-        // ==================== PHASE 2: IDLE / HOVERING ====================
-        // Lock onto nearest enemy when entering idle, then track it.
-        // Idle animation loops with gentle swaying.
+        // ==================== PHASE 1: RISING + PHASE 2: IDLE ====================
+        // The entity stays on the ground. The Spawn animation rises the dragon out of the puddle and the
+        // Idle animation sways it. It keeps facing where the caster looks, but never locks onto a target:
+        // that only happens in flight, after it has flown a while.
         if (this.age <= PHASE2_END) {
-            // Lock onto target on first idle tick
-            if (this.age == RISE_TICKS + 1) {
-                lockOnTarget(owner);
-            }
-            
-            // Track locked target (or fall back to crosshair if none found)
-            updateLaunchDirFromTarget(owner);
-            
-            // Smoothly rotate yaw toward target direction
-            if (this.launchDir != null) {
-                float targetYaw = -(float)(Mth.atan2(this.launchDir.x, this.launchDir.z) * (180.0 / Math.PI));
-                float yawDiff = Mth.wrapDegrees(targetYaw - this.getYRot());
-                float maxYawStep = 360.0f / (float) IDLE_TICKS;
-                this.setYRot(this.getYRot() + Mth.clamp(yawDiff, -maxYawStep, maxYawStep));
-            }
+            this.trackAim(owner);
+            this.turnToAim(AIM_YAW_STEP);
             return;
         }
-        
+
         // ==================== PHASE 3: ATTACK ====================
-        // Attack animation straightens dragon from vertical to horizontal
-        // via per-bone rotations. Entity stays in place.
+        // The Attack animation swings the dragon from upright to flat while the entity itself lifts to
+        // flight height, so what you see is also what hits things. The aim is frozen from here on:
+        // looking at the dragon (or away from it) no longer changes where it goes.
         if (this.age <= PHASE3_END) {
-            // The aim is frozen once the attack animation starts, so looking at the dragon (or away from
-            // it) no longer changes where it goes. A locked target is still tracked.
-            if (this.lockedTarget != null && this.lockedTarget.isAlive()) {
-                updateLaunchDirFromTarget(owner);
+            if (Double.isNaN(this.baseY)) {
+                this.baseY = this.getY() - FLIGHT_LIFT * attackProgress(this.age - 1);
             }
-            if (this.launchDir != null) {
-                float targetYaw = -(float)(Mth.atan2(this.launchDir.x, this.launchDir.z) * (180.0 / Math.PI));
-                float yawDiff = Mth.wrapDegrees(targetYaw - this.getYRot());
-                float maxYawStep = 360.0f / (float) ATTACK_ANIM_TICKS;
-                this.setYRot(this.getYRot() + Mth.clamp(yawDiff, -maxYawStep, maxYawStep));
-            }
+            this.turnToAim(AIM_YAW_STEP);
+            this.setPos(this.getX(), this.baseY + FLIGHT_LIFT * attackProgress(this.age), this.getZ());
             return;
         }
         
@@ -196,16 +184,8 @@ public class WaterDragonEntity extends Projectile implements GeoEntity {
             this.launched = true;
             this.startPos = this.position();
             
-            // Only a locked target changes the direction now; otherwise it goes where it was aimed.
-            if (this.launchDir == null || (this.lockedTarget != null && this.lockedTarget.isAlive())) {
-                updateLaunchDirFromTarget(owner);
-            }
-            
-            if (this.launchDir != null) {
-                this.setDeltaMovement(this.launchDir.scale(SPEED));
-            } else if (owner instanceof LivingEntity shooter) {
-                this.setDeltaMovement(shooter.getLookAngle().scale(SPEED));
-            }
+            // It goes where it was aimed; a target is only picked up later, in flight.
+            this.setDeltaMovement(this.getAim().scale(SPEED));
         }
         
         int flightAge = this.age - PHASE3_END;
@@ -286,56 +266,6 @@ public class WaterDragonEntity extends Projectile implements GeoEntity {
     }
 
     /**
-     * Lock onto the best enemy near the player's crosshair direction with line of sight from the dragon.
-     * Requires visibility from the dragon to the target (no walls/blocks in between).
-     * Scores by crosshair alignment (primary) with distance bonus for closer targets.
-     */
-    private void lockOnTarget(Entity owner) {
-        if (!(owner instanceof Player player)) return;
-        
-        List<LivingEntity> nearby = this.level().getEntitiesOfClass(
-            LivingEntity.class,
-            this.getBoundingBox().inflate(50.0),
-            e -> e != player && e.isAlive() && !e.isSpectator() && !(e instanceof Player)
-        );
-        
-        if (nearby.isEmpty()) return;
-        
-        Vec3 look = player.getLookAngle();
-        Vec3 eye = player.getEyePosition();
-        Vec3 dragonPos = this.position().add(0, this.getBbHeight() / 2.0, 0);
-        LivingEntity best = null;
-        double bestScore = -1;
-        
-        for (LivingEntity e : nearby) {
-            Vec3 toE = e.position().subtract(eye);
-            double dist = toE.length();
-            if (dist < 0.5) continue;
-            double dot = look.dot(toE.normalize());
-            if (dot < -0.2) continue; // Behind the player
-            
-            // Line of sight check from dragon to target (must not be blocked by terrain)
-            Vec3 targetCenter = e.position().add(0, e.getBbHeight() / 2.0, 0);
-            ClipContext clipCtx = new ClipContext(dragonPos, targetCenter, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, e);
-            BlockHitResult blockHit = this.level().clip(clipCtx);
-            if (blockHit.getType() == HitResult.Type.BLOCK) {
-                continue; // Dragon can't see this entity
-            }
-            
-            // Score: crosshair alignment primary, distance as tiebreaker (closer = bonus)
-            double score = dot * (1.0 + 5.0 / (dist + 3.0));
-            if (score > bestScore) {
-                bestScore = score;
-                best = e;
-            }
-        }
-        
-        if (best != null) {
-            this.lockedTarget = best;
-        }
-    }
-    
-    /**
      * Scan for targets during flight. Looks for enemies in a cone ahead of the dragon.
      * If a target is found, locks onto it for homing.
      */
@@ -374,22 +304,46 @@ public class WaterDragonEntity extends Projectile implements GeoEntity {
         }
     }
     
-    /**
-     * Update launchDir toward the locked target. If no locked target
-     * (or it died), fall back to the owner's look direction.
-     */
-    private void updateLaunchDirFromTarget(Entity owner) {
-        Vec3 from = this.position().add(0, 1.0, 0); // The dragon's body, not its feet
-        if (this.lockedTarget != null && this.lockedTarget.isAlive()) {
-            this.launchDir = this.lockedTarget.position()
-                    .add(0, this.lockedTarget.getBbHeight() * 0.5, 0)
-                    .subtract(from).normalize();
-        } else if (owner instanceof LivingEntity shooter) {
-            // Fallback: aim at the point the caster is looking at (the block they look at, or 50 blocks out)
-            this.launchDir = limitPitch(JutsuSteering.aimPoint(shooter, AIM_DISTANCE).subtract(from).normalize());
-        }
+    private Vec3 getAim() {
+        Vector3f aim = this.entityData.get(DATA_AIM);
+        return new Vec3(aim.x(), aim.y(), aim.z());
     }
-    
+
+    private float aimYaw() {
+        Vec3 aim = this.getAim();
+        return -(float) (Mth.atan2(aim.x, aim.z) * (180.0 / Math.PI));
+    }
+
+    /** Turns toward the aim by at most {@code maxStep} degrees. */
+    private void turnToAim(float maxStep) {
+        if (this.getAim().horizontalDistanceSqr() < 1.0e-4) return; // aiming straight up or down: keep facing
+        float diff = Mth.wrapDegrees(this.aimYaw() - this.getYRot());
+        this.setYRot(this.getYRot() + Mth.clamp(diff, -maxStep, maxStep));
+    }
+
+    /** 0 at the start of the attack animation and 1 at its end. */
+    private static double attackProgress(int age) {
+        return Mth.clamp((age - PHASE2_END) / (double) ATTACK_ANIM_TICKS, 0.0, 1.0);
+    }
+
+    /**
+     * Server side: points the aim at the spot the caster looks at, measured from where the dragon will
+     * start flying. Measuring from the dragon itself used to send it backwards when the caster looked at
+     * the ground closer than the dragon is, so anything that is not clearly in front of the launch point
+     * falls back to the way the caster looks.
+     */
+    private void trackAim(Entity owner) {
+        if (this.level().isClientSide || !(owner instanceof LivingEntity shooter)) return;
+
+        Vec3 look = shooter.getLookAngle();
+        Vec3 launchPoint = this.position().add(0.0, FLIGHT_LIFT, 0.0);
+        Vec3 toAim = JutsuSteering.aimPoint(shooter, AIM_DISTANCE).subtract(launchPoint);
+        Vec3 dir = toAim.dot(look) > MIN_AIM_AHEAD ? toAim.normalize() : look;
+
+        Vec3 aim = limitPitch(dir);
+        this.entityData.set(DATA_AIM, new Vector3f((float) aim.x, (float) aim.y, (float) aim.z));
+    }
+
     /**
      * Keeps an untargeted launch close to level: a shallow climb at most, and a steeper dive allowed so
      * it can hit the ground in front of the caster. Looking up to watch the dragon rise would otherwise
@@ -533,6 +487,7 @@ public class WaterDragonEntity extends Projectile implements GeoEntity {
         super.readAdditionalSaveData(compound);
         this.age = compound.getInt("Age");
         this.launched = compound.getBoolean("Launched");
+        if (compound.contains("BaseY")) this.baseY = compound.getDouble("BaseY");
     }
     
     @Override
@@ -540,6 +495,7 @@ public class WaterDragonEntity extends Projectile implements GeoEntity {
         super.addAdditionalSaveData(compound);
         compound.putInt("Age", this.age);
         compound.putBoolean("Launched", this.launched);
+        if (!Double.isNaN(this.baseY)) compound.putDouble("BaseY", this.baseY);
     }
     
     /**
