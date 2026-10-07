@@ -92,7 +92,7 @@ public class WaterDragonEntity extends Projectile implements GeoEntity {
     private static final double MAX_AIM_PITCH_DOWN = 30.0; // Degrees below level
     private static final double SPAWN_DISTANCE = 3.5;    // The dragon rises this far in front of the caster
     private static final int LOCK_DELAY_TICKS = 25;      // In flight, it flies straight this long (about 12 blocks) before it can lock on
-    private static final double FLIGHT_HEIGHT = 1.5;     // The whole dragon starts this many blocks above the ground (the puddle in the geo file sits 16 model units per 3 blocks below: -8 for 1.5)
+    private static final double FLIGHT_HEIGHT = 1.0;     // The whole dragon starts this many blocks above the ground (the puddle in the geo file sits 16 model units per 3 blocks below: -5.333 for 1.0)
     private static final double BODY_HEIGHT = 0.3;       // Height of the middle of the body above the entity's position
     private static final float BOX_WIDTH = 3.0F;         // Size of the entity's own box (shown with F3+B)
     private static final float BOX_HEIGHT = 2.0F;
