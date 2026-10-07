@@ -253,5 +253,7 @@
   "command.dojutsu.give.multiple": "Gave %s players the %s dōjutsu",
   "command.dojutsu.invalid": "Unknown dōjutsu type: %s",
   "command.dojutsu.already_has": "%s already has %s",
-  "command.dojutsu.too_many": "%s already has the maximum number of dōjutsu"
+  "command.dojutsu.too_many": "%s already has the maximum number of dōjutsu",
+
+  "sword_ability.kenjutsu_required": "You need %2$s Kenjutsu to use %1$s. (You have %3$s)"
 }
