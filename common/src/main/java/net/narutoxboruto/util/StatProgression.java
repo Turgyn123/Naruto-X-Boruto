@@ -118,6 +118,7 @@ public final class StatProgression {
             trainSpeed(player);
         }
         tickChakraControl(player, tick);
+        WallClimbing.tickServer(player);
         if (tick % KIBA_DRAIN_INTERVAL == 0) {
             Kiba.tickChakraDrain(player);
         }

@@ -83,6 +83,8 @@ public class WaterDragonEntity extends Projectile implements GeoEntity {
     private static final double SPAWN_DISTANCE = 3.5;    // The dragon rises this far in front of the caster
     private static final int LOCK_DELAY_TICKS = 10;      // In flight, it flies straight this long before it can lock on
     private static final double TERRAIN_LOOKAHEAD = 4.0; // Blocks ahead checked for terrain to climb over
+    private static final double PUDDLE_OFFSET = 0.65;    // Blocks from the entity to the middle of the puddle in the model
+    private static final double PUDDLE_RADIUS = 1.4;     // Blocks, roughly the size of the puddle
     
     public WaterDragonEntity(EntityType<? extends WaterDragonEntity> entityType, Level level) {
         super(entityType, level);
@@ -137,6 +139,11 @@ public class WaterDragonEntity extends Projectile implements GeoEntity {
             return;
         }
         
+        // The dragon climbs out of a puddle: spray around it while it rises and winds up
+        if (this.age <= PHASE2_END + 1 && this.level() instanceof ServerLevel serverLevel) {
+            sprayPuddle(serverLevel);
+        }
+
         // ==================== PHASE 1: RISING ====================
         // Entity stays at spawn position. The Spawn animation handles the
         // visual rise (bone11 starts underground and animates to rest pose).
@@ -260,6 +267,24 @@ public class WaterDragonEntity extends Projectile implements GeoEntity {
         }
     }
     
+    /**
+     * Water spraying up from the puddle the dragon rises out of. The puddle is part of the model, a little
+     * in front of the entity's position, and it shrinks away again while the dragon launches.
+     */
+    private void sprayPuddle(ServerLevel level) {
+        Vec3 facing = Vec3.directionFromRotation(0.0F, this.getYRot());
+        double x = this.getX() + facing.x * PUDDLE_OFFSET;
+        double z = this.getZ() + facing.z * PUDDLE_OFFSET;
+
+        if (this.age == 1) {
+            level.playSound(null, x, this.getY(), z, SoundEvents.GENERIC_SPLASH, SoundSource.PLAYERS, 1.0F, 0.8F);
+            level.sendParticles(ParticleTypes.SPLASH, x, this.getY() + 0.1, z, 30, PUDDLE_RADIUS, 0.1, PUDDLE_RADIUS, 0.3);
+        } else if (this.age % 2 == 0) {
+            int count = this.age == PHASE2_END + 1 ? 24 : 4;
+            level.sendParticles(ParticleTypes.SPLASH, x, this.getY() + 0.1, z, count, PUDDLE_RADIUS, 0.05, PUDDLE_RADIUS, 0.1);
+        }
+    }
+
     /**
      * Lock onto the best enemy near the player's crosshair direction with line of sight from the dragon.
      * Requires visibility from the dragon to the target (no walls/blocks in between).
@@ -531,6 +556,7 @@ public class WaterDragonEntity extends Projectile implements GeoEntity {
     private static final RawAnimation SPAWN_ANIM = RawAnimation.begin().thenPlayAndHold("Spawn");
     private static final RawAnimation IDLE_ANIM = RawAnimation.begin().thenLoop("Idle");
     private static final RawAnimation ATTACK_ANIM = RawAnimation.begin().thenPlayAndHold("Attack");
+    private static final RawAnimation TAIL_ANIM = RawAnimation.begin().thenLoop("Tail");
     
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
@@ -546,6 +572,11 @@ public class WaterDragonEntity extends Projectile implements GeoEntity {
             }
             return state.setAndContinue(ATTACK_ANIM);
         }));
+
+        // The tail keeps waving through every phase. It only moves the tail bones, so it can run on its
+        // own next to the main controller.
+        controllers.add(new AnimationController<>(this, "tail_controller", 0,
+                state -> state.setAndContinue(TAIL_ANIM)));
     }
     
     @Override
