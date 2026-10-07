@@ -7,6 +7,7 @@ import net.minecraft.client.player.Input;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.entity.player.ProfilePublicKey;
 import net.narutoxboruto.items.PreventSlow;
+import net.narutoxboruto.util.WallClimbing;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -30,5 +31,7 @@ public abstract class MixinLocalPlayer extends AbstractClientPlayer {
             input.leftImpulse *= 5;
             input.forwardImpulse *= 5;
         }
+        // Wall climbing with Chakra Control: needs the input of this tick, and runs before the player moves
+        WallClimbing.tickLocal(this, input.forwardImpulse, input.jumping, input.shiftKeyDown);
     }
 }

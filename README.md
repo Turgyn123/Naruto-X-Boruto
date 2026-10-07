@@ -28,6 +28,9 @@ Available on **NeoForge**, **Fabric** and **Forge**, built from one shared codeb
   stats and chakra growth.
 - **Doujutsu**: the Sharingan (with its tomoe stages), Byakugan and Ketsuryugan, with their own buffs and
   a screen to equip them and adjust how the eyes look.
+- **Chakra Control**: a toggle (see the key bindings) that costs a little chakra over time. While it is on
+  you walk on water, run faster and climb walls: walk into a wall and keep holding forward. Look down
+  to run back down, hold sneak to slide, and press back to let go. Hanging on a wall slowly drains chakra.
 - **Jutsu**: Fire Ball, Earth Wall, Earth Wave, Water Dragon, Water Prison, Shark Bomb and Lightning Chakra
   Mode. They need the matching nature release, cost chakra, and live in a jutsu storage that is bound to you.
 - **Swords**: Kubikiribocho, Samehada, Kabutowari, Kiba, Shibuki and Nuibari. Their special abilities need
