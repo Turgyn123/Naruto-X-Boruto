@@ -32,9 +32,10 @@ public class FabricLightningCloakRenderer {
         Vec3 playerPos = player.getPosition(partialTick);
         Vec3 cameraPos = context.camera().getPosition();
 
-        // Create PoseStack and apply the view matrix from the context
+        // Start from an identity stack. In 1.21 the camera rotation is applied to the vertices by the
+        // render system's model-view matrix when the batch is drawn, so copying context.positionMatrix()
+        // into the stack as well would rotate the lightning twice and move it away from the player.
         PoseStack poseStack = new PoseStack();
-        poseStack.last().pose().set(context.positionMatrix());
 
         poseStack.pushPose();
         poseStack.translate(
