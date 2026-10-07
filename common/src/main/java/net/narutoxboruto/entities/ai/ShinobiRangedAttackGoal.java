@@ -24,7 +24,7 @@ public class ShinobiRangedAttackGoal <T extends net.minecraft.world.entity.Mob &
         this.attackIntervalMin = pAttackIntervalMin;
         this.attackIntervalMax = pAttackIntervalMax;
         this.attackRadiusSqr = pAttackRadius * pAttackRadius;
-        this.setFlags(EnumSet.of(Goal.Flag.LOOK));
+        this.setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
     }
 
     public boolean canUse() {

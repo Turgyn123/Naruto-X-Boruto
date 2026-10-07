@@ -5,6 +5,9 @@ import net.narutoxboruto.entities.effects.LightningArcEntity;
 import net.narutoxboruto.entities.jutsus.FireBallEntity;
 import net.narutoxboruto.entities.jutsus.SharkBombEntity;
 import net.narutoxboruto.entities.jutsus.WaterDragonEntity;
+import net.narutoxboruto.entities.shinobis.JinpachiMunashi;
+import net.narutoxboruto.entities.shinobis.KizameHoshigaki;
+import net.narutoxboruto.entities.shinobis.ZabuzaMomochi;
 import net.narutoxboruto.entities.throwables.*;
 
 public class ModEntities {
@@ -24,4 +27,9 @@ public class ModEntities {
 
     //Effects
     public static EntityType<LightningArcEntity> LIGHTNING_ARC;
+
+    //Bosses
+    public static EntityType<ZabuzaMomochi> ZABUZA_MOMOCHI;
+    public static EntityType<JinpachiMunashi> JINPACHI_MUNASHI;
+    public static EntityType<KizameHoshigaki> KISAME_HOSHIGAKI;
 }

@@ -73,6 +73,9 @@ public class NeoForgeMain {
         ModEntities.SHARK_BOMB = NeoForgeEntities.SHARK_BOMB.get();
         ModEntities.WATER_DRAGON = NeoForgeEntities.WATER_DRAGON.get();
         ModEntities.LIGHTNING_ARC = NeoForgeEntities.LIGHTNING_ARC.get();
+        ModEntities.ZABUZA_MOMOCHI = NeoForgeEntities.ZABUZA_MOMOCHI.get();
+        ModEntities.JINPACHI_MUNASHI = NeoForgeEntities.JINPACHI_MUNASHI.get();
+        ModEntities.KISAME_HOSHIGAKI = NeoForgeEntities.KISAME_HOSHIGAKI.get();
 
         ModItems.SHURIKEN_ITEM = NeoForgeItems.SHURIKEN.get();
         ModItems.FUMA_SHURIKEN_ITEM = NeoForgeItems.FUMA_SHURIKEN.get();
