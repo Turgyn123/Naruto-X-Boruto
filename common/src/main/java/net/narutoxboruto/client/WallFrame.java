@@ -56,10 +56,6 @@ public final class WallFrame {
     private static final double SPEED = 0.22D;
     /** Pull toward the surface, so the body stays against it. */
     private static final double STICK = 0.1D;
-    /** Blocks per tick to walk around the edge of a surface, how far in onto the next face, and the longest it may take. */
-    private static final double WRAP_SPEED = 0.08D;
-    private static final double WRAP_DEPTH = 0.7D;
-    private static final int WRAP_TICKS = 24;
     /** Ticks to keep walking over the top of a wall after it ends. */
     private static final int LEDGE_TICKS = 10;
     private static final double LEDGE_PUSH = 0.12D;
@@ -70,9 +66,6 @@ public final class WallFrame {
     /** The third person camera's distance behind the player. */
     private static final double CAMERA_DISTANCE = 4.0D;
     private static final float MAX_PITCH = 89.5F;
-    /** Degrees per tick the body turns toward the walking direction, and how far the head may turn from the body. */
-    private static final float BODY_TURN = 35.0F;
-    private static final float HEAD_LIMIT = 75.0F;
 
     // ---- the surface the player walks on
     private static boolean active;
@@ -81,13 +74,9 @@ public final class WallFrame {
     /** Where the player looks, in the frame. Yaw 0 and pitch 0 look straight ahead along the surface. */
     private static float yaw;
     private static float pitch;
-    /** Where the body faces, in the frame: it turns toward the way the player walks, so sideways steps do not slide. */
-    private static float bodyYaw;
-    private static int wrapTicks;
-    /** Around an edge: toward the old surface, away from the old surface's end, and how far in so far. */
-    private static Vec3 wrapIn = Vec3.ZERO;
-    private static Vec3 wrapOut = Vec3.ZERO;
-    private static double wrapTravel;
+    /** The direction of the keys in the walking animation: forward and to the left, from -1 to 1. */
+    private static float stepForward;
+    private static float stepLeft;
     /** How far the middle of the box really is from the surface it walks on. */
     private static double reach = 0.3D;
     private static int ledgeTicks;
@@ -237,7 +226,7 @@ public final class WallFrame {
 
     private static Quaternionf toQuat(float bodyYaw) {
         return active
-                ? frameRotation(normal).mul(new Quaternionf().rotationY((float) Math.toRadians(180.0 - bodyYaw)), new Quaternionf())
+                ? frameRotation(normal).mul(new Quaternionf().rotationY((float) Math.toRadians(180.0 - yaw)), new Quaternionf())
                 : vanillaQuat(bodyYaw);
     }
 
@@ -333,14 +322,13 @@ public final class WallFrame {
     }
 
     private static void enter(LocalPlayer player, Direction wallNormal) {
-        snapshot(player, player.yBodyRot);
+        // Start the turn from the body facing the wall, so the model tips straight back from it
+        snapshot(player, wallNormal.getOpposite().toYRot());
         active = true;
         normal = wallNormal;
         trackReach(player, true);
         yaw = 0.0F;
         pitch = 0.0F;
-        bodyYaw = 0.0F;
-        wrapTicks = 0;
         ledgeTicks = 0;
     }
 
@@ -348,7 +336,6 @@ public final class WallFrame {
     private static void leave(LocalPlayer player, int ledge, Vec3 direction, Vec3 look) {
         snapshot(player, player.yBodyRot);
         active = false;
-        wrapTicks = 0;
         ledgeTicks = ledge;
         ledgeDir = direction;
         moving = false;
@@ -359,32 +346,57 @@ public final class WallFrame {
     /**
      * Onto the next surface, turning the view with the player: the rotation that takes the old surface to
      * the new one is applied to the look direction, so the player keeps looking "forward" along the new
-     * surface. {@code wrap} is the way to walk around an edge, or zero for a corner where the new surface
-     * is already against the body.
+     * surface. {@code ledge} is the way to keep walking when the new surface is the ordinary world.
      */
-    private static void changeSurface(LocalPlayer player, Direction newNormal, Vec3 wrap) {
+    private static void changeSurface(LocalPlayer player, Direction newNormal, Vec3 ledge) {
         Vec3 look = lookDirection(player, 0.0F);
         Vec3 axis = vec(normal).cross(vec(newNormal));
         Vec3 turned = axis.cross(look).add(axis.scale(axis.dot(look)));
 
         if (newNormal == Direction.UP) {
             // The top of a wall, or the floor: the ordinary world
-            leave(player, wrap.lengthSqr() > 0.0 ? LEDGE_TICKS : 0, wrap, turned);
+            leave(player, ledge.lengthSqr() > 0.0 ? LEDGE_TICKS : 0, ledge, turned);
             return;
         }
 
         snapshot(player, player.yBodyRot);
         fromLook = look;
-        boolean around = wrap.lengthSqr() > 0.0;
-        wrapIn = vec(normal.getOpposite());
-        wrapOut = vec(newNormal);
-        wrapTravel = 0.0;
         normal = newNormal;
         trackReach(player, true);
         setFrameLook(newNormal, turned);
-        bodyYaw = yaw;
-        wrapTicks = around ? WRAP_TICKS : 0;
         applyLook(player, look);
+    }
+
+    /**
+     * The surface ends: move the body around the edge onto the next face, which faces the way it was
+     * walking, and stand it against that face. The body is placed there at once and the view makes up the
+     * difference, turning around the corner over the next ticks, so nothing slides. Returns false when
+     * there is no room on the other side.
+     */
+    private static boolean hopAround(LocalPlayer player, Direction heading) {
+        Direction wallSide = normal.getOpposite();
+        Vec3 start = player.position();
+        Direction faceSide = heading.getOpposite();
+        // How far in along the old surface's thickness the middle of the body should end up
+        for (double depth : new double[]{0.5, 0.35, 0.2}) {
+            Vec3 in = start.add(vec(wallSide).scale(reach + depth));
+            for (double push = 0.0; push <= 0.31; push += 0.05) {
+                player.setPos(in.add(vec(heading).scale(push)));
+                if (player.level().noCollision(player, player.getBoundingBox())
+                        && WallClimbing.touches(player, faceSide)) {
+                    Vec3 delta = player.position().subtract(start);
+                    changeSurface(player, heading, Vec3.ZERO);
+                    // Look the same until the view has turned: undo the jump in the view, and fade that out
+                    fromFeet = fromFeet.subtract(delta);
+                    fromShift = fromShift.subtract(delta);
+                    player.setDeltaMovement(Vec3.ZERO);
+                    player.setOldPosAndRot();
+                    return true;
+                }
+            }
+        }
+        player.setPos(start);
+        return false;
     }
 
     private static void walk(LocalPlayer player, Input input) {
@@ -419,33 +431,12 @@ public final class WallFrame {
             inFrame = new Vec3(l * cos - f * sin, 0.0, f * cos + l * sin);
         }
         moving = length > 1.0e-4;
-        turnBody(inFrame, forward, moving);
+        stepForward = length > 1.0e-4 ? (float) (forward / Math.max(length, 1.0)) : 0.0F;
+        stepLeft = length > 1.0e-4 ? (float) (left / Math.max(length, 1.0)) : 0.0F;
 
         Direction wallSide = normal.getOpposite();
         Vec3 stick = vec(wallSide).scale(STICK);
         Vec3 along = toWorld(normal, inFrame.scale(SPEED));
-
-        // Walking around the edge of the surface onto the next one: first clear the end of the old surface,
-        // then slowly in along the new face until the body stands on it
-        if (wrapTicks > 0) {
-            wrapTicks--;
-            boolean held = WallClimbing.touches(player, wallSide);
-            if (held && wrapTravel >= WRAP_DEPTH) {
-                wrapTicks = 0;
-            } else if (wrapTicks == 0) {
-                leave(player, 0, Vec3.ZERO, lookDirection(player, 0.0F));
-                return;
-            } else {
-                Vec3 inward = wrapIn.scale(WRAP_SPEED);
-                boolean free = player.level().noCollision(player, player.getBoundingBox().move(inward));
-                if (free) wrapTravel += WRAP_SPEED;
-                player.setDeltaMovement(free ? inward : wrapOut.scale(WRAP_SPEED));
-                player.fallDistance = 0.0F;
-                trackReach(player, false);
-                applyLook(player, lookDirection(player, 0.0F));
-                return;
-            }
-        }
 
         Direction heading = along.lengthSqr() > 0.0004 ? Direction.getNearest(along.x, along.y, along.z) : null;
 
@@ -455,12 +446,11 @@ public final class WallFrame {
             return;
         }
 
-        // The surface ends: around its edge onto the next face, which faces the way the player was walking
+        // The surface ends: over the top of a wall, or around its edge onto the next face
         if (!WallClimbing.touches(player, wallSide)) {
-            if (heading != null) {
-                // Back toward the old surface, and on in the walking direction so the body slides past the corner
-                changeSurface(player, heading, vec(wallSide).add(vec(heading).scale(0.6)));
-            } else {
+            if (heading == Direction.UP) {
+                changeSurface(player, Direction.UP, vec(wallSide).add(vec(heading).scale(0.6)));
+            } else if (heading == null || !hopAround(player, heading)) {
                 leave(player, 0, Vec3.ZERO, lookDirection(player, 0.0F));
             }
             return;
@@ -471,21 +461,6 @@ public final class WallFrame {
         player.setSprinting(false);
         trackReach(player, false);
         applyLook(player, lookDirection(player, 0.0F));
-    }
-
-    /**
-     * The body turns toward the way it walks, like a person who steps sideways turns to face that way, and
-     * follows the head when the head turns too far. Walking backward keeps facing the look direction.
-     */
-    private static void turnBody(Vec3 inFrame, float forward, boolean walking) {
-        if (walking) {
-            float target = (float) Math.toDegrees(Math.atan2(-inFrame.x, inFrame.z));
-            if (forward < 0.0F) target += 180.0F;
-            bodyYaw = Mth.wrapDegrees(bodyYaw + Mth.clamp(Mth.wrapDegrees(target - bodyYaw), -BODY_TURN, BODY_TURN));
-        }
-        float diff = Mth.wrapDegrees(yaw - bodyYaw);
-        if (diff > HEAD_LIMIT) bodyYaw = Mth.wrapDegrees(yaw - HEAD_LIMIT);
-        else if (diff < -HEAD_LIMIT) bodyYaw = Mth.wrapDegrees(yaw + HEAD_LIMIT);
     }
 
     /** Not on a surface: the last steps over the top of a wall. */
@@ -594,14 +569,28 @@ public final class WallFrame {
     public static void poseModel(ModelPart head, ModelPart rightArm, ModelPart leftArm,
                                  ModelPart rightLeg, ModelPart leftLeg, float ageInTicks) {
         if (!active) return;
-        head.yRot = (float) Math.toRadians(Mth.clamp(Mth.wrapDegrees(yaw - bodyYaw), -HEAD_LIMIT, HEAD_LIMIT));
+        head.yRot = 0.0F;
         head.xRot = (float) Math.toRadians(pitch);
         if (moving) {
+            // Forward and back swing the limbs, a step to the side spreads the legs the way they move
             float swing = ageInTicks * 0.8F;
-            rightArm.xRot = Mth.cos(swing + (float) Math.PI) * 1.0F;
-            leftArm.xRot = Mth.cos(swing) * 1.0F;
-            rightLeg.xRot = Mth.cos(swing) * 1.4F;
-            leftLeg.xRot = Mth.cos(swing + (float) Math.PI) * 1.4F;
+            float forward = Math.abs(stepForward);
+            float side = Math.abs(stepLeft);
+            float cos = Mth.cos(swing);
+            float amount = Math.max(forward, side * 0.35F);
+            rightArm.xRot = -cos * 1.0F * amount;
+            leftArm.xRot = cos * 1.0F * amount;
+            rightLeg.xRot = cos * 1.4F * forward;
+            leftLeg.xRot = -cos * 1.4F * forward;
+            float lead = 0.5F + 0.5F * cos;
+            float trail = 1.0F - lead;
+            if (stepLeft > 0.0F) {
+                leftLeg.zRot = -0.5F * side * lead;
+                rightLeg.zRot = -0.5F * side * trail;
+            } else {
+                rightLeg.zRot = 0.5F * side * lead;
+                leftLeg.zRot = 0.5F * side * trail;
+            }
         }
     }
 }
