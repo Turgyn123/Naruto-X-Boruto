@@ -74,9 +74,6 @@ public final class WallFrame {
     /** Where the player looks, in the frame. Yaw 0 and pitch 0 look straight ahead along the surface. */
     private static float yaw;
     private static float pitch;
-    /** The direction of the keys in the walking animation: forward and to the left, from -1 to 1. */
-    private static float stepForward;
-    private static float stepLeft;
     /** How far the middle of the box really is from the surface it walks on. */
     private static double reach = 0.3D;
     private static int ledgeTicks;
@@ -431,8 +428,6 @@ public final class WallFrame {
             inFrame = new Vec3(l * cos - f * sin, 0.0, f * cos + l * sin);
         }
         moving = length > 1.0e-4;
-        stepForward = length > 1.0e-4 ? (float) (forward / Math.max(length, 1.0)) : 0.0F;
-        stepLeft = length > 1.0e-4 ? (float) (left / Math.max(length, 1.0)) : 0.0F;
 
         Direction wallSide = normal.getOpposite();
         Vec3 stick = vec(wallSide).scale(STICK);
@@ -572,25 +567,11 @@ public final class WallFrame {
         head.yRot = 0.0F;
         head.xRot = (float) Math.toRadians(pitch);
         if (moving) {
-            // Forward and back swing the limbs, a step to the side spreads the legs the way they move
             float swing = ageInTicks * 0.8F;
-            float forward = Math.abs(stepForward);
-            float side = Math.abs(stepLeft);
-            float cos = Mth.cos(swing);
-            float amount = Math.max(forward, side * 0.35F);
-            rightArm.xRot = -cos * 1.0F * amount;
-            leftArm.xRot = cos * 1.0F * amount;
-            rightLeg.xRot = cos * 1.4F * forward;
-            leftLeg.xRot = -cos * 1.4F * forward;
-            float lead = 0.5F + 0.5F * cos;
-            float trail = 1.0F - lead;
-            if (stepLeft > 0.0F) {
-                leftLeg.zRot = -0.5F * side * lead;
-                rightLeg.zRot = -0.5F * side * trail;
-            } else {
-                rightLeg.zRot = 0.5F * side * lead;
-                leftLeg.zRot = 0.5F * side * trail;
-            }
+            rightArm.xRot = Mth.cos(swing + (float) Math.PI) * 1.0F;
+            leftArm.xRot = Mth.cos(swing) * 1.0F;
+            rightLeg.xRot = Mth.cos(swing) * 1.4F;
+            leftLeg.xRot = Mth.cos(swing + (float) Math.PI) * 1.4F;
         }
     }
 }
