@@ -1,7 +1,6 @@
 package net.narutoxboruto.capabilities;
 
 import net.minecraft.nbt.CompoundTag;
-import net.narutoxboruto.capabilities.climber.ClimberComponent;
 import net.narutoxboruto.capabilities.info.*;
 import net.narutoxboruto.capabilities.jutsu.JutsuStorage;
 import net.narutoxboruto.capabilities.release.*;
@@ -48,8 +47,6 @@ public class PlayerCapData {
     private NarutoRun narutoRun = new NarutoRun();
     private KibaActive kibaActive = new KibaActive();
     private LightningChakraModeActive lightningChakraModeActive = new LightningChakraModeActive();
-    private WallRunning wallRunning = new WallRunning();
-    private ClimberComponent climberComponent = new ClimberComponent();
 
     // Jutsu
     private JutsuStorage jutsuStorage = new JutsuStorage();
@@ -86,8 +83,6 @@ public class PlayerCapData {
     public NarutoRun getNarutoRun() { return narutoRun; }
     public KibaActive getKibaActive() { return kibaActive; }
     public LightningChakraModeActive getLightningChakraModeActive() { return lightningChakraModeActive; }
-    public WallRunning getWallRunning() { return wallRunning; }
-    public ClimberComponent getClimberComponent() { return climberComponent; }
     public JutsuStorage getJutsuStorage() { return jutsuStorage; }
     public Dojutsu getDojutsu() { return dojutsu; }
 
@@ -178,7 +173,6 @@ public class PlayerCapData {
         tag.putBoolean("naruto_run", narutoRun.getValue());
         tag.putBoolean("kiba_active", kibaActive.getValue());
         tag.putBoolean("lcm_active", lightningChakraModeActive.getValue());
-        tag.putBoolean("wall_running", wallRunning.getValue());
         // Jutsu Storage
         tag.put("jutsu_storage", jutsuStorage.toNbt());
         // Dojutsu
@@ -221,7 +215,6 @@ public class PlayerCapData {
         if (tag.contains("naruto_run")) narutoRun = new NarutoRun(tag.getBoolean("naruto_run"));
         if (tag.contains("kiba_active")) kibaActive = new KibaActive(tag.getBoolean("kiba_active"));
         if (tag.contains("lcm_active")) lightningChakraModeActive = new LightningChakraModeActive(tag.getBoolean("lcm_active"));
-        if (tag.contains("wall_running")) wallRunning = new WallRunning(tag.getBoolean("wall_running"));
         // Jutsu Storage
         if (tag.contains("jutsu_storage")) jutsuStorage = JutsuStorage.fromNbt(tag.getCompound("jutsu_storage"));
         // Dojutsu
@@ -261,7 +254,6 @@ public class PlayerCapData {
         this.narutoRun = new NarutoRun(source.narutoRun.getValue());
         this.kibaActive = new KibaActive(source.kibaActive.getValue());
         this.lightningChakraModeActive = new LightningChakraModeActive(source.lightningChakraModeActive.getValue());
-        this.wallRunning = new WallRunning(source.wallRunning.getValue());
 
         this.jutsuStorage = new JutsuStorage();
         this.jutsuStorage.copyFrom(source.jutsuStorage);

@@ -70,6 +70,9 @@ public final class WallFrame {
     /** The third person camera's distance behind the player. */
     private static final double CAMERA_DISTANCE = 4.0D;
     private static final float MAX_PITCH = 89.5F;
+    /** Degrees per tick the body turns toward the walking direction, and how far the head may turn from the body. */
+    private static final float BODY_TURN = 35.0F;
+    private static final float HEAD_LIMIT = 75.0F;
 
     // ---- the surface the player walks on
     private static boolean active;
@@ -78,6 +81,8 @@ public final class WallFrame {
     /** Where the player looks, in the frame. Yaw 0 and pitch 0 look straight ahead along the surface. */
     private static float yaw;
     private static float pitch;
+    /** Where the body faces, in the frame: it turns toward the way the player walks, so sideways steps do not slide. */
+    private static float bodyYaw;
     private static int wrapTicks;
     /** Around an edge: toward the old surface, away from the old surface's end, and how far in so far. */
     private static Vec3 wrapIn = Vec3.ZERO;
@@ -232,7 +237,7 @@ public final class WallFrame {
 
     private static Quaternionf toQuat(float bodyYaw) {
         return active
-                ? frameRotation(normal).mul(new Quaternionf().rotationY((float) Math.toRadians(180.0 - yaw)), new Quaternionf())
+                ? frameRotation(normal).mul(new Quaternionf().rotationY((float) Math.toRadians(180.0 - bodyYaw)), new Quaternionf())
                 : vanillaQuat(bodyYaw);
     }
 
@@ -334,6 +339,7 @@ public final class WallFrame {
         trackReach(player, true);
         yaw = 0.0F;
         pitch = 0.0F;
+        bodyYaw = 0.0F;
         wrapTicks = 0;
         ledgeTicks = 0;
     }
@@ -376,6 +382,7 @@ public final class WallFrame {
         normal = newNormal;
         trackReach(player, true);
         setFrameLook(newNormal, turned);
+        bodyYaw = yaw;
         wrapTicks = around ? WRAP_TICKS : 0;
         applyLook(player, look);
     }
@@ -412,6 +419,7 @@ public final class WallFrame {
             inFrame = new Vec3(l * cos - f * sin, 0.0, f * cos + l * sin);
         }
         moving = length > 1.0e-4;
+        turnBody(inFrame, forward, moving);
 
         Direction wallSide = normal.getOpposite();
         Vec3 stick = vec(wallSide).scale(STICK);
@@ -463,6 +471,21 @@ public final class WallFrame {
         player.setSprinting(false);
         trackReach(player, false);
         applyLook(player, lookDirection(player, 0.0F));
+    }
+
+    /**
+     * The body turns toward the way it walks, like a person who steps sideways turns to face that way, and
+     * follows the head when the head turns too far. Walking backward keeps facing the look direction.
+     */
+    private static void turnBody(Vec3 inFrame, float forward, boolean walking) {
+        if (walking) {
+            float target = (float) Math.toDegrees(Math.atan2(-inFrame.x, inFrame.z));
+            if (forward < 0.0F) target += 180.0F;
+            bodyYaw = Mth.wrapDegrees(bodyYaw + Mth.clamp(Mth.wrapDegrees(target - bodyYaw), -BODY_TURN, BODY_TURN));
+        }
+        float diff = Mth.wrapDegrees(yaw - bodyYaw);
+        if (diff > HEAD_LIMIT) bodyYaw = Mth.wrapDegrees(yaw - HEAD_LIMIT);
+        else if (diff < -HEAD_LIMIT) bodyYaw = Mth.wrapDegrees(yaw + HEAD_LIMIT);
     }
 
     /** Not on a surface: the last steps over the top of a wall. */
@@ -571,7 +594,7 @@ public final class WallFrame {
     public static void poseModel(ModelPart head, ModelPart rightArm, ModelPart leftArm,
                                  ModelPart rightLeg, ModelPart leftLeg, float ageInTicks) {
         if (!active) return;
-        head.yRot = 0.0F;
+        head.yRot = (float) Math.toRadians(Mth.clamp(Mth.wrapDegrees(yaw - bodyYaw), -HEAD_LIMIT, HEAD_LIMIT));
         head.xRot = (float) Math.toRadians(pitch);
         if (moving) {
             float swing = ageInTicks * 0.8F;

@@ -3,7 +3,6 @@ package net.narutoxboruto.main.platform;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-import net.narutoxboruto.capabilities.climber.ClimberComponent;
 import net.narutoxboruto.capabilities.info.*;
 import net.narutoxboruto.capabilities.jutsu.JutsuStorage;
 import net.narutoxboruto.capabilities.release.*;
@@ -83,8 +82,6 @@ public class NeoForgePlatformHelper implements IPlatformHelper {
     @Override public KibaActive getKibaActive(Player player) { return player.getData(NeoForgeCapabilities.KIBA_ACTIVE); }
     @Override public LightningChakraModeActive getLightningChakraModeActive(Player player) { return player.getData(NeoForgeCapabilities.LIGHTNING_CHAKRA_MODE_ACTIVE); }
     @Override public NarutoRun getNarutoRun(Player player) { return player.getData(NeoForgeCapabilities.NARUTO_RUN); }
-    @Override public WallRunning getWallRunning(Player player) { return player.getData(NeoForgeCapabilities.WALL_RUNNING); }
-    @Override public ClimberComponent getClimberComponent(Player player) { return player.getData(NeoForgeCapabilities.CLIMBER); }
 
     //Set data
     @Override public void setChakra(ServerPlayer player, Chakra chakra) { player.setData(NeoForgeCapabilities.CHAKRA, chakra); }

@@ -1,6 +1,5 @@
 package net.narutoxboruto.client;
 
-import net.narutoxboruto.util.RotationUtil;
 
 public class PlayerData {
 
@@ -18,9 +17,6 @@ public class PlayerData {
     private static boolean kibaActive = false;
     private static boolean lightningChakraModeActive = false;
     
-    // Wall running state cache (synced from server)
-    private static RotationUtil.Surface wallRunningSurface = RotationUtil.Surface.GROUND;
-
     // Dojutsu
     private static String dojutsuUnlockedList = "";
     private static String dojutsuLeftEye = "";
@@ -322,15 +318,6 @@ public class PlayerData {
 
     public static void setLightningJutsu(String lightningJutsu) {
         PlayerData.lightningJutsu = lightningJutsu;
-    }
-
-    // Wall running state
-    public static RotationUtil.Surface getWallRunningSurface() {
-        return wallRunningSurface;
-    }
-    
-    public static void setWallRunningSurface(RotationUtil.Surface surface) {
-        wallRunningSurface = surface;
     }
 
     // Dojutsu getters/setters

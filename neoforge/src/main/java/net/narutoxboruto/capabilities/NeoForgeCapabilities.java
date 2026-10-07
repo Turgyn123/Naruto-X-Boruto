@@ -1,6 +1,5 @@
 package net.narutoxboruto.capabilities;
 
-import net.narutoxboruto.capabilities.climber.ClimberComponent;
 import net.narutoxboruto.capabilities.info.*;
 import net.narutoxboruto.capabilities.jutsu.JutsuStorage;
 import net.narutoxboruto.capabilities.release.*;
@@ -46,8 +45,6 @@ public class NeoForgeCapabilities {
     public static final Supplier<AttachmentType<LightningChakraModeActive>> LIGHTNING_CHAKRA_MODE_ACTIVE = ATTACHMENT_TYPES.register("lightning_chakra_mode_active", () -> AttachmentType.<LightningChakraModeActive>builder(() -> new LightningChakraModeActive()).serialize(LightningChakraModeActive.CODEC).build());
     public static final Supplier<AttachmentType<JutsuStorage>> JUTSU_STORAGE = ATTACHMENT_TYPES.register("jutsu_storage", () -> AttachmentType.<JutsuStorage>builder(() -> new JutsuStorage()).serialize(JutsuStorage.CODEC).copyOnDeath().build());
     public static final Supplier<AttachmentType<Dojutsu>> DOJUTSU = ATTACHMENT_TYPES.register("dojutsu", () -> AttachmentType.<Dojutsu>builder(() -> new Dojutsu()).serialize(Dojutsu.CODEC).copyOnDeath().build());
-    public static final Supplier<AttachmentType<WallRunning>> WALL_RUNNING = ATTACHMENT_TYPES.register("wall_running", () -> AttachmentType.<WallRunning>builder(() -> new WallRunning()).serialize(WallRunning.CODEC).build());
-    public static final Supplier<AttachmentType<ClimberComponent>> CLIMBER = ATTACHMENT_TYPES.register("climber", () -> AttachmentType.<ClimberComponent>builder(() -> new ClimberComponent()).build());
 
     public static void register(IEventBus modEventBus) {
         ATTACHMENT_TYPES.register(modEventBus);
