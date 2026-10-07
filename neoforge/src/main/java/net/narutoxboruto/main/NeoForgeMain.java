@@ -52,6 +52,10 @@ public class NeoForgeMain {
             EarthWave.onServerTick();
             WaterPrison.onServerTick();
         });
+        NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.server.ServerStoppingEvent event) -> {
+            WaterPrison.shutdown();
+            EarthWave.clear();
+        });
 
         // Register event handlers on MOD bus (registration events)
         eventBus.register(SpawnEvents.class);

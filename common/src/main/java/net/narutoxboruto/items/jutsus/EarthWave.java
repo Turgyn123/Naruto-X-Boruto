@@ -123,6 +123,11 @@ public class EarthWave extends AbstractJutsuItem {
         }
     }
     
+    /** Drops waves that are still running. Call when the server is stopping so they don't carry into the next world. */
+    public static void clear() {
+        ACTIVE_WAVES.clear();
+    }
+
     /**
      * Process a circular ring of the wave at the given distance from origin.
      */

@@ -89,6 +89,10 @@ public class FabricMain implements ModInitializer {
             EarthWave.onServerTick();
             WaterPrison.onServerTick();
         });
+        net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
+            WaterPrison.shutdown();
+            EarthWave.clear();
+        });
 
         // Use Fabric to bootstrap the Common mod.
         Main.LOG.info("Hello Fabric world!");

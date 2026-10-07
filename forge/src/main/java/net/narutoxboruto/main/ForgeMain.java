@@ -50,6 +50,10 @@ public class ForgeMain {
             EarthWave.onServerTick();
             WaterPrison.onServerTick();
         });
+        MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.server.ServerStoppingEvent event) -> {
+            WaterPrison.shutdown();
+            EarthWave.clear();
+        });
 
         // Register event handlers on MOD bus (registration events)
         eventBus.register(ForgeSpawnEvents.class);
