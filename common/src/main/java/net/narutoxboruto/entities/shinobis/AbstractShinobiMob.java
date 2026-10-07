@@ -104,6 +104,8 @@ public class AbstractShinobiMob extends PathfinderMob implements RangedAttackMob
 
     @Override
     protected void customServerAiStep() {
+        // They chase targets underwater, so keep their air full instead of letting them drown.
+        this.setAirSupply(this.getMaxAirSupply());
         if (shouldHoldThrowableWeapon()) {
             this.setItemInHand(InteractionHand.OFF_HAND, this.getThrowableWeapon());
         }
@@ -159,12 +161,6 @@ public class AbstractShinobiMob extends PathfinderMob implements RangedAttackMob
 
     public void setSearchingForLand(boolean p_32399_) {
         this.searchingForLand = p_32399_;
-    }
-
-    /** They chase targets underwater, so they must not drown. */
-    @Override
-    public boolean canBreatheUnderwater() {
-        return true;
     }
 
     @Override
