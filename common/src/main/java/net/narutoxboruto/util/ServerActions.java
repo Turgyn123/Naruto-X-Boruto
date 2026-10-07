@@ -33,6 +33,8 @@ public final class ServerActions {
 
     /** At most one recharge every 2 ticks, which is about as fast as a human can mash the key. */
     private static final int CHAKRA_RECHARGE_MIN_INTERVAL_TICKS = 2;
+    /** Each recharge restores this share of max chakra (at least 1), so a full recharge takes the same effort at any level. */
+    private static final int CHAKRA_RECHARGE_PERCENT = 1;
     private static final int PRUNE_THRESHOLD = 64;
     private static final int PRUNE_AGE_TICKS = 200;
 
@@ -82,7 +84,8 @@ public final class ServerActions {
         MaxChakra maxChakra = Services.PLATFORM.getMaxChakra(player);
         if (chakra.getValue() >= maxChakra.getValue()) return;
 
-        chakra.addValue(1, player);
+        int amount = Math.max(1, (int) Math.ceil(maxChakra.getValue() * CHAKRA_RECHARGE_PERCENT / 100.0D));
+        chakra.addValue(amount, player);
         player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 10, 1, false, true));
     }
 
