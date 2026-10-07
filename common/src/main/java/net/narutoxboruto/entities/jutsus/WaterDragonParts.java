@@ -41,6 +41,9 @@ public final class WaterDragonParts {
             new Part("tail7", 0.97, -3.58, -3.42, 0.70, 0.25),
     };
 
+    /** Blocks the Attack animation lifts the model while it swings flat (bone11's position, 3.733 model units). */
+    public static final double FLY_LIFT = 0.7;
+
     public static final int COUNT = PARTS.length;
     public static final int HEAD = 0;
 
@@ -65,7 +68,7 @@ public final class WaterDragonParts {
         for (int i = 0; i < PARTS.length; i++) {
             Part part = PARTS[i];
             double f = Mth.lerp(t, part.upForward(), part.flatForward());
-            double u = Mth.lerp(t, part.upUp(), part.flatUp());
+            double u = Mth.lerp(t, part.upUp(), part.flatUp() + FLY_LIFT);
             Vec3 center = origin.add(forward.scale(f)).add(up.scale(u));
             boxes[i] = new AABB(center, center).inflate(part.radius());
         }

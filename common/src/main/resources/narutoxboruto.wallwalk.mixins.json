@@ -1,0 +1,16 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "net.narutoxboruto.mixin.wallwalk",
+  "refmap": "${mod_id}.refmap.json",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [],
+  "client": [
+    "MixinCameraWallWalk",
+    "MixinEntityWallWalk"
+  ],
+  "server": [],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

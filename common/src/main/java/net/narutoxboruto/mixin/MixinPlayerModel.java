@@ -6,6 +6,7 @@ import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.narutoxboruto.client.WallFrame;
 import net.narutoxboruto.util.WallClimbing;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -26,8 +27,11 @@ public abstract class MixinPlayerModel <T extends LivingEntity> extends Humanoid
 
     @Inject(method = "setupAnim(Lnet/minecraft/world/entity/LivingEntity;FFFFF)V", at = @At("TAIL"))
     public void setupAnim(T pEntity, float pLimbSwing, float pLimbSwingAmount, float pAgeInTicks, float pNetHeadYaw, float pHeadPitch, CallbackInfo ci) {
-        // Climbing a wall with Chakra Control: arms up, swinging with the height gained
-        if (pEntity instanceof Player player && WallClimbing.isHangingOnWall(player)) {
+        if (pEntity instanceof Player player && WallFrame.appliesTo(player)) {
+            // The local player walking on a wall: the head follows the sideways look and the limbs swing
+            WallFrame.poseModel(head, rightArm, leftArm, rightLeg, leftLeg, pAgeInTicks);
+        } else if (pEntity instanceof Player player && WallClimbing.isHangingOnWall(player)) {
+            // Another player hanging on a wall with Chakra Control: arms up, swinging with the height gained
             float reach = Mth.sin((float) (player.getY() * 5.0D)) * 0.4F;
             rightArm.xRot = -2.6F + reach;
             leftArm.xRot = -2.6F - reach;
