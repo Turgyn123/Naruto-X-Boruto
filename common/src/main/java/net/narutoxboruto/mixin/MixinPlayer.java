@@ -105,7 +105,7 @@ public abstract class MixinPlayer extends LivingEntity implements ModeHandler {
                     -1,      // Use -1 for infinite duration
                     0,       // amplifier
                     false,   // ambient = false
-                    true,    // visible = true
+                    false,   // visible = false: no swirl particles around the player
                     true     // show icon = true
             ));
         }

@@ -96,6 +96,7 @@
 
   "gui.narutoxboruto.shinobi_stats": "Shinobi Stats",
   "gui.narutoxboruto.jutsu_storage": "Jutsu Storage",
+  "gui.narutoxboruto.jutsu_search": "Search jutsu or nature...",
   "gui.narutoxboruto.dojutsu_menu": "Dojutsu Menu",
 
   "msg.jutsu_cooldown": "Jutsu is on cooldown!",
