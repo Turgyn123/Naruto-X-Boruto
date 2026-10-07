@@ -44,11 +44,6 @@ public final class WallClimbing {
                 && !player.isInWater() && !player.isInLava() && !player.onClimbable();
     }
 
-    /** True while the player is up in the air with a wall at their side. Used for the pose other players see. */
-    public static boolean isHangingOnWall(Player player) {
-        return canCling(player) && !player.onGround() && touchingWall(player);
-    }
-
     /** Any block close to the sides of the player's body. */
     public static boolean touchingWall(Player player) {
         AABB box = player.getBoundingBox();
