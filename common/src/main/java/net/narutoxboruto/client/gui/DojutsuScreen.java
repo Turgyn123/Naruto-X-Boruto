@@ -19,7 +19,7 @@ import java.util.List;
 public class DojutsuScreen extends Screen {
 
     private static final ResourceLocation BACKGROUND = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID,
-            "textures/gui/dojutsu_menu.png");
+            "textures/gui/shinobi_stats.png");
 
     private static final int PANEL_WIDTH = 260;
     private static final int PANEL_HEIGHT = 240;
@@ -313,7 +313,7 @@ public class DojutsuScreen extends Screen {
         int top = (this.height - PANEL_HEIGHT) / 2;
 
         // Draw background panel — use full texture including borders
-        guiGraphics.blit(BACKGROUND, left, top, PANEL_WIDTH, PANEL_HEIGHT, 0.0F, 0.0F, PANEL_WIDTH, PANEL_HEIGHT, PANEL_WIDTH, PANEL_HEIGHT);
+        guiGraphics.blit(BACKGROUND, left, top, PANEL_WIDTH, PANEL_HEIGHT, 0.0F, 0.0F, 246, 200, 256, 256);
 
         Dojutsu dojutsu = getDojutsu();
         List<String> unlockedList = dojutsu.getUnlockedList();
