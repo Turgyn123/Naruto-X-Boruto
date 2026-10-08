@@ -60,8 +60,10 @@ public class ShinobiStatsGui extends Screen {
         guiGraphics.blit(BACKGROUND, (this.width - 234) / 2, (this.height - 192) / 2, 0, 0, 256, 192);
         this.renderInfo(guiGraphics);
         this.drawReleaseIcons(guiGraphics, 95, 16);
-        this.drawKekkeiGenkai(guiGraphics, 95);
-        this.drawDojutsuInfo(guiGraphics, 95);
+        // With more than six releases the icons use a second row, and what follows moves down
+        int shift = releaseRows() > 1 ? 17 : 0;
+        this.drawKekkeiGenkai(guiGraphics, 95, shift);
+        this.drawDojutsuInfo(guiGraphics, 95, shift);
         super.render(guiGraphics, pMouseX, pMouseY, pPartialTick);
     }
 
@@ -158,15 +160,21 @@ public class ShinobiStatsGui extends Screen {
         }
     }
 
-    private void drawKekkeiGenkai(GuiGraphics guiGraphics, int x) {
+    private int releaseRows() {
+        LocalPlayer localPlayer = Minecraft.getInstance().player;
+        if (localPlayer == null) return 1;
+        return Services.PLATFORM.getReleaseList(localPlayer).getReleasesAsList().size() > 6 ? 2 : 1;
+    }
+
+    private void drawKekkeiGenkai(GuiGraphics guiGraphics, int x, int shift) {
         Component kgLabel = Component.translatable("shinobiStat.kekkei_genkai")
                 .append(": ")
                 .append(Component.translatable("kekkei_genkai.none"));
         guiGraphics.drawString(this.font, kgLabel,
-                (this.width - 192) / 2 + x, this.height / 2 - 7, 0, false);
+                (this.width - 192) / 2 + x, this.height / 2 - 7 + shift, 0, false);
     }
 
-    private void drawDojutsuInfo(GuiGraphics guiGraphics, int x) {
+    private void drawDojutsuInfo(GuiGraphics guiGraphics, int x, int shift) {
         Dojutsu dojutsu = Services.PLATFORM.getDojutsu(player);
         List<String> unlocked = dojutsu.getUnlockedList();
 
@@ -177,7 +185,7 @@ public class ShinobiStatsGui extends Screen {
                         : Component.empty());
 
         guiGraphics.drawString(this.font, dojutsuLabel,
-                (this.width - 192) / 2 + x, this.height / 2 + 5, 0, false);
+                (this.width - 192) / 2 + x, this.height / 2 + 5 + shift, 0, false);
 
         if (!unlocked.isEmpty()) {
             for (int i = 0; i < unlocked.size(); i++) {
@@ -187,7 +195,7 @@ public class ShinobiStatsGui extends Screen {
                             "textures/dojutsu/icons/" + Dojutsu.DOJUTSU_ICON.get(dj) + ".png");
                     guiGraphics.blit(icon,
                             (this.width - 192) / 2 + x + i * 14,
-                            this.height / 2 + 15,
+                            this.height / 2 + 15 + shift,
                             11, 11, 0.0F, 0.0F, 32, 32, 32, 32);
                 }
             }

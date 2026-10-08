@@ -23,7 +23,7 @@ import net.neoforged.api.distmarker.OnlyIn;
 public class JutsuStorageScreen extends AbstractContainerScreen<JutsuStorageMenu> {
 
     // Use generic container texture (similar to chest)
-    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/gui/jutsu_storage.png");
+    private static final ResourceLocation TEXTURE = ResourceLocation.withDefaultNamespace("textures/gui/container/generic_54.png");
     
     private static final int SLOTS_PER_PAGE = 54; // 6 rows of 9
     private int currentPage = 0;
@@ -33,6 +33,8 @@ public class JutsuStorageScreen extends AbstractContainerScreen<JutsuStorageMenu
     private EditBox searchBox;
     /** What is typed in the search bar. Kept when the screen is resized. */
     private String searchText = "";
+    /** How much the whole screen is shrunk to fit the window: 1 when there is room for it. */
+    private float uiScale = 1.0F;
 
     public JutsuStorageScreen(JutsuStorageMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
@@ -43,6 +45,14 @@ public class JutsuStorageScreen extends AbstractContainerScreen<JutsuStorageMenu
 
     @Override
     protected void init() {
+        // Shrink to fit: the storage, the inventory and the search bar above it have to fit in the window, also
+        // at a large GUI scale. this.width and this.height are the real window here, on the first call and
+        // after every resize; they become the size of the shrunk, virtual window, and the mouse is converted.
+        float fit = Math.min(1.0F, Math.min((this.height - 8.0F) / (this.imageHeight + 40.0F), (this.width - 8.0F) / (this.imageWidth + 60.0F)));
+        uiScale = Math.max(0.25F, (float) Math.floor(fit * 20.0F) / 20.0F);
+        this.width = Math.round(this.width / uiScale);
+        this.height = Math.round(this.height / uiScale);
+
         super.init();
         // Adjust title position if needed
         this.titleLabelX = (this.imageWidth - this.font.width(this.title)) / 2;
@@ -92,6 +102,28 @@ public class JutsuStorageScreen extends AbstractContainerScreen<JutsuStorageMenu
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().scale(uiScale, uiScale, 1.0F);
+        renderScaled(guiGraphics, Math.round(mouseX / uiScale), Math.round(mouseY / uiScale), partialTick);
+        guiGraphics.pose().popPose();
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        return super.mouseClicked(mouseX / uiScale, mouseY / uiScale, button);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        return super.mouseReleased(mouseX / uiScale, mouseY / uiScale, button);
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        return super.mouseDragged(mouseX / uiScale, mouseY / uiScale, button, dragX / uiScale, dragY / uiScale);
+    }
+
+    private void renderScaled(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         super.render(guiGraphics, mouseX, mouseY, partialTick);
         renderSearchMarks(guiGraphics);
         this.renderTooltip(guiGraphics, mouseX, mouseY);

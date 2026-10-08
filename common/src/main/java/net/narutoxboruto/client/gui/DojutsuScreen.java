@@ -30,6 +30,9 @@ public class DojutsuScreen extends Screen {
 
     private final LocalPlayer player;
 
+    /** How much the whole screen is shrunk to fit the window: 1 when there is room for it. */
+    private float uiScale = 1.0F;
+
     // Tracks which arrow is hovered (null if none)
     private String hoveredArrow = null;
 
@@ -55,7 +58,32 @@ public class DojutsuScreen extends Screen {
     }
 
     @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        return mouseClickedScaled(mouseX / uiScale, mouseY / uiScale, button);
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        return mouseDraggedScaled(mouseX / uiScale, mouseY / uiScale, button, dragX / uiScale, dragY / uiScale);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        return mouseReleasedScaled(mouseX / uiScale, mouseY / uiScale, button);
+    }
+
+    /**
+     * The screen is laid out in a shrunk, virtual window, so the panel fits at any GUI scale (full screen):
+     * the width and height become those of that window, and the mouse is converted to it.
+     */
+    @Override
     protected void init() {
+        // this.width and this.height are the real window here, on the first call and after every resize
+        float fit = Math.min(1.0F, Math.min((this.height - 8.0F) / PANEL_HEIGHT, (this.width - 8.0F) / PANEL_WIDTH));
+        uiScale = Math.max(0.25F, (float) Math.floor(fit * 20.0F) / 20.0F);
+        this.width = Math.round(this.width / uiScale);
+        this.height = Math.round(this.height / uiScale);
+
         int left = (this.width - PANEL_WIDTH) / 2;
         int top = (this.height - PANEL_HEIGHT) / 2;
 
@@ -176,8 +204,7 @@ public class DojutsuScreen extends Screen {
         return null;
     }
 
-    @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    private boolean mouseClickedScaled(double mouseX, double mouseY, int button) {
         if (button == 0) {
             // Custom controls: scale -/+, reset, hide/show
             if (getMinusArea().contains(mouseX, mouseY)) {
@@ -237,8 +264,7 @@ public class DojutsuScreen extends Screen {
         return super.mouseClicked(mouseX, mouseY, button);
     }
 
-    @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+    private boolean mouseDraggedScaled(double mouseX, double mouseY, int button, double dragX, double dragY) {
         if (button == 0 && draggingEye != null) {
             int dx = (int) (mouseX - dragStartMouseX);
             int dy = (int) (mouseY - dragStartMouseY);
@@ -256,8 +282,7 @@ public class DojutsuScreen extends Screen {
         return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
     }
 
-    @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+    private boolean mouseReleasedScaled(double mouseX, double mouseY, int button) {
         if (button == 0 && draggingEye != null) {
             // Send final offset to server
             Dojutsu dojutsu = getDojutsu();
@@ -307,6 +332,13 @@ public class DojutsuScreen extends Screen {
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().scale(uiScale, uiScale, 1.0F);
+        renderScaled(guiGraphics, Math.round(mouseX / uiScale), Math.round(mouseY / uiScale), partialTick);
+        guiGraphics.pose().popPose();
+    }
+
+    private void renderScaled(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         super.render(guiGraphics, mouseX, mouseY, partialTick);
 
         int left = (this.width - PANEL_WIDTH) / 2;
