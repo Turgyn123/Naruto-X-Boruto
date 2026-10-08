@@ -95,6 +95,10 @@
   "key.narutoxboruto.dojutsu_toggle": "Activate / Deactivate Dōjutsu",
 
   "gui.narutoxboruto.shinobi_stats": "Shinobi Stats",
+  "gui.narutoxboruto.tab_info": "Information",
+  "gui.narutoxboruto.tab_stats": "Statistics",
+  "gui.narutoxboruto.tab_dojutsu": "Dojutsu",
+  "gui.narutoxboruto.chakra": "Chakra",
   "gui.narutoxboruto.jutsu_storage": "Jutsu Storage",
   "gui.narutoxboruto.jutsu_search": "Search...",
   "gui.narutoxboruto.dojutsu_menu": "Dojutsu Menu",
