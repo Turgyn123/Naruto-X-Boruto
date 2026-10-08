@@ -159,7 +159,7 @@ public class ShinobiStatsGui extends Screen {
             drawInformation(g, virtualMouseX, virtualMouseY);
 
             // A thick line between the two parts
-            g.fill(left() + 12, top() + 104, left() + PANEL_W - 12, top() + 106, GREEN);
+            g.fill(left() + 12, top() + 106, left() + PANEL_W - 12, top() + 108, GREEN);
             drawHeading(g, "gui.narutoxboruto.heading_statistics", top() + 111);
             drawStatistics(g);
         }
@@ -179,27 +179,49 @@ public class ShinobiStatsGui extends Screen {
 
     // ---------------------------------------------------------------- information tab
 
+    /**
+     * The top part is a shinobi registration card: a portrait on the left, the name with a red rank stamp and
+     * the card number on the right, and under them the village, clan, nature releases and dojutsu.
+     */
     private void drawInformation(GuiGraphics g, int mouseX, int mouseY) {
-        int x = left() + 14;
-        int y = top() + 28;
-        int rowHeight = 11;
-
-        // Name
-        g.drawString(this.font, player.getName(), x, y, 0xFF1F4E9E, false);
-
-        // Affiliation and clan, each with its icon
         String affiliation = Services.PLATFORM.getAffiliation(player).getValue();
         String clan = Services.PLATFORM.getClan(player).getValue();
         String rank = Services.PLATFORM.getRank(player).getValue();
 
-        y += rowHeight;
+        // Portrait
+        int frameX = left() + 14;
+        int frameY = top() + 28;
+        drawFrame(g, frameX, frameY, 54, 72);
+        InventoryScreen.renderEntityInInventoryFollowsMouse(g, frameX + 1, frameY + 1, frameX + 53, frameY + 71,
+                27, 0.0625F, mouseX, mouseY, player);
+
+        int x = left() + 78;
+        int right = left() + PANEL_W - 14;
+
+        // The name, a little larger than the rest
+        g.pose().pushPose();
+        g.pose().translate(x, top() + 28, 0.0F);
+        g.pose().scale(1.25F, 1.25F, 1.0F);
+        g.drawString(this.font, player.getName(), 0, 0, 0xFF1F4E9E, false);
+        g.pose().popPose();
+
+        // The rank as a red stamp, and the card number
+        String stamp = Component.translatable("rank." + rank).getString().toUpperCase(java.util.Locale.ROOT);
+        int stampY = top() + 42;
+        int stampW = this.font.width(stamp) + 8;
+        g.fill(x, stampY, x + stampW, stampY + 12, 0xFFA02820);
+        g.fill(x + 1, stampY + 1, x + stampW - 1, stampY + 11, 0xFFFFFDE8);
+        g.drawString(this.font, stamp, x + 4, stampY + 2, 0xFFA02820, false);
+        String card = String.format("No. %08X", player.getUUID().hashCode());
+        g.drawString(this.font, card, right - this.font.width(card), stampY + 2, LABEL, false);
+
+        // The rows
+        int y = top() + 57;
+        int rowHeight = 10;
         drawRow(g, x, y, "shinobiStat.affiliation", "affiliation." + affiliation, "affiliations", affiliation, ModUtil.AFF_LIST);
         y += rowHeight;
         drawRow(g, x, y, "shinobiStat.clan", "clan." + clan, "clans", clan, ModUtil.CLAN_LIST);
-        y += rowHeight;
-        drawRow(g, x, y, "shinobiStat.rank", "rank." + rank, null, rank, null);
 
-        // Releases
         y += rowHeight;
         ReleaseList releases = Services.PLATFORM.getReleaseList(player);
         Component label = Component.translatable("shinobiStat.releases").append(": ");
@@ -216,7 +238,6 @@ public class ShinobiStatsGui extends Screen {
             }
         }
 
-        // Kekkei genkai and dojutsu
         y += rowHeight;
         g.drawString(this.font, Component.translatable("shinobiStat.kekkei_genkai").append(": ")
                 .append(Component.translatable("kekkei_genkai.none")), x, y, LABEL, false);
@@ -238,13 +259,6 @@ public class ShinobiStatsGui extends Screen {
                 g.blit(icon, dojutsuX + i * 13, y - 2, 11, 11, 0.0F, 0.0F, 32, 32, 32, 32);
             }
         }
-
-        // The model of the player in a frame
-        int frameX = left() + PANEL_W - 76;
-        int frameY = top() + 28;
-        drawFrame(g, frameX, frameY, 60, 72);
-        InventoryScreen.renderEntityInInventoryFollowsMouse(g, frameX + 1, frameY + 1, frameX + 59, frameY + 71,
-                28, 0.0625F, mouseX, mouseY, player);
     }
 
     private void drawRow(GuiGraphics g, int x, int y, String labelKey, String valueKey, String iconFolder, String value, List<String> iconList) {
