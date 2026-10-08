@@ -38,7 +38,9 @@ public class FabricTab {
                         output.accept(FabricItems.SHIBUKI);
                         output.accept(FabricItems.KIBA);
                         output.accept(FabricItems.KABUTOWARI);
-                        //output.accept(FabricItems.NUIBARI);
+                        output.accept(FabricItems.NUIBARI);
+                        output.accept(FabricItems.HIRAMEKAREI);
+                        output.accept(FabricItems.GIANT_FAN);
                     }).build()
     );
 

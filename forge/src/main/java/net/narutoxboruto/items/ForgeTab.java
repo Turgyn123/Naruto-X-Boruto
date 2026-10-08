@@ -38,7 +38,9 @@ public class ForgeTab {
                 output.accept(SHIBUKI.get());
                 output.accept(KIBA.get());
                 output.accept(KABUTOWARI.get());
-                //output.accept(NUIBARI.get());
+                output.accept(NUIBARI.get());
+                output.accept(HIRAMEKAREI.get());
+                output.accept(GIANT_FAN.get());
             }).build());
 
     public static final RegistryObject<CreativeModeTab> NXB_TAB = CREATIVE_MODE_TAB.register("nxb_tab", () -> CreativeModeTab.builder()

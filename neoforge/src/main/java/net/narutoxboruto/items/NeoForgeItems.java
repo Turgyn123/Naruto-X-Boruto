@@ -34,6 +34,8 @@ public class NeoForgeItems {
     public static final DeferredItem<Item> KUBIKIRIBOCHO = ITEMS.register("kubikiribocho", () -> new Kubikiribocho(new Item.Properties().stacksTo(1).attributes(SwordItem.createAttributes(SwordCustomTiers.KUBIKIRIBOCHO, 6, -3f))));
     public static final DeferredItem<Item> SHIBUKI = ITEMS.register("shibuki", () -> new Shibuki(new Item.Properties().stacksTo(1).attributes(SwordItem.createAttributes(SwordCustomTiers.SHIBUKI, 2, -2f))));
     public static final DeferredItem<Item> NUIBARI = ITEMS.register("nuibari", () -> new Nuibari(new Item.Properties().stacksTo(1).attributes(SwordItem.createAttributes(SwordCustomTiers.NUIBARI, 2, -1.5f))));
+    public static final DeferredItem<Item> HIRAMEKAREI = ITEMS.register("hiramekarei", () -> new Hiramekarei(new Item.Properties().stacksTo(1).attributes(SwordItem.createAttributes(SwordCustomTiers.HIRAMEKAREI, 4, -2.0f))));
+    public static final DeferredItem<Item> GIANT_FAN = ITEMS.register("giant_fan", () -> new GiantFan(new Item.Properties()));
     public static final DeferredItem<Item> KABUTOWARI = ITEMS.register("kabutowari", () -> new Kabutowari(new Item.Properties().stacksTo(1).attributes(SwordItem.createAttributes(SwordCustomTiers.KABUTOWARI, 6, -3.0f))));
     public static final DeferredItem<Item> KIBA = ITEMS.register("kiba", () -> new Kiba(new Item.Properties().stacksTo(1).attributes(SwordItem.createAttributes(SwordCustomTiers.KIBA, 4, -1.5f))));
 
