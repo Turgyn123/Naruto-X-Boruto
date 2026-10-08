@@ -1,5 +1,6 @@
 package net.narutoxboruto.client.gui;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -20,33 +21,31 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * The character screen, opened with the stats key. A parchment panel with tabs on its right side:
- * <ul>
- *   <li><b>Information</b>: name, affiliation, clan, rank, releases, dojutsu and a model of the player.</li>
- *   <li><b>Statistics</b>: the ten stats on a radar chart.</li>
- *   <li><b>Dojutsu</b>: opens the dojutsu menu.</li>
- * </ul>
+ * The character screen, opened with the stats key. One cream and green panel with two parts: the information
+ * (name, affiliation, clan, rank, releases, dojutsu and a model of the player) on top, and the ten stats on a
+ * radar chart below it. A tab on the right side opens the dojutsu menu.
  */
 public class ShinobiStatsGui extends Screen {
     private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID,
             "textures/gui/character_screen.png");
 
     private static final int PANEL_W = 240;
-    private static final int PANEL_H = 232;
+    private static final int PANEL_H = 260;
     private static final int TAB_W = 28;
     private static final int TAB_H = 24;
     private static final int TAB_GAP = 3;
 
-    private static final int INK = 0xFF2B1D14;
-    private static final int LABEL = 0xFF5A4028;
-    private static final int LINE = 0xFF6E502D;
-    private static final int PAPER_DARK = 0xFFC8AE80;
-    private static final int PAPER_LIGHT = 0xFFECDCB8;
+    private static final int TEXTURE_H = 512;
 
-    private static final int TAB_INFO = 0;
-    private static final int TAB_STATS = 1;
-    private static final int TAB_DOJUTSU = 2;
-    private static final String[] TAB_KEYS = {"gui.narutoxboruto.tab_info", "gui.narutoxboruto.tab_stats", "gui.narutoxboruto.tab_dojutsu"};
+    private static final int INK = 0xFF1B2A24;
+    private static final int LABEL = 0xFF5C7568;
+    private static final int GREEN = 0xFF1F4034;
+    private static final int LINE = 0xFFC4CCBA;
+    private static final int FRAME_BG = 0xFFE9EDD0;
+
+    private static final int TAB_CHARACTER = 0;
+    private static final int TAB_DOJUTSU = 1;
+    private static final String[] TAB_KEYS = {"gui.narutoxboruto.tab_character", "gui.narutoxboruto.tab_dojutsu"};
 
     /** The stats in the order around the radar chart, clockwise from the top, with the colour of each. */
     private static final String[] STATS = {
@@ -60,10 +59,7 @@ public class ShinobiStatsGui extends Screen {
     /** Stats that show "-" until they have a value (they are not trained from the start). */
     private static final List<String> LOCKED = new ArrayList<>(Arrays.asList("ninjutsu", "genjutsu", "kinjutsu", "senjutsu", "summoning"));
 
-    private static int rememberedTab = TAB_INFO;
-
     private final LocalPlayer player;
-    private int tab = rememberedTab;
 
     public ShinobiStatsGui() {
         super(Component.translatable("gui.narutoxboruto.shinobi_stats"));
@@ -79,13 +75,6 @@ public class ShinobiStatsGui extends Screen {
     }
 
     @Override
-    protected void init() {
-        this.addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, button -> this.onClose())
-                .bounds(left() + (PANEL_W - 90) / 2, top() + PANEL_H - 26, 90, 18).build());
-        super.init();
-    }
-
-    @Override
     public boolean isPauseScreen() {
         return false;
     }
@@ -93,8 +82,8 @@ public class ShinobiStatsGui extends Screen {
     // ---------------------------------------------------------------- tabs
 
     private int tabX(int index) {
-        // The selected tab sticks out further from the panel
-        return left() + PANEL_W - (index == tab ? 4 : 7);
+        // The character tab is the open one, so it sticks out further from the panel
+        return left() + PANEL_W - (index == TAB_CHARACTER ? 4 : 7);
     }
 
     private int tabY(int index) {
@@ -107,17 +96,9 @@ public class ShinobiStatsGui extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (button == 0) {
-            for (int i = 0; i < TAB_KEYS.length; i++) {
-                if (!overTab(i, mouseX, mouseY)) continue;
-                if (i == TAB_DOJUTSU) {
-                    Minecraft.getInstance().setScreen(new DojutsuScreen());
-                } else {
-                    tab = i;
-                    rememberedTab = i;
-                }
-                return true;
-            }
+        if (button == 0 && overTab(TAB_DOJUTSU, mouseX, mouseY)) {
+            Minecraft.getInstance().setScreen(new DojutsuScreen());
+            return true;
         }
         return super.mouseClicked(mouseX, mouseY, button);
     }
@@ -129,22 +110,25 @@ public class ShinobiStatsGui extends Screen {
         super.renderBackground(g, mouseX, mouseY, partialTick);
         // The tabs first, so the panel covers the part of them that is under it
         for (int i = 0; i < TAB_KEYS.length; i++) {
-            g.blit(TEXTURE, tabX(i), tabY(i), i == tab ? TAB_W : 0, PANEL_H, TAB_W, TAB_H);
-            g.blit(TEXTURE, tabX(i) + 8, tabY(i) + 4, 56 + i * 16, PANEL_H, 16, 16);
+            g.blit(TEXTURE, tabX(i), tabY(i), i == TAB_CHARACTER ? TAB_W : 0, PANEL_H, TAB_W, TAB_H, 256, TEXTURE_H);
+            g.blit(TEXTURE, tabX(i) + 8, tabY(i) + 4, 56 + i * 16, PANEL_H, 16, 16, 256, TEXTURE_H);
         }
-        g.blit(TEXTURE, left(), top(), 0, 0, PANEL_W, PANEL_H);
+        g.blit(TEXTURE, left(), top(), 0, 0, PANEL_W, PANEL_H, 256, TEXTURE_H);
     }
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.render(g, mouseX, mouseY, partialTick);
 
-        Component title = Component.translatable(TAB_KEYS[tab]);
-        g.drawString(this.font, title, (this.width - this.font.width(title)) / 2, top() + 8, INK, false);
-
         if (player != null) {
-            if (tab == TAB_INFO) drawInformation(g, mouseX, mouseY);
-            else drawStatistics(g);
+            drawHeading(g, "gui.narutoxboruto.heading_information", top() + 9);
+            g.fill(left() + 12, top() + 22, left() + PANEL_W - 12, top() + 23, LINE);
+            drawInformation(g, mouseX, mouseY);
+
+            // A thick line between the two parts
+            g.fill(left() + 12, top() + 104, left() + PANEL_W - 12, top() + 106, GREEN);
+            drawHeading(g, "gui.narutoxboruto.heading_statistics", top() + 111);
+            drawStatistics(g);
         }
 
         for (int i = 0; i < TAB_KEYS.length; i++) {
@@ -154,15 +138,20 @@ public class ShinobiStatsGui extends Screen {
         }
     }
 
+    private void drawHeading(GuiGraphics g, String key, int y) {
+        Component heading = Component.translatable(key).withStyle(ChatFormatting.BOLD);
+        g.drawString(this.font, heading, (this.width - this.font.width(heading)) / 2, y, GREEN, false);
+    }
+
     // ---------------------------------------------------------------- information tab
 
     private void drawInformation(GuiGraphics g, int mouseX, int mouseY) {
-        int x = left() + 16;
+        int x = left() + 14;
         int y = top() + 28;
-        int rowHeight = 17;
+        int rowHeight = 11;
 
         // Name
-        g.drawString(this.font, player.getName(), x, y, INK, false);
+        g.drawString(this.font, player.getName(), x, y, 0xFF1F4E9E, false);
 
         // Affiliation and clan, each with its icon
         String affiliation = Services.PLATFORM.getAffiliation(player).getValue();
@@ -217,20 +206,11 @@ public class ShinobiStatsGui extends Screen {
         }
 
         // The model of the player in a frame
-        int frameX = left() + PANEL_W - 82;
-        int frameY = top() + 26;
-        drawFrame(g, frameX, frameY, 66, 100);
-        InventoryScreen.renderEntityInInventoryFollowsMouse(g, frameX + 1, frameY + 1, frameX + 65, frameY + 99,
-                36, 0.0625F, mouseX, mouseY, player);
-
-        // Bottom boxes: shinobi points and chakra
-        int boxY = top() + 140;
-        g.fill(left() + 12, boxY - 6, left() + PANEL_W - 12, boxY - 5, LINE);
-        int boxW = (PANEL_W - 24 - 8) / 2;
-        drawBox(g, left() + 12, boxY, boxW, Component.translatable("shinobiStat.shinobi_points"),
-                String.valueOf(Services.PLATFORM.getShinobiPoints(player).getValue()));
-        drawBox(g, left() + 12 + boxW + 8, boxY, boxW, Component.translatable("gui.narutoxboruto.chakra"),
-                Services.PLATFORM.getChakra(player).getValue() + " / " + Services.PLATFORM.getMaxChakra(player).getValue());
+        int frameX = left() + PANEL_W - 76;
+        int frameY = top() + 28;
+        drawFrame(g, frameX, frameY, 60, 72);
+        InventoryScreen.renderEntityInInventoryFollowsMouse(g, frameX + 1, frameY + 1, frameX + 59, frameY + 71,
+                28, 0.0625F, mouseX, mouseY, player);
     }
 
     private void drawRow(GuiGraphics g, int x, int y, String labelKey, String valueKey, String iconFolder, String value, List<String> iconList) {
@@ -247,19 +227,8 @@ public class ShinobiStatsGui extends Screen {
     }
 
     private void drawFrame(GuiGraphics g, int x, int y, int w, int h) {
-        g.fill(x - 1, y - 1, x + w + 1, y + h + 1, 0xFF2B1D14);
-        g.fill(x, y, x + w, y + h, 0xFFEADBB4);
-        g.fill(x, y, x + w, y + 1, 0xFF8A6A3B);
-        g.fill(x, y, x + 1, y + h, 0xFF8A6A3B);
-    }
-
-    private void drawBox(GuiGraphics g, int x, int y, int w, Component label, String value) {
-        g.fill(x - 1, y - 1, x + w + 1, y + 29, 0xFF2B1D14);
-        g.fill(x, y, x + w, y + 28, PAPER_LIGHT);
-        g.fill(x, y, x + w, y + 1, 0xFF8A6A3B);
-        g.fill(x, y, x + 1, y + 28, 0xFF8A6A3B);
-        g.drawString(this.font, label, x + 5, y + 5, LABEL, false);
-        g.drawString(this.font, value, x + 5, y + 16, INK, false);
+        g.fill(x - 1, y - 1, x + w + 1, y + h + 1, GREEN);
+        g.fill(x, y, x + w, y + h, FRAME_BG);
     }
 
     // ---------------------------------------------------------------- statistics tab
@@ -292,13 +261,12 @@ public class ShinobiStatsGui extends Screen {
         int scale = Math.max(50, ((highest + 49) / 50) * 50);
 
         float cx = left() + PANEL_W / 2.0F;
-        float cy = top() + 126;
-        float radius = 58.0F;
+        float cy = top() + 189;
+        float radius = 38.0F;
 
-        // Shinobi points under the title
-        Component points = Component.translatable("shinobiStat.shinobi_points").append(": "
-                + Services.PLATFORM.getShinobiPoints(player).getValue());
-        g.drawString(this.font, points, (this.width - this.font.width(points)) / 2, top() + 22, LABEL, false);
+        // Shinobi points, on the right of the heading
+        String points = "SP: " + Services.PLATFORM.getShinobiPoints(player).getValue();
+        g.drawString(this.font, points, left() + PANEL_W - 14 - this.font.width(points), top() + 111, LABEL, false);
 
         // The web: rings and spokes
         for (int ring = 1; ring <= 4; ring++) {
@@ -311,12 +279,12 @@ public class ShinobiStatsGui extends Screen {
             }
             for (int i = 0; i < count; i++) {
                 int j = (i + 1) % count;
-                drawLine(g, xs[i], ys[i], xs[j], ys[j], ring == 4 ? 0xFF6E502D : 0x886E502D);
+                drawLine(g, xs[i], ys[i], xs[j], ys[j], ring == 4 ? 0xFF7C9A8A : 0x887C9A8A);
             }
         }
         for (int i = 0; i < count; i++) {
             drawLine(g, cx, cy, cx + (float) Math.sin(Math.PI * 2 * i / count) * radius,
-                    cy - (float) Math.cos(Math.PI * 2 * i / count) * radius, 0x666E502D);
+                    cy - (float) Math.cos(Math.PI * 2 * i / count) * radius, 0x667C9A8A);
         }
 
         // The stats
@@ -345,7 +313,7 @@ public class ShinobiStatsGui extends Screen {
             Component label = Component.translatable("shinobiStat." + name);
             boolean dashed = LOCKED.contains(name) && values[i] == 0;
             String value = dashed ? "-" : String.valueOf(values[i]);
-            int color = dashed ? 0xFF8C7A5A : STAT_COLORS[i];
+            int color = dashed ? 0xFF9AAA9E : STAT_COLORS[i];
 
             float ax = cx + sin * (radius + 8);
             float ay = cy - cos * (radius + 8);
