@@ -7,6 +7,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -59,19 +60,42 @@ public class ShinobiStatsGui extends Screen {
     /** Stats that show "-" until they have a value (they are not trained from the start). */
     private static final List<String> LOCKED = new ArrayList<>(Arrays.asList("ninjutsu", "genjutsu", "kinjutsu", "senjutsu", "summoning"));
 
+    /** How much the whole screen is shrunk to fit the window: 1 when there is room for it. */
+    private static final float MARGIN = 8.0F;
+
     private final LocalPlayer player;
+    private float uiScale = 1.0F;
 
     public ShinobiStatsGui() {
         super(Component.translatable("gui.narutoxboruto.shinobi_stats"));
         this.player = Minecraft.getInstance().player;
     }
 
+    /** Everything is laid out in the shrunk screen: this wide and this high. */
+    private float virtualWidth() {
+        return this.width / uiScale;
+    }
+
+    private float virtualHeight() {
+        return this.height / uiScale;
+    }
+
     private int left() {
-        return (this.width - PANEL_W) / 2;
+        return Math.round((virtualWidth() - PANEL_W) / 2.0F);
     }
 
     private int top() {
-        return (this.height - PANEL_H) / 2;
+        return Math.round((virtualHeight() - PANEL_H) / 2.0F);
+    }
+
+    @Override
+    protected void init() {
+        // Shrink to fit: the panel and its tabs have to fit in the window, also at a large GUI scale
+        float fitHeight = (this.height - MARGIN) / PANEL_H;
+        float fitWidth = (this.width - MARGIN) / (PANEL_W + 22);
+        float fit = Math.min(1.0F, Math.min(fitHeight, fitWidth));
+        uiScale = Math.max(0.25F, (float) Math.floor(fit * 20.0F) / 20.0F);
+        super.init();
     }
 
     @Override
@@ -90,7 +114,9 @@ public class ShinobiStatsGui extends Screen {
         return top() + 12 + index * (TAB_H + TAB_GAP);
     }
 
-    private boolean overTab(int index, double mouseX, double mouseY) {
+    private boolean overTab(int index, double realMouseX, double realMouseY) {
+        double mouseX = realMouseX / uiScale;
+        double mouseY = realMouseY / uiScale;
         return mouseX >= tabX(index) && mouseX < tabX(index) + TAB_W && mouseY >= tabY(index) && mouseY < tabY(index) + TAB_H;
     }
 
@@ -108,28 +134,36 @@ public class ShinobiStatsGui extends Screen {
     @Override
     public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.renderBackground(g, mouseX, mouseY, partialTick);
+        g.pose().pushPose();
+        g.pose().scale(uiScale, uiScale, 1.0F);
         // The tabs first, so the panel covers the part of them that is under it
         for (int i = 0; i < TAB_KEYS.length; i++) {
             g.blit(TEXTURE, tabX(i), tabY(i), i == TAB_CHARACTER ? TAB_W : 0, PANEL_H, TAB_W, TAB_H, 256, TEXTURE_H);
             g.blit(TEXTURE, tabX(i) + 8, tabY(i) + 4, 56 + i * 16, PANEL_H, 16, 16, 256, TEXTURE_H);
         }
         g.blit(TEXTURE, left(), top(), 0, 0, PANEL_W, PANEL_H, 256, TEXTURE_H);
+        g.pose().popPose();
     }
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.render(g, mouseX, mouseY, partialTick);
 
+        g.pose().pushPose();
+        g.pose().scale(uiScale, uiScale, 1.0F);
+        int virtualMouseX = Math.round(mouseX / uiScale);
+        int virtualMouseY = Math.round(mouseY / uiScale);
         if (player != null) {
             drawHeading(g, "gui.narutoxboruto.heading_information", top() + 9);
             g.fill(left() + 12, top() + 22, left() + PANEL_W - 12, top() + 23, LINE);
-            drawInformation(g, mouseX, mouseY);
+            drawInformation(g, virtualMouseX, virtualMouseY);
 
             // A thick line between the two parts
             g.fill(left() + 12, top() + 104, left() + PANEL_W - 12, top() + 106, GREEN);
             drawHeading(g, "gui.narutoxboruto.heading_statistics", top() + 111);
             drawStatistics(g);
         }
+        g.pose().popPose();
 
         for (int i = 0; i < TAB_KEYS.length; i++) {
             if (overTab(i, mouseX, mouseY)) {
@@ -140,7 +174,7 @@ public class ShinobiStatsGui extends Screen {
 
     private void drawHeading(GuiGraphics g, String key, int y) {
         Component heading = Component.translatable(key).withStyle(ChatFormatting.BOLD);
-        g.drawString(this.font, heading, (this.width - this.font.width(heading)) / 2, y, GREEN, false);
+        g.drawString(this.font, heading, left() + (PANEL_W - this.font.width(heading)) / 2, y, GREEN, false);
     }
 
     // ---------------------------------------------------------------- information tab
@@ -261,48 +295,55 @@ public class ShinobiStatsGui extends Screen {
         int scale = Math.max(50, ((highest + 49) / 50) * 50);
 
         float cx = left() + PANEL_W / 2.0F;
-        float cy = top() + 189;
-        float radius = 38.0F;
+        float cy = top() + 186;
+        float radius = 36.0F;
 
         // Shinobi points, on the right of the heading
         String points = "SP: " + Services.PLATFORM.getShinobiPoints(player).getValue();
         g.drawString(this.font, points, left() + PANEL_W - 14 - this.font.width(points), top() + 111, LABEL, false);
 
-        // The web: rings and spokes
+        // The chart is drawn in real screen pixels, not GUI pixels, so the circles are smooth at any scale
+        float f = Math.max(1.0F, (float) Math.ceil(Minecraft.getInstance().getWindow().getGuiScale() * uiScale));
+        float big = radius * f;
+        g.pose().pushPose();
+        g.pose().translate(cx, cy, 0.0F);
+        g.pose().scale(1.0F / f, 1.0F / f, 1.0F);
+
+        // The web: round rings and the spokes to each stat
         for (int ring = 1; ring <= 4; ring++) {
-            float r = radius * ring / 4.0F;
-            float[] xs = new float[count];
-            float[] ys = new float[count];
-            for (int i = 0; i < count; i++) {
-                xs[i] = cx + (float) Math.sin(Math.PI * 2 * i / count) * r;
-                ys[i] = cy - (float) Math.cos(Math.PI * 2 * i / count) * r;
-            }
-            for (int i = 0; i < count; i++) {
-                int j = (i + 1) % count;
-                drawLine(g, xs[i], ys[i], xs[j], ys[j], ring == 4 ? 0xFF7C9A8A : 0x887C9A8A);
+            float r = big * ring / 4.0F;
+            int segments = Math.max(96, (int) (Math.PI * 2 * r * 1.1));
+            int ringColor = ring == 4 ? 0xFF7C9A8A : 0xFFC6D2C2;
+            int thickness = ring == 4 ? Math.max(1, Math.round(f * 0.5F)) : 1;
+            for (int s = 0; s < segments; s++) {
+                double a = Math.PI * 2 * s / segments;
+                dot(g, (float) Math.sin(a) * r, (float) -Math.cos(a) * r, thickness, ringColor);
             }
         }
         for (int i = 0; i < count; i++) {
-            drawLine(g, cx, cy, cx + (float) Math.sin(Math.PI * 2 * i / count) * radius,
-                    cy - (float) Math.cos(Math.PI * 2 * i / count) * radius, 0x667C9A8A);
+            drawLine(g, 0, 0, (float) Math.sin(Math.PI * 2 * i / count) * big,
+                    (float) -Math.cos(Math.PI * 2 * i / count) * big, 0xFFD2DCCB, 1);
         }
 
         // The stats
         float[] px = new float[count];
         float[] py = new float[count];
         for (int i = 0; i < count; i++) {
-            float r = radius * Math.min(1.0F, values[i] / (float) scale);
-            px[i] = cx + (float) Math.sin(Math.PI * 2 * i / count) * r;
-            py[i] = cy - (float) Math.cos(Math.PI * 2 * i / count) * r;
+            float r = big * Math.min(1.0F, values[i] / (float) scale);
+            px[i] = (float) Math.sin(Math.PI * 2 * i / count) * r;
+            py[i] = (float) -Math.cos(Math.PI * 2 * i / count) * r;
         }
         fillPolygon(g, px, py, 0x70B02820);
+        int outline = Math.max(1, Math.round(f * 0.6F));
         for (int i = 0; i < count; i++) {
             int j = (i + 1) % count;
-            drawLine(g, px[i], py[i], px[j], py[j], 0xFF8A1E18);
+            drawLine(g, px[i], py[i], px[j], py[j], 0xFF8A1E18, outline);
         }
+        int marker = Math.max(3, Math.round(f * 1.5F));
         for (int i = 0; i < count; i++) {
-            g.fill(Math.round(px[i]) - 1, Math.round(py[i]) - 1, Math.round(px[i]) + 2, Math.round(py[i]) + 2, STAT_COLORS[i]);
+            dot(g, px[i], py[i], marker, STAT_COLORS[i]);
         }
+        g.pose().popPose();
 
         // The names and values around it
         for (int i = 0; i < count; i++) {
@@ -315,8 +356,9 @@ public class ShinobiStatsGui extends Screen {
             String value = dashed ? "-" : String.valueOf(values[i]);
             int color = dashed ? 0xFF9AAA9E : STAT_COLORS[i];
 
-            float ax = cx + sin * (radius + 8);
-            float ay = cy - cos * (radius + 8);
+            float out = Math.abs(sin) > 0.3F ? radius + 12 : radius + 8;
+            float ax = cx + sin * out;
+            float ay = cy - cos * out;
             int labelWidth = this.font.width(label);
             int valueWidth = this.font.width(value);
             int lx;
@@ -331,6 +373,9 @@ public class ShinobiStatsGui extends Screen {
                 lx = Math.round(ax) - labelWidth / 2;
                 vx = Math.round(ax) - valueWidth / 2;
             }
+            // Keep the names inside the panel
+            lx = Mth.clamp(lx, left() + 12, left() + PANEL_W - 12 - labelWidth);
+            vx = Mth.clamp(vx, left() + 12, left() + PANEL_W - 12 - valueWidth);
             int ly = Math.round(ay) - (cos > 0.3F ? 17 : cos < -0.3F ? -1 : 8);
             g.drawString(this.font, label, lx, ly, color, false);
             g.drawString(this.font, value, vx, ly + 9, INK, false);
@@ -339,17 +384,21 @@ public class ShinobiStatsGui extends Screen {
 
     // ---------------------------------------------------------------- lines and polygons
 
-    /** A one pixel line. */
-    private void drawLine(GuiGraphics g, float x0, float y0, float x1, float y1, int color) {
+    private void dot(GuiGraphics g, float x, float y, int size, int color) {
+        int ix = Math.round(x - size / 2.0F);
+        int iy = Math.round(y - size / 2.0F);
+        g.fill(ix, iy, ix + size, iy + size, color);
+    }
+
+    /** A line of the given thickness, in the units of the current pose. */
+    private void drawLine(GuiGraphics g, float x0, float y0, float x1, float y1, int color, int thickness) {
         int steps = (int) Math.ceil(Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)));
         if (steps <= 0) {
-            g.fill(Math.round(x0), Math.round(y0), Math.round(x0) + 1, Math.round(y0) + 1, color);
+            dot(g, x0, y0, thickness, color);
             return;
         }
         for (int s = 0; s <= steps; s++) {
-            int x = Math.round(x0 + (x1 - x0) * s / steps);
-            int y = Math.round(y0 + (y1 - y0) * s / steps);
-            g.fill(x, y, x + 1, y + 1, color);
+            dot(g, x0 + (x1 - x0) * s / steps, y0 + (y1 - y0) * s / steps, thickness, color);
         }
     }
 
