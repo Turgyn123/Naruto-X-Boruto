@@ -40,6 +40,7 @@ public class ForgeClient {
             EntityRenderers.register(SHARK_BOMB.get(), SharkBombRenderer::new);
             EntityRenderers.register(WATER_DRAGON.get(), WaterDragonRenderer::new);
             EntityRenderers.register(LIGHTNING_ARC.get(), LightningArcRenderer::new);
+            EntityRenderers.register(WEAPON_EFFECT.get(), WeaponEffectRenderer::new);
 
             EntityRenderers.register(JINPACHI_MUNASHI.get(),
                     (ctx) -> new AbstractShinobiRender(ctx, "jinpachi_munashi", true));
