@@ -17,7 +17,8 @@ public enum SwordCustomTiers implements Tier {
     KUBIKIRIBOCHO(0, 1561, -9.5F, 17.0F, 0, () -> Ingredient.EMPTY),
     NUIBARI(0, 1561, -3.5F, 7.0F, 0, () -> Ingredient.EMPTY),
     KABUTOWARI(0, 1561, -3.0F, 12.0F, 0, () -> Ingredient.EMPTY), // Heavy bluntsword
-    HIRAMEKAREI(0, 1561, -3.0F, 9.0F, 0, () -> Ingredient.EMPTY);
+    HIRAMEKAREI(0, 1561, -3.0F, 9.0F, 0, () -> Ingredient.EMPTY),
+    GIANT_FAN(0, 1561, -2.8F, 4.0F, 0, () -> Ingredient.EMPTY); // A fan, not a blade: light, but the wind does the work
 
     private final int level;
     private final int uses;

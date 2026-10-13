@@ -1,7 +1,6 @@
 package net.narutoxboruto.items.swords;
 
 import net.minecraft.ChatFormatting;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -11,8 +10,8 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.SwordItem;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.UseAnim;
 import net.minecraft.world.level.Level;
@@ -20,26 +19,28 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.narutoxboruto.capabilities.info.Chakra;
 import net.narutoxboruto.capabilities.info.ReleaseList;
+import net.narutoxboruto.entities.effects.WeaponEffectEntity;
 import net.narutoxboruto.main.platform.Services;
 import net.narutoxboruto.util.ModUtil;
 
 import java.util.List;
 
 /**
- * The Giant Fan, Temari's weapon. Needs the Wind release.
+ * The Giant Fan, Temari's weapon. It is a sword item and needs the Wind release.
  *
  * <ul>
  *   <li><b>Hold right click</b> to swing it: a strong wind blows everything in front of you away, players and mobs
- *       alike. It costs chakra every second, and stops by itself when the chakra runs out.</li>
+ *       alike. The wind is a real swirl that you see flying out of the fan, not particles. It costs chakra every
+ *       second, and stops by itself when the chakra runs out.</li>
  *   <li><b>The moons:</b> as in the anime, the longer you swing, the more of the three moons on the fan open up
  *       (one at the start, a second after two seconds, the third after four). Every moon makes the wind
  *       stronger, longer and more expensive.</li>
  *   <li><b>Cutting Whirlwind (Kamaitachi):</b> let go of right click after at least one second and the fan
- *       releases a blade of wind in front of you. It cuts everything in its way and throws it back, and the
- *       more moons are open the further and harder it hits. The fan needs a moment to recover afterwards.</li>
+ *       releases a blade of wind in front of you (a flying crescent, three of them with all three moons). It cuts
+ *       everything in its way and throws it back. The fan needs a moment to recover afterwards.</li>
  * </ul>
  */
-public class GiantFan extends Item {
+public class GiantFan extends SwordItem {
 
     private static final String REQUIRED_RELEASE = "wind";
     private static final int MAX_USE_TICKS = 72000;
@@ -51,16 +52,19 @@ public class GiantFan extends Item {
     private static final int RECOVER_TICKS = 60;
     /** How close to the looking direction something has to be to be hit by the wind: the cosine of the half angle. */
     private static final double CONE = 0.6D;
+    private static final int WIND_COLOR = 0xB8E6FFF2;
+    private static final int BLADE_COLOR = 0xD0F4FFFA;
 
     private static final int[] CHAKRA_PER_SECOND = {2, 4, 6};
     private static final double[] RANGE = {8.0D, 11.0D, 14.0D};
     private static final double[] PUSH = {1.0D, 1.4D, 1.8D};
+    private static final float[] WIND_SIZE = {1.0F, 1.4F, 1.8F};
     private static final int[] SLASH_CHAKRA = {4, 8, 12};
     private static final float[] SLASH_DAMAGE = {5.0F, 9.0F, 14.0F};
     private static final double[] SLASH_RANGE = {8.0D, 12.0D, 16.0D};
 
     public GiantFan(Properties properties) {
-        super(properties.stacksTo(1));
+        super(SwordCustomTiers.GIANT_FAN, properties);
     }
 
     /** 1 to 3: how many moons of the fan are open after this many ticks of swinging. */
@@ -148,14 +152,12 @@ public class GiantFan extends Item {
             target.hurtMarked = true;
         }
 
-        // The wind: clouds flying away from the fan, more of them with every moon
-        for (int i = 0; i < 6 + moons * 3; i++) {
-            double along = 1.0D + serverLevel.random.nextDouble() * (range * 0.4D);
-            double spread = 0.25D + along * 0.18D;
-            double x = eye.x + look.x * along + (serverLevel.random.nextDouble() - 0.5D) * spread * 2.0D;
-            double y = eye.y - 0.3D + look.y * along + (serverLevel.random.nextDouble() - 0.5D) * spread * 2.0D;
-            double z = eye.z + look.z * along + (serverLevel.random.nextDouble() - 0.5D) * spread * 2.0D;
-            serverLevel.sendParticles(ParticleTypes.CLOUD, x, y, z, 0, look.x, look.y, look.z, 0.9D);
+        // The wind: a swirl flies out of the fan every few ticks, far enough to cover the range
+        if (used % 3 == 0) {
+            double speed = 0.9D;
+            int life = (int) Math.ceil(range / speed);
+            Vec3 start = eye.add(look.scale(0.9D)).add(0.0D, -0.3D, 0.0D);
+            WeaponEffectEntity.spawnWind(serverLevel, start, look, WIND_SIZE[moons - 1], WIND_COLOR, life, speed);
         }
         if (used % 6 == 0) {
             serverLevel.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.PLAYER_ATTACK_SWEEP,
@@ -184,15 +186,12 @@ public class GiantFan extends Item {
         Vec3 look = player.getLookAngle();
         double range = SLASH_RANGE[index];
 
-        // A blade of wind: a wide arc moving away from the player
-        Vec3 side = look.cross(new Vec3(0.0D, 1.0D, 0.0D));
-        side = side.lengthSqr() < 1.0e-4 ? new Vec3(1.0D, 0.0D, 0.0D) : side.normalize();
-        for (double along = 1.5D; along <= range; along += 1.2D) {
-            double halfWidth = 1.0D + along * 0.35D;
-            for (double across = -halfWidth; across <= halfWidth; across += 0.9D) {
-                Vec3 p = eye.add(look.scale(along)).add(side.scale(across)).add(0.0D, -0.4D, 0.0D);
-                serverLevel.sendParticles(ParticleTypes.SWEEP_ATTACK, p.x, p.y, p.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
-            }
+        // The blades of wind: one, two or three crescents flying out, one behind the other
+        double speed = 1.4D;
+        int life = (int) Math.ceil(range / speed);
+        for (int i = 0; i <= index; i++) {
+            Vec3 start = eye.add(look.scale(1.2D + i * 1.4D)).add(0.0D, -0.4D, 0.0D);
+            WeaponEffectEntity.spawnCrescent(serverLevel, start, look, 1.0F + 0.3F * index, BLADE_COLOR, life, speed);
         }
         serverLevel.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, 1.2F, 0.5F);
 

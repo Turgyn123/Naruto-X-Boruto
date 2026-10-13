@@ -8,6 +8,7 @@ import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.RegistryObject;
 import net.narutoxboruto.entities.effects.LightningArcEntity;
+import net.narutoxboruto.entities.effects.WeaponEffectEntity;
 import net.narutoxboruto.entities.jutsus.*;
 import net.narutoxboruto.entities.shinobis.*;
 import net.narutoxboruto.entities.throwables.*;
@@ -39,6 +40,14 @@ public class ForgeEntities {
                     .updateInterval(1)
                     .fireImmune()
                     .build("lightning_arc"));
+
+    public static final RegistryObject<EntityType<WeaponEffectEntity>> WEAPON_EFFECT =
+            MOD_ENTITIES.register("weapon_effect", () -> EntityType.Builder.<WeaponEffectEntity>of(WeaponEffectEntity::new, MobCategory.MISC)
+                    .sized(0.1F, 0.1F)
+                    .clientTrackingRange(16)
+                    .updateInterval(1)
+                    .fireImmune()
+                    .build("weapon_effect"));
 
     //Bosses
     public static final RegistryObject<EntityType<KizameHoshigaki>> KISAME_HOSHIGAKI = registerEntity("kisame_hoshigaki", KizameHoshigaki::new, MobCategory.MONSTER, 0.6F, 1.8F);

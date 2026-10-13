@@ -65,6 +65,7 @@ public class FabricClient implements ClientModInitializer {
         EntityRendererRegistry.register(FabricEntities.SHARK_BOMB, SharkBombRenderer::new);
         EntityRendererRegistry.register(FabricEntities.WATER_DRAGON, WaterDragonRenderer::new);
         EntityRendererRegistry.register(FabricEntities.LIGHTNING_ARC, LightningArcRenderer::new);
+        EntityRendererRegistry.register(FabricEntities.WEAPON_EFFECT, WeaponEffectRenderer::new);
 
         // Boss renderers
         EntityRendererRegistry.register(FabricEntities.JINPACHI_MUNASHI,

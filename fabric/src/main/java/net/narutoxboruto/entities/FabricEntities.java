@@ -7,6 +7,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.narutoxboruto.entities.effects.LightningArcEntity;
+import net.narutoxboruto.entities.effects.WeaponEffectEntity;
 import net.narutoxboruto.entities.jutsus.*;
 import net.narutoxboruto.entities.shinobis.*;
 import net.narutoxboruto.entities.throwables.*;
@@ -37,6 +38,17 @@ public class FabricEntities {
                     .updateInterval(1)
                     .fireImmune()
                     .build("lightning_arc")
+    );
+
+    public static final EntityType<WeaponEffectEntity> WEAPON_EFFECT = Registry.register(
+            BuiltInRegistries.ENTITY_TYPE,
+            ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "weapon_effect"),
+            EntityType.Builder.<WeaponEffectEntity>of(WeaponEffectEntity::new, MobCategory.MISC)
+                    .sized(0.1F, 0.1F)
+                    .clientTrackingRange(16)
+                    .updateInterval(1)
+                    .fireImmune()
+                    .build("weapon_effect")
     );
 
     //Bosses

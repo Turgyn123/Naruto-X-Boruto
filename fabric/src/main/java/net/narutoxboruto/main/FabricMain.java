@@ -56,6 +56,7 @@ public class FabricMain implements ModInitializer {
         ModEntities.SHARK_BOMB = FabricEntities.SHARK_BOMB;
         ModEntities.WATER_DRAGON = FabricEntities.WATER_DRAGON;
         ModEntities.LIGHTNING_ARC = FabricEntities.LIGHTNING_ARC;
+        ModEntities.WEAPON_EFFECT = FabricEntities.WEAPON_EFFECT;
         ModEntities.ZABUZA_MOMOCHI = FabricEntities.ZABUZA_MOMOCHI;
         ModEntities.JINPACHI_MUNASHI = FabricEntities.JINPACHI_MUNASHI;
         ModEntities.KISAME_HOSHIGAKI = FabricEntities.KISAME_HOSHIGAKI;

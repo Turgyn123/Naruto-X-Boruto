@@ -1,52 +1,57 @@
 package net.narutoxboruto.items.swords;
 
-import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.narutoxboruto.entities.effects.WeaponEffectEntity;
+
+import java.util.List;
 
 /**
- * Nuibari, the needle sword of Kushimaru Kuriarare. With the ability switched on (the Special Action key) every
- * hit stitches the target in place with chakra thread: it is slowed down heavily and weakened for a few
- * seconds. Costs a little chakra per hit and needs the same Kenjutsu as the other swordsmen's blades.
+ * Nuibari, the needle sword of Kushimaru Kuriarare, that stitches its enemies with chakra thread.
+ *
+ * With the ability switched on (the Special Action key), a hit ties the target to the sword with a thread of
+ * chakra. The target cannot move for up to 30 seconds. The thread breaks, and the target is free, when someone hits
+ * the wielder, when the wielder dies or goes away, or when the target is pulled more than 24 blocks away. Whichever
+ * way it ends, the ability rests for a minute. Needs the same Kenjutsu as the other swordsmen's blades.
+ *
+ * The thread itself (and holding the target) is the {@link WeaponEffectEntity} of kind THREAD.
  */
 public class Nuibari extends AbstractAbilitySword {
 
-    private static final int BIND_TICKS = 80;
-
     public Nuibari(Properties pProperties) {
         super(SwordCustomTiers.NUIBARI, pProperties);
+        // The base class puts the sword on this cooldown after every use of the ability: the 30 seconds the thread
+        // holds and then the minute of rest. The thread shortens it to the minute when it ends.
+        this.cooldown = WeaponEffectEntity.THREAD_TICKS + WeaponEffectEntity.THREAD_COOLDOWN_TICKS;
     }
 
     @Override
     public int getChakraCost() {
-        return 2;
+        return 3;
     }
 
     @Override
     protected void doSpecialAbility(LivingEntity pTarget, ServerPlayer serverPlayer) {
-        pTarget.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, BIND_TICKS, 3));
-        pTarget.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, BIND_TICKS, 1));
+        if (!(serverPlayer.level() instanceof ServerLevel level)) return;
 
-        if (serverPlayer.level() instanceof ServerLevel level) {
-            // Threads in the air between the sword and the target
-            double fromX = serverPlayer.getX();
-            double fromY = serverPlayer.getEyeY() - 0.3;
-            double fromZ = serverPlayer.getZ();
-            double toX = pTarget.getX();
-            double toY = pTarget.getY() + pTarget.getBbHeight() / 2.0;
-            double toZ = pTarget.getZ();
-            for (int i = 0; i <= 12; i++) {
-                double t = i / 12.0;
-                level.sendParticles(ParticleTypes.CRIT, fromX + (toX - fromX) * t, fromY + (toY - fromY) * t,
-                        fromZ + (toZ - fromZ) * t, 1, 0.02, 0.02, 0.02, 0.0);
-            }
-            level.sendParticles(ParticleTypes.ENCHANTED_HIT, toX, toY, toZ, 12, 0.3, 0.4, 0.3, 0.1);
-            level.playSound(null, pTarget.blockPosition(), SoundEvents.CHAIN_PLACE, SoundSource.PLAYERS, 0.8F, 1.4F);
-        }
+        WeaponEffectEntity.spawnThread(level, serverPlayer, pTarget, this);
+
+        serverPlayer.displayClientMessage(Component.translatable("nuibari.bound").withStyle(ChatFormatting.DARK_RED), true);
+        level.playSound(null, pTarget.blockPosition(), SoundEvents.CHAIN_PLACE, SoundSource.PLAYERS, 1.0F, 0.7F);
+    }
+
+    @Override
+    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+        super.appendHoverText(stack, context, tooltip, flag);
+        tooltip.add(Component.translatable("nuibari.tip_bind").withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.translatable("nuibari.tip_break").withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.translatable("nuibari.tip_cooldown").withStyle(ChatFormatting.GRAY));
     }
 }
