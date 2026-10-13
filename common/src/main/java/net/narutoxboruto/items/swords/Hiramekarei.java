@@ -30,8 +30,9 @@ import java.util.List;
  * Hiramekarei, the twin blades of Mangetsu Hozuki, the swordsman of the Mist who stored chakra in his swords.
  *
  * <ul>
- *   <li><b>Passive, stored chakra:</b> the blades can store up to 150 of your chakra. Hold right click while
- *       sneaking to pour chakra into them. The stored chakra is shown in the tooltip.</li>
+ *   <li><b>Passive, stored chakra:</b> like Samehada, the blades take in chakra with every hit, a little of your
+ *       own and, from a player you hit, some of theirs, up to 150. Hold right click while sneaking to pour more of
+ *       your chakra in. The stored chakra is shown in the tooltip.</li>
  *   <li><b>Ability 1, both blades</b> (the Special Action key): you hold both blades instead of one (the model
  *       changes to {@code hiramekarei_to}). With both blades drawn every hit is a double strike.</li>
  *   <li><b>Ability 2, chakra coating</b> (right click): the whole blade is covered in chakra and glows. While it
@@ -45,6 +46,9 @@ public class Hiramekarei extends AbstractAbilitySword {
     private static final String STORED_KEY = "hiramekarei_chakra";
     private static final String COAT_KEY = "hiramekarei_coat";
     public static final int MAX_STORED = 150;
+    /** Chakra the blades take in with a hit: from a player that is hit, and from the wielder. */
+    private static final int ABSORB_FROM_TARGET = 4;
+    private static final int ABSORB_FROM_WIELDER = 3;
     private static final int COAT_MINIMUM = 10;
     private static final int COAT_PER_HIT = 4;
     private static final float COAT_DAMAGE = 5.0F;
@@ -109,6 +113,30 @@ public class Hiramekarei extends AbstractAbilitySword {
     @Override
     public boolean hurtEnemy(ItemStack stack, LivingEntity target, LivingEntity attacker) {
         boolean result = super.hurtEnemy(stack, target, attacker);
+
+        // Like Samehada, the blades take in chakra with every hit: a little of the wielder's own, and more from a
+        // player they hit
+        if (attacker instanceof ServerPlayer wielder && getStored(stack) < MAX_STORED) {
+            int gained = 0;
+            if (target instanceof ServerPlayer victim) {
+                Chakra victimChakra = Services.PLATFORM.getChakra(victim);
+                int taken = Math.min(victimChakra.getValue(), ABSORB_FROM_TARGET);
+                if (taken > 0) {
+                    victimChakra.subValue(taken, victim);
+                    gained += taken;
+                }
+            }
+            Chakra ownChakra = Services.PLATFORM.getChakra(wielder);
+            int given = Math.min(ownChakra.getValue(), ABSORB_FROM_WIELDER);
+            if (given > 0) {
+                ownChakra.subValue(given, wielder);
+                gained += given;
+            }
+            if (gained > 0) {
+                setStored(stack, getStored(stack) + gained);
+                wielder.displayClientMessage(Component.translatable("hiramekarei.stored", getStored(stack), MAX_STORED).withStyle(ChatFormatting.AQUA), true);
+            }
+        }
 
         if (isCoated(stack) && attacker instanceof ServerPlayer player && player.level() instanceof ServerLevel level) {
             if (getStored(stack) < COAT_PER_HIT) {

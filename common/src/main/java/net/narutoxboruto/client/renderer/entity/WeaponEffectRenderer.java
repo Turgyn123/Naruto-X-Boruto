@@ -22,13 +22,18 @@ import org.joml.Matrix4f;
  * <ul>
  *   <li>wind: three ribbons of air that spiral around the way it flies, widening and scrolling forward;</li>
  *   <li>crescent: a flat crescent blade that grows a little as it flies and fades out;</li>
- *   <li>thread: a thin, slightly swaying thread from the hand of the wielder to the target.</li>
+ *   <li>Nuibari: a needle that flies to the target and lands at its feet, with thin threads and a red flash.</li>
  * </ul>
  */
 public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
 
     private static final ResourceLocation WIND_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/wind_streak.png");
     private static final ResourceLocation CRESCENT_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/crescent.png");
+    private static final ResourceLocation NEEDLE_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/needle.png");
+    private static final float NEEDLE_FLIGHT_TICKS = 5.0F;
+    private static final double NEEDLE_LENGTH = 2.0D;
+    private static final float THREAD_HEIGHT = 12.0F;
+    private static final float RED_FLASH_TICKS = 14.0F;
     private static final ResourceLocation THREAD_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/thread.png");
     private static final ResourceLocation WHITE_TEXTURE = ResourceLocation.withDefaultNamespace("textures/misc/white.png");
     private static final int FULL_BRIGHT = 0xF000F0;
@@ -138,41 +143,77 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
 
     // ---------------------------------------------------------------- thread
 
+    /**
+     * Nuibari, as in the video: a long needle flies from the hand to the target and lands on the ground at its feet,
+     * the target flashes red, a thin thread runs from the eye of the needle to the target and another thin thread
+     * runs straight up from the target's feet.
+     */
     private void renderThread(WeaponEffectEntity entity, float age, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource) {
         Entity target = entity.level().getEntity(entity.getTargetId());
         if (target == null) return;
 
-        Vec3 from = entity.getPosition(partialTick);
-        Vec3 to = target.getPosition(partialTick).add(0.0D, target.getBbHeight() * 0.55D, 0.0D);
-        Vec3 along = to.subtract(from);
-        double distance = along.length();
-        if (distance < 0.05D) return;
-        Vec3 direction = along.scale(1.0D / distance);
+        // Everything is worked out in the world and then moved to the origin of the entity (the hand)
+        Vec3 hand = entity.getPosition(partialTick);
+        Vec3 feet = target.getPosition(partialTick);
+        Vec3 chest = feet.add(0.0D, target.getBbHeight() * 0.55D, 0.0D);
 
-        // The thread: thin, white and straight, seen from any side with two crossed strips
-        Vec3 reference = Math.abs(direction.y) > 0.9D ? new Vec3(1.0D, 0.0D, 0.0D) : new Vec3(0.0D, 1.0D, 0.0D);
-        Vec3 sideA = direction.cross(reference).normalize().scale(0.012D);
-        Vec3 sideB = direction.cross(sideA).normalize().scale(0.012D);
+        Vec3 flat = new Vec3(feet.x - hand.x, 0.0D, feet.z - hand.z);
+        flat = flat.lengthSqr() < 1.0E-4D ? new Vec3(0.0D, 0.0D, 1.0D) : flat.normalize();
+        Vec3 landTip = feet.add(0.0D, 0.06D, 0.0D);
 
-        VertexConsumer vc = bufferSource.getBuffer(RenderType.entityTranslucent(THREAD_TEXTURE));
+        // The flight of the needle: straight at the target, and flat on the ground when it has landed
+        float flight = Mth.clamp(age / NEEDLE_FLIGHT_TICKS, 0.0F, 1.0F);
+        Vec3 toTarget = landTip.subtract(hand);
+        Vec3 flightDirection = toTarget.lengthSqr() < 1.0E-4D ? flat : toTarget.normalize();
+        float settle = flight * flight * flight * flight;
+        Vec3 direction = flightDirection.scale(1.0F - settle).add(flat.scale(settle));
+        direction = direction.lengthSqr() < 1.0E-4D ? flat : direction.normalize();
+        Vec3 tip = hand.add(landTip.subtract(hand).scale(flight));
+        Vec3 tail = tip.subtract(direction.scale(NEEDLE_LENGTH));
+
         Matrix4f matrix = poseStack.last().pose();
-        float u1 = (float) (distance * 2.0D);
-        for (int side = 0; side < 2; side++) {
-            Vec3 across = side == 0 ? sideA : sideB;
-            vertex(vc, matrix, (float) across.x, (float) across.y, (float) across.z, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F, 1.0F);
-            vertex(vc, matrix, (float) -across.x, (float) -across.y, (float) -across.z, 0.0F, 1.0F, 1.0F, 1.0F, 1.0F, 1.0F);
-            vertex(vc, matrix, (float) (along.x - across.x), (float) (along.y - across.y), (float) (along.z - across.z), u1, 1.0F, 1.0F, 1.0F, 1.0F, 1.0F);
-            vertex(vc, matrix, (float) (along.x + across.x), (float) (along.y + across.y), (float) (along.z + across.z), u1, 0.0F, 1.0F, 1.0F, 1.0F, 1.0F);
+        VertexConsumer needle = bufferSource.getBuffer(RenderType.entityTranslucent(NEEDLE_TEXTURE));
+        strip(needle, matrix, tail.subtract(hand), tip.subtract(hand), 0.035D, NEEDLE_LENGTH, false);
+
+        if (flight >= 1.0F) {
+            VertexConsumer thread = bufferSource.getBuffer(RenderType.entityTranslucent(THREAD_TEXTURE));
+            // From the eye of the needle to the target
+            strip(thread, matrix, tail.subtract(hand), chest.subtract(hand), 0.008D, 1.0F, true);
+            // Straight up from its feet
+            float grow = Mth.clamp((age - NEEDLE_FLIGHT_TICKS) / 6.0F, 0.0F, 1.0F);
+            strip(thread, matrix, feet.subtract(hand), feet.add(0.0D, THREAD_HEIGHT * grow, 0.0D).subtract(hand), 0.008D, 1.0F, true);
         }
 
-        // The target is tinted red while the thread holds it: a thin red shell around its body
-        net.minecraft.world.phys.AABB box = target.getBoundingBox()
-                .move(target.getPosition(partialTick).subtract(target.position()))
-                .move(-entity.getX(), -entity.getY(), -entity.getZ())
-                .inflate(0.04D);
-        float alpha = 0.32F + 0.08F * Mth.sin(age * 0.4F);
-        VertexConsumer shell = bufferSource.getBuffer(RenderType.entityTranslucent(WHITE_TEXTURE));
-        shellBox(shell, matrix, (float) box.minX, (float) box.minY, (float) box.minZ, (float) box.maxX, (float) box.maxY, (float) box.maxZ, alpha);
+        // The target flashes red when the needle lands
+        float flash = age - NEEDLE_FLIGHT_TICKS;
+        if (flash >= 0.0F && flash < RED_FLASH_TICKS) {
+            net.minecraft.world.phys.AABB box = target.getBoundingBox()
+                    .move(feet.subtract(target.position()))
+                    .move(-hand.x, -hand.y, -hand.z)
+                    .inflate(0.04D);
+            float alpha = 0.6F * (1.0F - flash / RED_FLASH_TICKS);
+            VertexConsumer shell = bufferSource.getBuffer(RenderType.entityTranslucent(WHITE_TEXTURE));
+            shellBox(shell, matrix, (float) box.minX, (float) box.minY, (float) box.minZ, (float) box.maxX, (float) box.maxY, (float) box.maxZ, alpha);
+        }
+    }
+
+    /** A thin strip from one point to another, as two crossed ribbons so it is seen from any side. */
+    private static void strip(VertexConsumer vc, Matrix4f matrix, Vec3 from, Vec3 to, double halfWidth, float length, boolean tile) {
+        Vec3 along = to.subtract(from);
+        double distance = along.length();
+        if (distance < 1.0E-3D) return;
+        Vec3 direction = along.scale(1.0D / distance);
+        Vec3 reference = Math.abs(direction.y) > 0.9D ? new Vec3(1.0D, 0.0D, 0.0D) : new Vec3(0.0D, 1.0D, 0.0D);
+        Vec3 sideA = direction.cross(reference).normalize().scale(halfWidth);
+        Vec3 sideB = direction.cross(sideA).normalize().scale(halfWidth);
+        float u1 = tile ? (float) (distance * 2.0D) : 1.0F;
+        for (int side = 0; side < 2; side++) {
+            Vec3 across = side == 0 ? sideA : sideB;
+            vertex(vc, matrix, (float) (from.x + across.x), (float) (from.y + across.y), (float) (from.z + across.z), 0.0F, 0.0F, 1.0F, 1.0F, 1.0F, 1.0F);
+            vertex(vc, matrix, (float) (from.x - across.x), (float) (from.y - across.y), (float) (from.z - across.z), 0.0F, 1.0F, 1.0F, 1.0F, 1.0F, 1.0F);
+            vertex(vc, matrix, (float) (to.x - across.x), (float) (to.y - across.y), (float) (to.z - across.z), u1, 1.0F, 1.0F, 1.0F, 1.0F, 1.0F);
+            vertex(vc, matrix, (float) (to.x + across.x), (float) (to.y + across.y), (float) (to.z + across.z), u1, 0.0F, 1.0F, 1.0F, 1.0F, 1.0F);
+        }
     }
 
     /** The six faces of a box in red. */
