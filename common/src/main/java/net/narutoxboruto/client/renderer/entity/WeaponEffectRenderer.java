@@ -30,6 +30,7 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
     private static final ResourceLocation WIND_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/wind_streak.png");
     private static final ResourceLocation CRESCENT_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/crescent.png");
     private static final ResourceLocation THREAD_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/thread.png");
+    private static final ResourceLocation WHITE_TEXTURE = ResourceLocation.withDefaultNamespace("textures/misc/white.png");
     private static final int FULL_BRIGHT = 0xF000F0;
 
     public WeaponEffectRenderer(EntityRendererProvider.Context context) {
@@ -60,8 +61,8 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
 
     private void renderWind(WeaponEffectEntity entity, float age, float fade, PoseStack poseStack, MultiBufferSource bufferSource) {
         float size = entity.getSize();
-        float length = 2.8F * size;
-        float radius = 0.4F * size;
+        float length = 3.4F * size;
+        float radius = 0.55F * size;
         int color = entity.getColor();
         float red = ((color >> 16) & 0xFF) / 255.0F;
         float green = ((color >> 8) & 0xFF) / 255.0F;
@@ -72,8 +73,9 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
         Matrix4f matrix = poseStack.last().pose();
         int segments = 12;
 
-        for (int ribbon = 0; ribbon < 3; ribbon++) {
-            float phase = ribbon * (float) (Math.PI * 2.0 / 3.0) + age * 0.9F;
+        int ribbons = 5;
+        for (int ribbon = 0; ribbon < ribbons; ribbon++) {
+            float phase = ribbon * (float) (Math.PI * 2.0 / ribbons) + age * 0.9F;
             for (int s = 0; s < segments; s++) {
                 float t0 = s / (float) segments;
                 float t1 = (s + 1) / (float) segments;
@@ -99,7 +101,7 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
         float angle = phase + z * 2.2F;
         float sin = Mth.sin(angle);
         float cos = Mth.cos(angle);
-        float width = 0.2F * size * (0.5F + t);
+        float width = 0.38F * size * (0.5F + t);
         float inner = Math.max(0.0F, r - width * 0.5F);
         float outer = r + width * 0.5F;
         return new float[]{sin * inner, cos * inner, z, sin * outer, cos * outer, z};
@@ -147,39 +149,52 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
         if (distance < 0.05D) return;
         Vec3 direction = along.scale(1.0D / distance);
 
-        // Two directions across the thread, so that it can be seen from any side
+        // The thread: thin, white and straight, seen from any side with two crossed strips
         Vec3 reference = Math.abs(direction.y) > 0.9D ? new Vec3(1.0D, 0.0D, 0.0D) : new Vec3(0.0D, 1.0D, 0.0D);
-        Vec3 sideA = direction.cross(reference).normalize().scale(0.03D);
-        Vec3 sideB = direction.cross(sideA).normalize().scale(0.03D);
+        Vec3 sideA = direction.cross(reference).normalize().scale(0.012D);
+        Vec3 sideB = direction.cross(sideA).normalize().scale(0.012D);
 
         VertexConsumer vc = bufferSource.getBuffer(RenderType.entityTranslucent(THREAD_TEXTURE));
         Matrix4f matrix = poseStack.last().pose();
-        int segments = Math.max(6, (int) (distance * 3.0D));
-
-        for (int s = 0; s < segments; s++) {
-            float t0 = s / (float) segments;
-            float t1 = (s + 1) / (float) segments;
-            Vec3 p0 = threadPoint(along, direction, sideA, sideB, t0, age, distance);
-            Vec3 p1 = threadPoint(along, direction, sideA, sideB, t1, age, distance);
-            float u0 = (float) (t0 * distance * 2.0D);
-            float u1 = (float) (t1 * distance * 2.0D);
-            for (int side = 0; side < 2; side++) {
-                Vec3 across = side == 0 ? sideA : sideB;
-                vertex(vc, matrix, (float) (p0.x + across.x), (float) (p0.y + across.y), (float) (p0.z + across.z), u0, 0.0F, 1.0F, 1.0F, 1.0F, 1.0F);
-                vertex(vc, matrix, (float) (p0.x - across.x), (float) (p0.y - across.y), (float) (p0.z - across.z), u0, 1.0F, 1.0F, 1.0F, 1.0F, 1.0F);
-                vertex(vc, matrix, (float) (p1.x - across.x), (float) (p1.y - across.y), (float) (p1.z - across.z), u1, 1.0F, 1.0F, 1.0F, 1.0F, 1.0F);
-                vertex(vc, matrix, (float) (p1.x + across.x), (float) (p1.y + across.y), (float) (p1.z + across.z), u1, 0.0F, 1.0F, 1.0F, 1.0F, 1.0F);
-            }
+        float u1 = (float) (distance * 2.0D);
+        for (int side = 0; side < 2; side++) {
+            Vec3 across = side == 0 ? sideA : sideB;
+            vertex(vc, matrix, (float) across.x, (float) across.y, (float) across.z, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F, 1.0F);
+            vertex(vc, matrix, (float) -across.x, (float) -across.y, (float) -across.z, 0.0F, 1.0F, 1.0F, 1.0F, 1.0F, 1.0F);
+            vertex(vc, matrix, (float) (along.x - across.x), (float) (along.y - across.y), (float) (along.z - across.z), u1, 1.0F, 1.0F, 1.0F, 1.0F, 1.0F);
+            vertex(vc, matrix, (float) (along.x + across.x), (float) (along.y + across.y), (float) (along.z + across.z), u1, 0.0F, 1.0F, 1.0F, 1.0F, 1.0F);
         }
+
+        // The target is tinted red while the thread holds it: a thin red shell around its body
+        net.minecraft.world.phys.AABB box = target.getBoundingBox()
+                .move(target.getPosition(partialTick).subtract(target.position()))
+                .move(-entity.getX(), -entity.getY(), -entity.getZ())
+                .inflate(0.04D);
+        float alpha = 0.32F + 0.08F * Mth.sin(age * 0.4F);
+        VertexConsumer shell = bufferSource.getBuffer(RenderType.entityTranslucent(WHITE_TEXTURE));
+        shellBox(shell, matrix, (float) box.minX, (float) box.minY, (float) box.minZ, (float) box.maxX, (float) box.maxY, (float) box.maxZ, alpha);
     }
 
-    /** A point on the thread: on the line from the hand to the target, sagging a little and swaying. */
-    private static Vec3 threadPoint(Vec3 along, Vec3 direction, Vec3 sideA, Vec3 sideB, float t, float age, double distance) {
-        double envelope = Math.sin(Math.PI * t);
-        double sway = Math.sin(t * 9.0D + age * 0.35D) * 0.05D * envelope;
-        double sag = -0.12D * envelope * Math.min(1.0D, distance / 6.0D);
-        Vec3 swayDirection = sideA.normalize().scale(sway * 3.0D);
-        return along.scale(t).add(0.0D, sag, 0.0D).add(swayDirection);
+    /** The six faces of a box in red. */
+    private static void shellBox(VertexConsumer vc, Matrix4f m, float x0, float y0, float z0, float x1, float y1, float z1, float alpha) {
+        float r = 0.9F;
+        float g = 0.05F;
+        float b = 0.05F;
+        // bottom, top
+        vertex(vc, m, x0, y0, z0, 0, 0, r, g, b, alpha); vertex(vc, m, x1, y0, z0, 1, 0, r, g, b, alpha);
+        vertex(vc, m, x1, y0, z1, 1, 1, r, g, b, alpha); vertex(vc, m, x0, y0, z1, 0, 1, r, g, b, alpha);
+        vertex(vc, m, x0, y1, z0, 0, 0, r, g, b, alpha); vertex(vc, m, x0, y1, z1, 0, 1, r, g, b, alpha);
+        vertex(vc, m, x1, y1, z1, 1, 1, r, g, b, alpha); vertex(vc, m, x1, y1, z0, 1, 0, r, g, b, alpha);
+        // north, south
+        vertex(vc, m, x0, y0, z0, 0, 0, r, g, b, alpha); vertex(vc, m, x0, y1, z0, 0, 1, r, g, b, alpha);
+        vertex(vc, m, x1, y1, z0, 1, 1, r, g, b, alpha); vertex(vc, m, x1, y0, z0, 1, 0, r, g, b, alpha);
+        vertex(vc, m, x0, y0, z1, 0, 0, r, g, b, alpha); vertex(vc, m, x1, y0, z1, 1, 0, r, g, b, alpha);
+        vertex(vc, m, x1, y1, z1, 1, 1, r, g, b, alpha); vertex(vc, m, x0, y1, z1, 0, 1, r, g, b, alpha);
+        // west, east
+        vertex(vc, m, x0, y0, z0, 0, 0, r, g, b, alpha); vertex(vc, m, x0, y0, z1, 1, 0, r, g, b, alpha);
+        vertex(vc, m, x0, y1, z1, 1, 1, r, g, b, alpha); vertex(vc, m, x0, y1, z0, 0, 1, r, g, b, alpha);
+        vertex(vc, m, x1, y0, z0, 0, 0, r, g, b, alpha); vertex(vc, m, x1, y1, z0, 0, 1, r, g, b, alpha);
+        vertex(vc, m, x1, y1, z1, 1, 1, r, g, b, alpha); vertex(vc, m, x1, y0, z1, 1, 0, r, g, b, alpha);
     }
 
     // ---------------------------------------------------------------- helpers

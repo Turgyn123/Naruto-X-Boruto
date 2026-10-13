@@ -51,17 +51,17 @@ public class GiantFan extends SwordItem {
     private static final int MIN_CHARGE = 20;
     private static final int RECOVER_TICKS = 60;
     /** How close to the looking direction something has to be to be hit by the wind: the cosine of the half angle. */
-    private static final double CONE = 0.6D;
-    private static final int WIND_COLOR = 0xB8E6FFF2;
-    private static final int BLADE_COLOR = 0xD0F4FFFA;
+    private static final double CONE = 0.5D;
+    private static final int WIND_COLOR = 0xF0F2FFFA;
+    private static final int BLADE_COLOR = 0xF0F4FFFA;
 
     private static final int[] CHAKRA_PER_SECOND = {2, 4, 6};
-    private static final double[] RANGE = {8.0D, 11.0D, 14.0D};
-    private static final double[] PUSH = {1.0D, 1.4D, 1.8D};
-    private static final float[] WIND_SIZE = {1.0F, 1.4F, 1.8F};
+    private static final double[] RANGE = {10.0D, 14.0D, 18.0D};
+    private static final double[] PUSH = {1.2D, 1.7D, 2.2D};
+    private static final float[] WIND_SIZE = {1.5F, 2.0F, 2.6F};
     private static final int[] SLASH_CHAKRA = {4, 8, 12};
     private static final float[] SLASH_DAMAGE = {5.0F, 9.0F, 14.0F};
-    private static final double[] SLASH_RANGE = {8.0D, 12.0D, 16.0D};
+    private static final double[] SLASH_RANGE = {10.0D, 15.0D, 20.0D};
 
     public GiantFan(Properties properties) {
         super(SwordCustomTiers.GIANT_FAN, properties);
@@ -93,7 +93,6 @@ public class GiantFan extends SwordItem {
 
         chakra.subValue(CHAKRA_PER_SECOND[0], serverPlayer);
         serverPlayer.startUsingItem(hand);
-        showMoons(serverPlayer, 1);
         return InteractionResultHolder.consume(stack);
     }
 
@@ -107,10 +106,6 @@ public class GiantFan extends SwordItem {
         return MAX_USE_TICKS;
     }
 
-    private void showMoons(ServerPlayer player, int moons) {
-        player.displayClientMessage(Component.literal("●".repeat(moons) + "○".repeat(3 - moons)).withStyle(ChatFormatting.LIGHT_PURPLE), true);
-    }
-
     @Override
     public void onUseTick(Level level, LivingEntity user, ItemStack stack, int remainingUseDuration) {
         if (level.isClientSide() || !(user instanceof ServerPlayer player) || !(level instanceof ServerLevel serverLevel)) return;
@@ -120,7 +115,6 @@ public class GiantFan extends SwordItem {
 
         // A new moon opens
         if (used == SECOND_MOON || used == THIRD_MOON) {
-            showMoons(player, moons);
             serverLevel.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.PLAYER_ATTACK_STRONG, SoundSource.PLAYERS, 0.8F, 0.7F);
         }
 
@@ -190,8 +184,8 @@ public class GiantFan extends SwordItem {
         double speed = 1.4D;
         int life = (int) Math.ceil(range / speed);
         for (int i = 0; i <= index; i++) {
-            Vec3 start = eye.add(look.scale(1.2D + i * 1.4D)).add(0.0D, -0.4D, 0.0D);
-            WeaponEffectEntity.spawnCrescent(serverLevel, start, look, 1.0F + 0.3F * index, BLADE_COLOR, life, speed);
+            Vec3 start = eye.add(look.scale(1.5D + i * 1.8D)).add(0.0D, -0.4D, 0.0D);
+            WeaponEffectEntity.spawnCrescent(serverLevel, start, look, 1.7F + 0.5F * index, BLADE_COLOR, life, speed);
         }
         serverLevel.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, 1.2F, 0.5F);
 
@@ -199,7 +193,7 @@ public class GiantFan extends SwordItem {
         for (LivingEntity target : serverLevel.getEntitiesOfClass(LivingEntity.class, area, e -> e != player && e.isAlive())) {
             Vec3 to = target.getBoundingBox().getCenter().subtract(eye);
             double distance = to.length();
-            if (distance > range || distance < 0.1D || to.normalize().dot(look) < 0.5D) continue;
+            if (distance > range || distance < 0.1D || to.normalize().dot(look) < 0.4D) continue;
 
             target.hurt(player.damageSources().playerAttack(player), SLASH_DAMAGE[index]);
             double strength = 0.8D + 0.5D * index;
