@@ -98,8 +98,15 @@
   "sword_ability.activate": "%s ability activated",
   "sword_ability.deactivate": "%s ability deactivated",
 
-  "samehada.no_chakra": "No chakra left",
+  "samehada.no_chakra": "Samehada has no chakra left",
   "samehada.chakra_amount": "%s chakra in storage.",
+  "samehada.stored": "Stored %1$s chakra (%2$s in the sword)",
+  "samehada.full": "Samehada cannot hold more chakra",
+  "samehada.no_own_chakra": "You have no chakra to store",
+  "samehada.chakra_full": "Your chakra is already full",
+  "samehada.tip_hit": "Every hit feeds it chakra, and takes some from a player you hit",
+  "samehada.tip_store": "R: store 25 of your chakra in the sword (up to 250)",
+  "samehada.tip_release": "Right click: take the stored chakra back",
 
   "msg.kiba.no_lightning_release": "You need Lightning Release to use Kiba!",
   "msg.shurikenjutsu_increased": "Your Shurikenjutsu has increased.",
