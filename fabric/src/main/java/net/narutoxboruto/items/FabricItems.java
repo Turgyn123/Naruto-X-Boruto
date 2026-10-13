@@ -33,6 +33,8 @@ public class FabricItems {
     public static final Item KUBIKIRIBOCHO = register("kubikiribocho", new Kubikiribocho(new Item.Properties().stacksTo(1).attributes(SwordItem.createAttributes(SwordCustomTiers.KUBIKIRIBOCHO, 6, -3f))));
     public static final Item SHIBUKI = register("shibuki", new Shibuki(new Item.Properties().stacksTo(1).attributes(SwordItem.createAttributes(SwordCustomTiers.SHIBUKI, 2, -2f))));
     public static final Item NUIBARI = register("nuibari", new Nuibari(new Item.Properties().stacksTo(1).attributes(SwordItem.createAttributes(SwordCustomTiers.NUIBARI, 2, -1.5f))));
+    public static final Item HIRAMEKAREI = register("hiramekarei", new Hiramekarei(new Item.Properties().stacksTo(1).attributes(SwordItem.createAttributes(SwordCustomTiers.HIRAMEKAREI, 4, -2.0f))));
+    public static final Item GIANT_FAN = register("giant_fan", new GiantFan(new Item.Properties()));
     public static final Item KABUTOWARI = register("kabutowari", new Kabutowari(new Item.Properties().stacksTo(1).attributes(SwordItem.createAttributes(SwordCustomTiers.KABUTOWARI, 6, -3.0f))));
     public static final Item KIBA = register("kiba", new Kiba(new Item.Properties().stacksTo(1).attributes(SwordItem.createAttributes(SwordCustomTiers.KIBA, 4, -1.5f))));
 

@@ -23,9 +23,9 @@ public class ModItems {
     public static final String KABUTOWARI = "kabutowari";
     public static final String KIBA = "kiba";
 
-    //These are the abilities that still need to come ingame
-    //public static final String NUIBARI = "nuibari";
-    //public static final String HIRAMEKAREI = "hiramekarei";
+    public static final String NUIBARI = "nuibari";
+    public static final String HIRAMEKAREI = "hiramekarei";
+    public static final String GIANT_FAN = "giant_fan";
 
     //Scrolls
     public static final String TAIJUTSU_SCROLL = "taijutsu_scroll";

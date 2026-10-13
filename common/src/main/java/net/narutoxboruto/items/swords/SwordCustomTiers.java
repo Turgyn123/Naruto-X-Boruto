@@ -16,8 +16,8 @@ public enum SwordCustomTiers implements Tier {
     KIBA(0, 1561, -2.0F, 8.0F, 0, () -> Ingredient.EMPTY), // Fast dual lightning blades
     KUBIKIRIBOCHO(0, 1561, -9.5F, 17.0F, 0, () -> Ingredient.EMPTY),
     NUIBARI(0, 1561, -3.5F, 7.0F, 0, () -> Ingredient.EMPTY),
-    KABUTOWARI(0, 1561, -3.0F, 12.0F, 0, () -> Ingredient.EMPTY); // Heavy bluntsword
-    // HIRAMEKAREI()
+    KABUTOWARI(0, 1561, -3.0F, 12.0F, 0, () -> Ingredient.EMPTY), // Heavy bluntsword
+    HIRAMEKAREI(0, 1561, -3.0F, 9.0F, 0, () -> Ingredient.EMPTY);
 
     private final int level;
     private final int uses;
