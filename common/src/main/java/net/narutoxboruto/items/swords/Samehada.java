@@ -105,8 +105,8 @@ public class Samehada extends AbstractAbilitySword {
 
         int stored = getStored(stack);
         Component message = stored >= MAX_SWORD_CHAKRA
-                ? Component.translatable("samehada.status_full", stored, MAX_SWORD_CHAKRA).withStyle(ChatFormatting.GREEN)
-                : Component.translatable("samehada.status_not_full", stored, MAX_SWORD_CHAKRA).withStyle(ChatFormatting.AQUA);
+                ? Component.translatable("samehada.status_full", stored, MAX_SWORD_CHAKRA).withStyle(ChatFormatting.WHITE)
+                : Component.translatable("samehada.status_not_full", stored, MAX_SWORD_CHAKRA).withStyle(ChatFormatting.WHITE);
         player.displayClientMessage(message, true);
         return InteractionResultHolder.consume(stack);
     }
@@ -133,7 +133,6 @@ public class Samehada extends AbstractAbilitySword {
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, context, tooltip, flag);
-        tooltip.add(Component.translatable("samehada.chakra_amount", getStored(stack)).withStyle(ChatFormatting.AQUA));
         tooltip.add(Component.translatable("samehada.tip_hit").withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("samehada.tip_take").withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("samehada.tip_status").withStyle(ChatFormatting.GRAY));
