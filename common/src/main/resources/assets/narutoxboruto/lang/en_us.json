@@ -33,7 +33,7 @@
   "hiramekarei.coat_off": "The chakra coat is gone",
   "hiramekarei.tip_store": "Every hit stores chakra in the blades (up to 150). Sneak + hold right click pours more in",
   "hiramekarei.tip_both": "Two handed: slow and heavy, double the damage. Special Action: a fast blade in each hand. Throw the main blade and they merge again",
-  "hiramekarei.tip_coat": "Right click: cover the blades in chakra for extra damage. It drains 2 stored chakra every second",
+  "hiramekarei.tip_coat": "Right click: cover the blades in chakra for +3 attack damage. It drains 2 stored chakra every second",
   "nuibari.bound": "The thread has caught its target",
   "nuibari.no_target": "No target in sight",
   "nuibari.snap": "The thread snaps",

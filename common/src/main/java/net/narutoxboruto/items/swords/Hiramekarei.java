@@ -57,7 +57,8 @@ public class Hiramekarei extends AbstractAbilitySword {
     /** The coat drains 2 stored chakra every second it is on. */
     private static final int COAT_DRAIN = 2;
     private static final int COAT_DRAIN_INTERVAL = 20;
-    private static final float COAT_DAMAGE = 5.0F;
+    /** The chakra coat adds this much attack damage to the blades, shown in the tooltip like any attack damage. */
+    private static final int COAT_BONUS = 3;
     /** Combined, two handed: slow and heavy (1.3 attack speed), double the damage of a single blade (14 against 7 shown). */
     private static final int COMBINED_DAMAGE = 4;
     private static final float COMBINED_SPEED = -2.7F;
@@ -80,9 +81,15 @@ public class Hiramekarei extends AbstractAbilitySword {
 
     /** The attack damage and speed of the blades: combined (two handed) or one blade (split). */
     public static ItemAttributeModifiers attributes(boolean combined) {
+        return attributes(combined, false);
+    }
+
+    /** The same with the chakra coat on or off: the coat is plus 3 attack damage. */
+    public static ItemAttributeModifiers attributes(boolean combined, boolean coated) {
+        int bonus = coated ? COAT_BONUS : 0;
         return combined
-                ? SwordItem.createAttributes(SwordCustomTiers.HIRAMEKAREI, COMBINED_DAMAGE, COMBINED_SPEED)
-                : SwordItem.createAttributes(SwordCustomTiers.HIRAMEKAREI, SINGLE_DAMAGE, SINGLE_SPEED);
+                ? SwordItem.createAttributes(SwordCustomTiers.HIRAMEKAREI, COMBINED_DAMAGE + bonus, COMBINED_SPEED)
+                : SwordItem.createAttributes(SwordCustomTiers.HIRAMEKAREI, SINGLE_DAMAGE + bonus, SINGLE_SPEED);
     }
 
     @Override
@@ -110,6 +117,12 @@ public class Hiramekarei extends AbstractAbilitySword {
         CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> tag.putBoolean(COAT_KEY, coated));
         stack.remove(DataComponents.ENCHANTMENT_GLINT_OVERRIDE);
         updateModel(stack);
+        updateStats(stack);
+    }
+
+    /** The attack damage and speed follow the state: combined or split, and with the chakra coat on or off. */
+    private void updateStats(ItemStack stack) {
+        stack.set(DataComponents.ATTRIBUTE_MODIFIERS, attributes(!super.isActive(stack), isCoated(stack)));
     }
 
     /** The model follows the state: 0 is the combined blades, 1 is one blade. */
@@ -140,7 +153,7 @@ public class Hiramekarei extends AbstractAbilitySword {
     protected void setActive(ItemStack pStack, boolean pActive) {
         super.setActive(pStack, !pActive);
         updateModel(pStack);
-        pStack.set(DataComponents.ATTRIBUTE_MODIFIERS, attributes(pActive));
+        updateStats(pStack);
     }
 
     // ---------------------------------------------------------------- the split blades
@@ -313,8 +326,6 @@ public class Hiramekarei extends AbstractAbilitySword {
                 return result;
             }
 
-            target.invulnerableTime = 0;
-            target.hurt(player.damageSources().playerAttack(player), COAT_DAMAGE);
 
             // A crescent of chakra comes off the blade, the way the swing goes
             Vec3 look = player.getLookAngle();
