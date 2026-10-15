@@ -177,7 +177,9 @@ public class WeaponEffectEntity extends Entity {
     public static double waveHalfAngle(double radius) {
         return Math.toRadians(30.0D + (WAVE_HALF_ANGLE - 30.0D) * (1.0D - Math.exp(-radius / 18.0D)));
     }
-    private static final float WAVE_DAMAGE = 3.0F;
+    private static final float WAVE_DAMAGE = 1.0F;
+    /** The fire from the jutsu burns for 30 seconds, and keeps being lit again for as long as the target stays in it. */
+    private static final int WAVE_BURN_TICKS = 600;
     /** How long the fire takes to die down once the caster lets go. */
     private static final int WAVE_FADE_TICKS = 14;
     /** The cloud of ash: how big it is, how long it hangs in the air, and what it does when it burns. */
@@ -268,6 +270,7 @@ public class WeaponEffectEntity extends Entity {
 
         // Everything in the fan the front has passed burns
         if (tickCount % 5 != 0) return;
+        boolean strike = tickCount % 20 == 0;
         double front = Math.min(WAVE_RANGE, (tickCount + 1) * WAVE_SPEED);
         float yaw = getYRot() * ((float) Math.PI / 180.0F);
         Vec3 forward = new Vec3(-Mth.sin(yaw), 0.0D, Mth.cos(yaw));
@@ -279,9 +282,12 @@ public class WeaponEffectEntity extends Entity {
             if (distance > 1.5D && to.dot(forward) / distance < Math.cos(waveHalfAngle(distance))) continue;
             if (target.getY() < getY() - 3.0D || target.getY() > getY() + 8.0D) continue;
             if (caster != null && !caster.hasLineOfSight(target)) continue;
-            target.invulnerableTime = 0;
-            target.hurt(fireSource(ownerEntity), WAVE_DAMAGE);
-            target.setRemainingFireTicks(160);
+            // 1 damage every second, and the fire it sets is what makes it deadly
+            if (strike) {
+                target.invulnerableTime = 0;
+                target.hurt(fireSource(ownerEntity), WAVE_DAMAGE);
+            }
+            target.setRemainingFireTicks(WAVE_BURN_TICKS);
         }
     }
 
