@@ -258,7 +258,8 @@ public class Hiramekarei extends AbstractAbilitySword {
 
     /**
      * Called when a stack is about to be dropped by a player. The off hand blade is never dropped. When the real
-     * split blade is thrown away the off hand blade is gone and the thrown blade is combined again.
+     * split blade is thrown away the off hand blade is gone and the thrown blade is combined again. Any blade that is
+     * thrown away loses its chakra coat.
      *
      * @return true when the drop must be cancelled
      */
@@ -266,10 +267,15 @@ public class Hiramekarei extends AbstractAbilitySword {
         if (isOffhandBlade(dropped)) {
             return true;
         }
-        if (isSplitBlade(dropped)) {
-            ((Hiramekarei) dropped.getItem()).setActive(dropped, true);
-            if (isOffhandBlade(player.getOffhandItem())) {
-                player.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
+        if (dropped.getItem() instanceof Hiramekarei blade) {
+            if (blade.isCoated(dropped)) {
+                blade.setCoated(dropped, false);
+            }
+            if (isSplitBlade(dropped)) {
+                blade.setActive(dropped, true);
+                if (isOffhandBlade(player.getOffhandItem())) {
+                    player.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
+                }
             }
         }
         return false;
