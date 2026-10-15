@@ -32,7 +32,6 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
     private static final ResourceLocation NEEDLE_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/needle.png");
     private static final float NEEDLE_FLIGHT_TICKS = 5.0F;
     private static final double NEEDLE_LENGTH = 2.0D;
-    private static final float THREAD_HEIGHT = 12.0F;
     private static final float RED_FLASH_TICKS = 14.0F;
     private static final ResourceLocation THREAD_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/thread.png");
     private static final ResourceLocation WHITE_TEXTURE = ResourceLocation.withDefaultNamespace("textures/misc/white.png");
@@ -145,8 +144,8 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
 
     /**
      * Nuibari, as in the video: a long needle flies from the hand to the target and lands on the ground at its feet,
-     * the target flashes red, a thin thread runs from the eye of the needle to the target and another thin thread
-     * runs straight up from the target's feet.
+     * the target flashes red, a thin thread runs from the eye of the needle to the target, another from the hand
+     * to the target, and thread winds round the target like stitches.
      */
     private void renderThread(WeaponEffectEntity entity, float age, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource) {
         Entity target = entity.level().getEntity(entity.getTargetId());
@@ -177,11 +176,13 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
 
         if (flight >= 1.0F) {
             VertexConsumer thread = bufferSource.getBuffer(RenderType.entityTranslucent(THREAD_TEXTURE));
-            // From the eye of the needle to the target
-            strip(thread, matrix, tail.subtract(hand), chest.subtract(hand), 0.008D, 1.0F, true);
-            // Straight up from its feet
             float grow = Mth.clamp((age - NEEDLE_FLIGHT_TICKS) / 6.0F, 0.0F, 1.0F);
-            strip(thread, matrix, feet.subtract(hand), feet.add(0.0D, THREAD_HEIGHT * grow, 0.0D).subtract(hand), 0.008D, 1.0F, true);
+            // A thread from the hand to the target, so it can be seen what holds it
+            strip(thread, matrix, Vec3.ZERO, chest.subtract(hand).scale(grow), 0.02D, 1.0F, true);
+            // From the eye of the needle to the target
+            strip(thread, matrix, tail.subtract(hand), chest.subtract(hand), 0.012D, 1.0F, true);
+            // Stitches: thread winds round the target from its feet up
+            wrapTarget(thread, matrix, target, feet.subtract(hand), age, grow);
         }
 
         // The target flashes red when the needle lands
@@ -194,6 +195,22 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
             float alpha = 0.6F * (1.0F - flash / RED_FLASH_TICKS);
             VertexConsumer shell = bufferSource.getBuffer(RenderType.entityTranslucent(WHITE_TEXTURE));
             shellBox(shell, matrix, (float) box.minX, (float) box.minY, (float) box.minZ, (float) box.maxX, (float) box.maxY, (float) box.maxZ, alpha);
+        }
+    }
+
+    /** Thread winding round a target in a spiral from its feet to its head, like stitches. */
+    private static void wrapTarget(VertexConsumer vc, Matrix4f matrix, Entity target, Vec3 feetFromHand, float age, float grow) {
+        double height = target.getBbHeight();
+        double radius = target.getBbWidth() * 0.6D + 0.08D;
+        int segments = 24;
+        double turns = 3.0D;
+        Vec3 previous = null;
+        for (int i = 0; i <= segments; i++) {
+            double progress = (double) i / segments;
+            double angle = progress * turns * Math.PI * 2.0D + age * 0.12D;
+            Vec3 point = feetFromHand.add(Math.cos(angle) * radius, progress * grow * height, Math.sin(angle) * radius);
+            if (previous != null) strip(vc, matrix, previous, point, 0.012D, 1.0F, true);
+            previous = point;
         }
     }
 
