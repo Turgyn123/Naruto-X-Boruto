@@ -51,12 +51,27 @@ public class WeaponEffectEntity extends Entity {
     private Item cooldownItem;
     private Vec3 anchor = Vec3.ZERO;
     private int lastOwnerHurt;
+    /** How many more ticks the thread is reeling the target in. */
+    private int reel;
 
-    /** How long the thread of Nuibari holds a target at most, and how long the ability then rests. */
-    public static final int THREAD_TICKS = 30 * 20;
-    public static final int THREAD_COOLDOWN_TICKS = 60 * 20;
-    private static final double THREAD_BREAK_DISTANCE = 24.0D;
+    /**
+     * The thread of Nuibari first reels the target in for half a second, then holds it for 3 seconds. After it ends
+     * the ability rests for 8 seconds.
+     */
+    private static final int REEL_TICKS = 10;
+    private static final int HOLD_TICKS = 3 * 20;
+    public static final int THREAD_TICKS = REEL_TICKS + HOLD_TICKS;
+    public static final int THREAD_COOLDOWN_TICKS = 8 * 20;
+    private static final double THREAD_BREAK_DISTANCE = 32.0D;
     private static final int HOLD_AMPLIFIER = 6;
+    /** The target is pulled to this far in front of the wielder. */
+    private static final double REEL_STOP_DISTANCE = 2.2D;
+
+    /** Whether a target is held by the thread of Nuibari right now. */
+    public static boolean isHeldByThread(LivingEntity target) {
+        MobEffectInstance hold = target.getEffect(MobEffects.MOVEMENT_SLOWDOWN);
+        return hold != null && hold.getAmplifier() == HOLD_AMPLIFIER;
+    }
 
     public WeaponEffectEntity(EntityType<?> entityType, Level level) {
         super(entityType, level);
@@ -114,8 +129,8 @@ public class WeaponEffectEntity extends Entity {
     }
 
     /**
-     * The chakra thread of Nuibari: holds {@code victim} in place for up to 30 seconds. {@code cooldownItem} is the
-     * sword that goes on cooldown for a minute when the thread ends, however it ends.
+     * The chakra thread of Nuibari: reels {@code victim} in to the wielder, then holds it in place for 3 seconds.
+     * {@code cooldownItem} is the sword that goes on cooldown when the thread ends, however it ends.
      */
     public static void spawnThread(ServerLevel level, ServerPlayer wielder, LivingEntity victim, Item cooldownItem) {
         WeaponEffectEntity effect = create(level, THREAD, wielder.getEyePosition(), wielder.getLookAngle(), 1.0F, 0xFFFFFFFF, THREAD_TICKS);
@@ -125,6 +140,7 @@ public class WeaponEffectEntity extends Entity {
         effect.cooldownItem = cooldownItem;
         effect.anchor = victim.position();
         effect.lastOwnerHurt = wielder.hurtTime;
+        effect.reel = REEL_TICKS;
         level.addFreshEntity(effect);
     }
 
@@ -146,8 +162,8 @@ public class WeaponEffectEntity extends Entity {
     }
 
     /**
-     * Holds the target and watches the thread. The thread breaks, and the target is free, when whoever holds it is
-     * hit, dies or goes away, when the target dies, when it is pulled too far, or after 30 seconds.
+     * Reels the target in, holds it and watches the thread. The thread breaks, and the target is free, when whoever
+     * holds it is hit, dies or goes away, when the target dies, when it is too far away, or when the time is up.
      */
     private void tickThread() {
         if (!(level() instanceof ServerLevel serverLevel)) return;
@@ -181,6 +197,26 @@ public class WeaponEffectEntity extends Entity {
         if (--life <= 0) {
             endThread(wielder, victim, "nuibari.expired");
             return;
+        }
+
+        // First the thread reels the target in: it is dragged to just in front of the wielder
+        if (reel > 0) {
+            reel--;
+            Vec3 forward = wielder.getLookAngle().multiply(1.0D, 0.0D, 1.0D);
+            forward = forward.lengthSqr() < 1.0e-6D ? new Vec3(0.0D, 0.0D, 1.0D) : forward.normalize();
+            Vec3 goal = wielder.position().add(forward.scale(REEL_STOP_DISTANCE));
+            Vec3 toGoal = goal.subtract(victim.position());
+            if (toGoal.horizontalDistanceSqr() > 1.0D) {
+                Vec3 pull = toGoal.normalize().scale(Math.min(1.5D, toGoal.length() * 0.6D));
+                victim.setDeltaMovement(pull.x, Mth.clamp(pull.y, -0.2D, 0.35D), pull.z);
+                victim.hurtMarked = true;
+                victim.fallDistance = 0.0F;
+                anchor = victim.position();
+                return;
+            }
+            // It has arrived: this is where it is held
+            reel = 0;
+            anchor = victim.position();
         }
 
         // Hold the target: it cannot walk (a slowness only we apply, refreshed every tick) and a player that

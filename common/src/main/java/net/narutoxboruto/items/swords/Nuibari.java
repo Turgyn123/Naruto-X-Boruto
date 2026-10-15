@@ -30,16 +30,19 @@ import java.util.List;
 /**
  * Nuibari, the needle sword of Kushimaru Kuriarare, that stitches its enemies with chakra thread.
  *
- * Right click on a target in sight, up to 30 blocks away: a thin thread of chakra shoots from the sword to the target
- * and the target turns red. It cannot move for up to 30 seconds. The thread breaks, and the target is free, when
- * someone hits the wielder, when the wielder dies or goes away, or when the target is pulled more than 24 blocks away.
- * Whichever way it ends, the ability rests for a minute. Needs the same Kenjutsu as the other swordsmen's blades.
+ * Right click on a target in sight, up to 25 blocks away: a thin thread of chakra shoots from the sword to the target,
+ * reels it in to just in front of you and holds it there for 3 seconds. Every hit on the held target does 4 extra
+ * damage. The thread breaks, and the target is free, when someone hits the wielder or when the wielder dies or goes
+ * away. Whichever way it ends, the ability rests for 8 seconds. Needs the same Kenjutsu as the other swordsmen's
+ * blades.
  *
  * The thread itself (and holding the target) is the {@link WeaponEffectEntity} of kind THREAD.
  */
 public class Nuibari extends AbstractAbilitySword {
 
-    private static final double RANGE = 30.0D;
+    private static final double RANGE = 25.0D;
+    /** A hit on a target that is held by the thread does this much extra damage. */
+    private static final float STITCH_BONUS = 4.0F;
 
     public Nuibari(Properties pProperties) {
         super(SwordCustomTiers.NUIBARI, pProperties);
@@ -83,7 +86,7 @@ public class Nuibari extends AbstractAbilitySword {
         }
         chakra.subValue(getChakraCost(), serverPlayer);
 
-        // The sword rests while the thread holds (30 seconds) and for the minute after
+        // The sword rests while the thread reels and holds, and for a few seconds after
         serverPlayer.getCooldowns().addCooldown(this, WeaponEffectEntity.THREAD_TICKS + WeaponEffectEntity.THREAD_COOLDOWN_TICKS);
         WeaponEffectEntity.spawnThread(serverLevel, serverPlayer, target, this);
 
@@ -92,11 +95,23 @@ public class Nuibari extends AbstractAbilitySword {
         return InteractionResultHolder.consume(stack);
     }
 
+    /** A hit on a target that the thread holds does extra damage. */
+    @Override
+    public boolean hurtEnemy(ItemStack stack, LivingEntity target, LivingEntity attacker) {
+        boolean result = super.hurtEnemy(stack, target, attacker);
+        if (attacker instanceof ServerPlayer player && WeaponEffectEntity.isHeldByThread(target)) {
+            target.invulnerableTime = 0;
+            target.hurt(player.damageSources().playerAttack(player), STITCH_BONUS);
+        }
+        return result;
+    }
+
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, context, tooltip, flag);
         tooltip.add(Component.translatable("nuibari.tip_bind").withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("nuibari.tip_break").withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.translatable("nuibari.tip_stitch").withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("nuibari.tip_cooldown").withStyle(ChatFormatting.GRAY));
     }
 }
