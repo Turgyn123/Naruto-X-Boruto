@@ -48,9 +48,9 @@ public final class HiramekareiChakraRenderer {
     private static final RandomSource RANDOM = RandomSource.create(42L);
 
     /** How wide the blade is along its length: the middle and the half sizes of its outline in slices. */
-    private static final int SLICES = 48;
+    private static final int SLICES = 64;
     /** The ring of the aura: rows along the blade and columns around it. */
-    private static final int ROWS = 56;
+    private static final int ROWS = 80;
     private static final int COLUMNS = 36;
     /** The aura closes over the tip of the blade, in a rounded cap over the last part of its length. */
     private static final float CAP_START = 0.93F;
@@ -196,22 +196,23 @@ public final class HiramekareiChakraRenderer {
             }
         }
 
-        // Round it off. First every value is replaced by the biggest one near it, then the result is blurred, so the
-        // aura stays outside the blade but the corners and steps of the blade turn into smooth curves. The blur is
-        // never wider than the first step, so it cannot pull the aura inside the blade.
+        // Round off only the sharpest corners and steps. First every value is replaced by the biggest one right next
+        // to it, then the result is blurred once, so the aura stays outside the blade and still follows its real
+        // shape: the narrowing to the tip, the waist and the hooks. The blur is never wider than the first step, so it
+        // cannot pull the aura inside the blade.
         float[][] grown = new float[SLICES][COLUMNS + 1];
         for (int s = 0; s < SLICES; s++) {
             for (int c = 0; c < COLUMNS; c++) {
                 float biggest = 0.0F;
-                for (int ds = -2; ds <= 2; ds++) {
-                    for (int dc = -2; dc <= 2; dc++) {
+                for (int ds = -1; ds <= 1; ds++) {
+                    for (int dc = -1; dc <= 1; dc++) {
                         biggest = Math.max(biggest, reach[Mth.clamp(s + ds, 0, SLICES - 1)][Math.floorMod(c + dc, COLUMNS)]);
                     }
                 }
                 grown[s][c] = biggest;
             }
         }
-        for (int pass = 0; pass < 2; pass++) {
+        for (int pass = 0; pass < 1; pass++) {
             float[][] copy = new float[SLICES][];
             for (int s = 0; s < SLICES; s++) copy[s] = grown[s].clone();
             for (int s = 0; s < SLICES; s++) {
