@@ -6,6 +6,7 @@ import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
 import net.narutoxboruto.capabilities.PlayerDataManager;
+import net.narutoxboruto.client.gui.HiramekareiHud;
 import net.narutoxboruto.main.Main;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -29,6 +30,8 @@ public class MixinGui {
         if (minecraft.player == null || minecraft.options.hideGui) {
             return;
         }
+
+        HiramekareiHud.render(gui, minecraft);
 
         int width = minecraft.getWindow().getGuiScaledWidth();
         int height = minecraft.getWindow().getGuiScaledHeight();

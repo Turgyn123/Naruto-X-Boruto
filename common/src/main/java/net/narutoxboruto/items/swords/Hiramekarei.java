@@ -268,7 +268,6 @@ public class Hiramekarei extends AbstractAbilitySword {
             }
             if (gained > 0) {
                 setStored(stack, getStored(stack) + gained);
-                wielder.displayClientMessage(Component.translatable("hiramekarei.stored", getStored(stack), MAX_STORED).withStyle(ChatFormatting.AQUA), true);
             }
         }
 
@@ -368,7 +367,6 @@ public class Hiramekarei extends AbstractAbilitySword {
         int step = Math.min(CHARGE_PER_STEP, MAX_STORED - stored);
         chakra.subValue(step, player);
         setStored(stack, stored + step);
-        player.displayClientMessage(Component.translatable("hiramekarei.stored", getStored(stack), MAX_STORED).withStyle(ChatFormatting.AQUA), true);
         if (used % 20 == 0) {
             level.playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 0.5F, 0.8F + stored / (float) MAX_STORED);
         }
@@ -377,7 +375,6 @@ public class Hiramekarei extends AbstractAbilitySword {
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, context, tooltip, flag);
-        tooltip.add(Component.translatable("hiramekarei.stored", getStored(stack), MAX_STORED).withStyle(ChatFormatting.AQUA));
         tooltip.add(Component.translatable("hiramekarei.tip_store").withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("hiramekarei.tip_both").withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("hiramekarei.tip_coat").withStyle(ChatFormatting.GRAY));

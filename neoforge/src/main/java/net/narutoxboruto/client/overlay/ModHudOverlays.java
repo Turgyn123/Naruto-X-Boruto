@@ -4,6 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
 import net.narutoxboruto.capabilities.NeoForgeCapabilities;
+import net.narutoxboruto.client.gui.HiramekareiHud;
 import net.narutoxboruto.main.Main;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -27,6 +28,7 @@ public class ModHudOverlays {
         }
 
         GuiGraphics gui = event.getGuiGraphics();
+        HiramekareiHud.render(gui, minecraft);
         int width = minecraft.getWindow().getGuiScaledWidth();
         int height = minecraft.getWindow().getGuiScaledHeight();
 
