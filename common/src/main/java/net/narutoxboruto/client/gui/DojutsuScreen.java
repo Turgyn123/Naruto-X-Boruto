@@ -461,9 +461,16 @@ public class DojutsuScreen extends Screen {
         int entityBottom = top + 128;
         int lookX = (entityLeft + entityRight) / 2;
         int lookY = entityTop + 10;
+        // The model is drawn in real GUI coordinates: it cuts itself off with a scissor rectangle, and that rectangle
+        // ignores the shrink of this screen, so in a shrunk screen it would be in the wrong place and cut the shoulders
+        // of the model in the wrong place (down over the controls)
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().scale(1.0F / uiScale, 1.0F / uiScale, 1.0F);
         InventoryScreen.renderEntityInInventoryFollowsMouse(
-                guiGraphics, entityLeft, entityTop, entityRight, entityBottom,
-                110, 0.72F, lookX, lookY, player);
+                guiGraphics, Math.round(entityLeft * uiScale), Math.round(entityTop * uiScale),
+                Math.round(entityRight * uiScale), Math.round(entityBottom * uiScale),
+                Math.round(110 * uiScale), 0.72F, lookX * uiScale, lookY * uiScale, player);
+        guiGraphics.pose().popPose();
 
         // Draw equipped dojutsu eye textures on the character face
         // Push Z forward so eyes render IN FRONT of the 3D player model
