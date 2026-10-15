@@ -2,18 +2,14 @@ package net.narutoxboruto.items.swords;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.core.particles.DustParticleOptions;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.SwordItem;
@@ -28,8 +24,6 @@ import net.narutoxboruto.capabilities.info.Chakra;
 import net.narutoxboruto.entities.effects.WeaponEffectEntity;
 import net.narutoxboruto.main.platform.Services;
 import net.narutoxboruto.util.ModUtil;
-
-import org.joml.Vector3f;
 
 import java.util.List;
 
@@ -75,7 +69,6 @@ public class Hiramekarei extends AbstractAbilitySword {
     private static final int CHARGE_INTERVAL = 4;
     private static final int MAX_USE_TICKS = 72000;
     private static final int CRESCENT_COLOR = 0xB06FD8FF;
-    private static final DustParticleOptions CHAKRA_DUST = new DustParticleOptions(new Vector3f(0.45F, 0.85F, 1.0F), 0.9F);
     /** Marks the locked copy of the blade that sits in the off hand while the blades are split. */
     private static final String OFFHAND_KEY = "hiramekarei_offhand";
 
@@ -112,10 +105,20 @@ public class Hiramekarei extends AbstractAbilitySword {
         return stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag().getBoolean(COAT_KEY);
     }
 
-    /** The coat is shown as chakra around the blades, see {@link #spawnChakraAura}. */
+    /** The coat is shown as a glowing shell of chakra around the blades: their own models, see {@link #updateModel}. */
     private void setCoated(ItemStack stack, boolean coated) {
         CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> tag.putBoolean(COAT_KEY, coated));
         stack.remove(DataComponents.ENCHANTMENT_GLINT_OVERRIDE);
+        updateModel(stack);
+    }
+
+    /**
+     * The model follows the state: 0 combined, 1 one blade, and 2 and 3 the same with the blades wrapped in chakra
+     * ({@code hiramekarei_two_chakra} and {@code hiramekarei_one_chakra}).
+     */
+    private void updateModel(ItemStack stack) {
+        int model = (super.isActive(stack) ? 1 : 0) + (isCoated(stack) ? 2 : 0);
+        stack.set(DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(model));
     }
 
     // ---------------------------------------------------------------- ability 1: both blades
@@ -140,7 +143,7 @@ public class Hiramekarei extends AbstractAbilitySword {
     @Override
     protected void setActive(ItemStack pStack, boolean pActive) {
         super.setActive(pStack, !pActive);
-        pStack.set(DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(pActive ? 0 : 1));
+        updateModel(pStack);
         pStack.set(DataComponents.ATTRIBUTE_MODIFIERS, attributes(pActive));
     }
 
@@ -162,41 +165,15 @@ public class Hiramekarei extends AbstractAbilitySword {
         ItemStack copy = main.copy();
         copy.setCount(1);
         CustomData.update(DataComponents.CUSTOM_DATA, copy, tag -> tag.putBoolean(OFFHAND_KEY, true));
-        copy.set(DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(1));
+        copy.remove(DataComponents.ENCHANTMENT_GLINT_OVERRIDE);
+        ((Hiramekarei) main.getItem()).updateModel(copy);
         return copy;
-    }
-
-    /** Wisps of chakra along the blade, in the hand it is held in. */
-    private static void spawnChakraAura(ServerLevel level, ServerPlayer player, boolean offhand) {
-        float yaw = player.getYRot() * Mth.DEG_TO_RAD;
-        Vec3 right = new Vec3(-Mth.cos(yaw), 0.0D, -Mth.sin(yaw));
-        boolean rightArm = (player.getMainArm() == HumanoidArm.RIGHT) != offhand;
-        Vec3 look = player.getLookAngle();
-        Vec3 base = player.position()
-                .add(0.0D, player.isCrouching() ? 0.9D : 1.1D, 0.0D)
-                .add(right.scale(rightArm ? 0.4D : -0.4D))
-                .add(look.scale(0.5D));
-        for (int i = 0; i < 3; i++) {
-            Vec3 at = base.add(look.scale(0.35D * i));
-            level.sendParticles(CHAKRA_DUST, at.x, at.y, at.z, 1, 0.07D, 0.07D, 0.07D, 0.0D);
-            if (i == 1) {
-                level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, at.x, at.y, at.z, 1, 0.08D, 0.08D, 0.08D, 0.004D);
-            }
-        }
     }
 
     /** Runs every tick for a Hiramekarei in an inventory: the main blade, and the off hand copy. */
     @Override
     public void inventoryTick(ItemStack stack, Level level, net.minecraft.world.entity.Entity entity, int slotId, boolean isSelected) {
         super.inventoryTick(stack, level, entity, slotId, isSelected);
-        // The coat: chakra around the blade in the hand
-        if (!level.isClientSide() && entity instanceof ServerPlayer holder && isCoated(stack) && level.getGameTime() % 2 == 0) {
-            if (isOffhandBlade(stack) && stack == holder.getOffhandItem()) {
-                spawnChakraAura((ServerLevel) level, holder, true);
-            } else if (stack == holder.getMainHandItem() && !isOffhandBlade(stack)) {
-                spawnChakraAura((ServerLevel) level, holder, false);
-            }
-        }
         // While the coat is on it drains 2 stored chakra every second, and goes out when it is empty
         if (!level.isClientSide() && entity instanceof ServerPlayer wielder && !isOffhandBlade(stack)
                 && isCoated(stack) && level.getGameTime() % COAT_DRAIN_INTERVAL == 0) {
@@ -254,6 +231,7 @@ public class Hiramekarei extends AbstractAbilitySword {
                 boolean coated = blade.isCoated(main);
                 if (blade.isCoated(off) != coated) {
                     CustomData.update(DataComponents.CUSTOM_DATA, off, tag -> tag.putBoolean(COAT_KEY, coated));
+                    blade.updateModel(off);
                 }
             }
         } else if (splitInMainHand) {

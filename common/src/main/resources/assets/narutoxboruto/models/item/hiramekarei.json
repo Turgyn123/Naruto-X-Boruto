@@ -1,6 +1,23 @@
 {
   "parent": "narutoxboruto:item/hiramekarei_two",
   "overrides": [
-    { "predicate": { "custom_model_data": 1 }, "model": "narutoxboruto:item/hiramekarei_one" }
+    {
+      "predicate": {
+        "custom_model_data": 1
+      },
+      "model": "narutoxboruto:item/hiramekarei_one"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 2
+      },
+      "model": "narutoxboruto:item/hiramekarei_two_chakra"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 3
+      },
+      "model": "narutoxboruto:item/hiramekarei_one_chakra"
+    }
   ]
 }
