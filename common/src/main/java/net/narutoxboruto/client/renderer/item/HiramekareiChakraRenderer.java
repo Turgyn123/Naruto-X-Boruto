@@ -24,7 +24,7 @@ import java.util.WeakHashMap;
 
 /**
  * The chakra coat of the Hiramekarei, drawn the way the anime does it: not a tint on the blade but a big flame-like
- * aura of chakra around it, flat shaded in blues with white highlights, flowing along the blade and licking off past
+ * aura of chakra around it, soft pale-blue mist with white highlights, flowing along the blade and licking off past
  * its tip.
  *
  * The aura is built around the blade: the model is measured once (how wide it is along its length) and three
@@ -47,7 +47,7 @@ public final class HiramekareiChakraRenderer {
     private static final int ROWS = 36;
     private static final int COLUMNS = 24;
     /** The flames lick on past the tip of the blade, this much of its length. */
-    private static final float TIP_EXTENSION = 0.14F;
+    private static final float TIP_EXTENSION = 0.16F;
 
     private record Outline(float yMin, float yMax, float[] cx, float[] cz, float[] hx, float[] hz) {}
 
@@ -80,9 +80,11 @@ public final class HiramekareiChakraRenderer {
 
         // From the outside in. Each sleeve has its own size, flame texture speed and turn, so the flames overlap
         // and cross instead of moving as one.
-        sleeve(consumer, matrix, outline, time, 1.40F, 0.100F, 0.38F, 0.45F, 1, 0.30F);
-        sleeve(consumer, matrix, outline, time, 1.22F, 0.055F, 0.62F, 0.65F, 1, 1.70F);
-        sleeve(consumer, matrix, outline, time, 1.07F, 0.022F, 0.85F, 0.85F, 2, 3.10F);
+        sleeve(consumer, matrix, outline, time, 1.55F, 0.130F, 0.16F, 0.35F, 1, 0.30F);
+        sleeve(consumer, matrix, outline, time, 1.40F, 0.100F, 0.22F, 0.45F, 1, 1.70F);
+        sleeve(consumer, matrix, outline, time, 1.25F, 0.065F, 0.28F, 0.60F, 2, 3.10F);
+        sleeve(consumer, matrix, outline, time, 1.12F, 0.035F, 0.34F, 0.75F, 1, 4.20F);
+        sleeve(consumer, matrix, outline, time, 1.04F, 0.015F, 0.40F, 0.90F, 2, 5.30F);
 
         poseStack.popPose();
     }
@@ -213,8 +215,8 @@ public final class HiramekareiChakraRenderer {
                 p[1] = y;
                 p[2] = cz + b * Mth.sin(angle);
                 // The flame texture: round the blade, and along it so that the flames point at the tip and flow
-                p[3] = (float) c / COLUMNS * turns + phase * 0.1F;
-                p[4] = (o.yMax + length * TIP_EXTENSION - y) * 0.7F + time * speed * 0.5F;
+                p[3] = (float) c / COLUMNS * turns + phase * 0.1F + time * speed * 0.07F;
+                p[4] = (o.yMax + length * TIP_EXTENSION - y) * 0.55F + time * speed * 0.45F;
             }
         }
 
