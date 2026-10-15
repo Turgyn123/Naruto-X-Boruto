@@ -47,7 +47,7 @@ public final class HiramekareiChakraRenderer {
     private static final int ROWS = 36;
     private static final int COLUMNS = 24;
     /** The flames lick on past the tip of the blade, this much of its length. */
-    private static final float TIP_EXTENSION = 0.22F;
+    private static final float TIP_EXTENSION = 0.14F;
 
     private record Outline(float yMin, float yMax, float[] cx, float[] cz, float[] hx, float[] hz) {}
 
@@ -80,9 +80,9 @@ public final class HiramekareiChakraRenderer {
 
         // From the outside in. Each sleeve has its own size, flame texture speed and turn, so the flames overlap
         // and cross instead of moving as one.
-        sleeve(consumer, matrix, outline, time, 1.40F, 0.100F, 0.32F, 0.55F, 2, 0.30F);
-        sleeve(consumer, matrix, outline, time, 1.22F, 0.055F, 0.55F, 0.80F, 3, 1.70F);
-        sleeve(consumer, matrix, outline, time, 1.07F, 0.022F, 0.80F, 1.05F, 2, 3.10F);
+        sleeve(consumer, matrix, outline, time, 1.40F, 0.100F, 0.38F, 0.45F, 1, 0.30F);
+        sleeve(consumer, matrix, outline, time, 1.22F, 0.055F, 0.62F, 0.65F, 1, 1.70F);
+        sleeve(consumer, matrix, outline, time, 1.07F, 0.022F, 0.85F, 0.85F, 2, 3.10F);
 
         poseStack.popPose();
     }
@@ -193,7 +193,7 @@ public final class HiramekareiChakraRenderer {
             float y = o.yMin + total * r / ROWS;
             float t = (y - o.yMin) / length;
             // Past the tip the flames narrow to a point
-            float taper = t <= 1.0F ? 1.0F : (float) Math.pow(Math.max(0.0F, 1.0F - (t - 1.0F) / TIP_EXTENSION), 0.7);
+            float taper = t <= 1.0F ? 1.0F : (float) Math.pow(Math.max(0.0F, 1.0F - (t - 1.0F) / TIP_EXTENSION), 0.5);
             float cx = at(o.cx, t);
             float cz = at(o.cz, t);
             float hx = at(o.hx, t);
@@ -204,8 +204,8 @@ public final class HiramekareiChakraRenderer {
             for (int c = 0; c <= COLUMNS; c++) {
                 float angle = (float) (2.0D * Math.PI * c / COLUMNS);
                 // The flames waver in size as they flow
-                float wobble = 1.0F + 0.10F * Mth.sin(time * 2.3F * speed + angle * 3.0F + y * 9.0F + phase)
-                        + 0.06F * Mth.sin(time * 3.1F * speed - angle * 5.0F + y * 5.0F);
+                float wobble = 1.0F + 0.08F * Mth.sin(time * 1.8F * speed + angle * 2.0F + y * 4.0F + phase)
+                        + 0.04F * Mth.sin(time * 2.4F * speed - angle * 3.0F + y * 3.0F);
                 float a = (hx * grow + margin) * wobble * taper;
                 float b = (hz * grow + margin) * wobble * taper;
                 float[] p = ring[r][c];
@@ -214,7 +214,7 @@ public final class HiramekareiChakraRenderer {
                 p[2] = cz + b * Mth.sin(angle);
                 // The flame texture: round the blade, and along it so that the flames point at the tip and flow
                 p[3] = (float) c / COLUMNS * turns + phase * 0.1F;
-                p[4] = (o.yMax + length * TIP_EXTENSION - y) * 0.9F + time * speed * 0.6F;
+                p[4] = (o.yMax + length * TIP_EXTENSION - y) * 0.7F + time * speed * 0.5F;
             }
         }
 
