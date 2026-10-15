@@ -78,6 +78,10 @@ public class NeoForgeItems {
     public static final DeferredItem<SpawnEggItem> KISAME_SPAWN_EGG = ITEMS.register("kisame_hoshigaki_egg", () -> new SpawnEggItem(NeoForgeEntities.KISAME_HOSHIGAKI.get(), 0x14161E, 14278624, new Item.Properties()));
     public static final DeferredItem<SpawnEggItem> ZABUZA_SPAWN_EGG = ITEMS.register("zabuza_momochi_egg", () -> new SpawnEggItem(NeoForgeEntities.ZABUZA_MOMOCHI.get(), 4342344, 13948116, new Item.Properties()));
     public static final DeferredItem<SpawnEggItem> JINPACHI_SPAWN_EGG = ITEMS.register("jinpachi_munashi_egg", () -> new SpawnEggItem(NeoForgeEntities.JINPACHI_MUNASHI.get(), 12758635, 5000268, new Item.Properties()));
+    public static final DeferredItem<SpawnEggItem> JININ_SPAWN_EGG = ITEMS.register("jinin_akebino_egg", () -> new SpawnEggItem(NeoForgeEntities.JININ_AKEBINO.get(), 3885650, 13148794, new Item.Properties()));
+    public static final DeferredItem<SpawnEggItem> KUSHIMARU_SPAWN_EGG = ITEMS.register("kushimaru_kuriarare_egg", () -> new SpawnEggItem(NeoForgeEntities.KUSHIMARU_KURIARARE.get(), 4863836, 14209248, new Item.Properties()));
+    public static final DeferredItem<SpawnEggItem> AMEYURI_SPAWN_EGG = ITEMS.register("ameyuri_ringo_egg", () -> new SpawnEggItem(NeoForgeEntities.AMEYURI_RINGO.get(), 5913130, 13217898, new Item.Properties()));
+    public static final DeferredItem<SpawnEggItem> CHOJURO_SPAWN_EGG = ITEMS.register("chojuro_egg", () -> new SpawnEggItem(NeoForgeEntities.CHOJURO.get(), 3033707, 15261896, new Item.Properties()));
 
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);

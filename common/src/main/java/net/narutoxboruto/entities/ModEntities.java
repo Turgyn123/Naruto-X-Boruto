@@ -7,6 +7,10 @@ import net.narutoxboruto.entities.jutsus.FireBallEntity;
 import net.narutoxboruto.entities.jutsus.SharkBombEntity;
 import net.narutoxboruto.entities.jutsus.WaterDragonEntity;
 import net.narutoxboruto.entities.shinobis.JinpachiMunashi;
+import net.narutoxboruto.entities.shinobis.JininAkebino;
+import net.narutoxboruto.entities.shinobis.KushimaruKuriarare;
+import net.narutoxboruto.entities.shinobis.AmeyuriRingo;
+import net.narutoxboruto.entities.shinobis.Chojuro;
 import net.narutoxboruto.entities.shinobis.KizameHoshigaki;
 import net.narutoxboruto.entities.shinobis.ZabuzaMomochi;
 import net.narutoxboruto.entities.throwables.*;
@@ -33,5 +37,9 @@ public class ModEntities {
     //Bosses
     public static EntityType<ZabuzaMomochi> ZABUZA_MOMOCHI;
     public static EntityType<JinpachiMunashi> JINPACHI_MUNASHI;
+    public static EntityType<JininAkebino> JININ_AKEBINO;
+    public static EntityType<KushimaruKuriarare> KUSHIMARU_KURIARARE;
+    public static EntityType<AmeyuriRingo> AMEYURI_RINGO;
+    public static EntityType<Chojuro> CHOJURO;
     public static EntityType<KizameHoshigaki> KISAME_HOSHIGAKI;
 }

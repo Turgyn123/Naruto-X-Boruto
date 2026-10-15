@@ -77,6 +77,10 @@ public class FabricItems {
     public static final Item KISAME_SPAWN_EGG = register("kisame_hoshigaki_egg", new SpawnEggItem(FabricEntities.KISAME_HOSHIGAKI, 0x14161E, 14278624, new Item.Properties()));
     public static final Item ZABUZA_SPAWN_EGG = register("zabuza_momochi_egg", new SpawnEggItem(FabricEntities.ZABUZA_MOMOCHI, 4342344, 13948116, new Item.Properties()));
     public static final Item JINPACHI_SPAWN_EGG = register("jinpachi_munashi_egg", new SpawnEggItem(FabricEntities.JINPACHI_MUNASHI, 12758635, 5000268, new Item.Properties()));
+    public static final Item JININ_SPAWN_EGG = register("jinin_akebino_egg", new SpawnEggItem(FabricEntities.JININ_AKEBINO, 3885650, 13148794, new Item.Properties()));
+    public static final Item KUSHIMARU_SPAWN_EGG = register("kushimaru_kuriarare_egg", new SpawnEggItem(FabricEntities.KUSHIMARU_KURIARARE, 4863836, 14209248, new Item.Properties()));
+    public static final Item AMEYURI_SPAWN_EGG = register("ameyuri_ringo_egg", new SpawnEggItem(FabricEntities.AMEYURI_RINGO, 5913130, 13217898, new Item.Properties()));
+    public static final Item CHOJURO_SPAWN_EGG = register("chojuro_egg", new SpawnEggItem(FabricEntities.CHOJURO, 3033707, 15261896, new Item.Properties()));
 
     private static Item register(String name, Item item) {
         return Registry.register(BuiltInRegistries.ITEM, ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, name), item);

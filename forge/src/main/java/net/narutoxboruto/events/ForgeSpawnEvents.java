@@ -13,6 +13,10 @@ public class ForgeSpawnEvents {
     public static void registerSpawnPlacements(SpawnPlacementRegisterEvent event) {
         event.register(ForgeEntities.ZABUZA_MOMOCHI.get(), SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, AbstractShinobiMob::checkBossSpawnRules, SpawnPlacementRegisterEvent.Operation.REPLACE);
         event.register(ForgeEntities.JINPACHI_MUNASHI.get(), SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, AbstractShinobiMob::checkBossSpawnRules, SpawnPlacementRegisterEvent.Operation.REPLACE);
+        event.register(ForgeEntities.JININ_AKEBINO.get(), SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, AbstractShinobiMob::checkBossSpawnRules, SpawnPlacementRegisterEvent.Operation.REPLACE);
+        event.register(ForgeEntities.KUSHIMARU_KURIARARE.get(), SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, AbstractShinobiMob::checkBossSpawnRules, SpawnPlacementRegisterEvent.Operation.REPLACE);
+        event.register(ForgeEntities.AMEYURI_RINGO.get(), SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, AbstractShinobiMob::checkBossSpawnRules, SpawnPlacementRegisterEvent.Operation.REPLACE);
+        event.register(ForgeEntities.CHOJURO.get(), SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, AbstractShinobiMob::checkBossSpawnRules, SpawnPlacementRegisterEvent.Operation.REPLACE);
         event.register(ForgeEntities.KISAME_HOSHIGAKI.get(), SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, AbstractShinobiMob::checkBossSpawnRules, SpawnPlacementRegisterEvent.Operation.REPLACE);
     }
 }

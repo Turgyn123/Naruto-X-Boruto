@@ -85,6 +85,14 @@ public class NeoForgeClient {
 
             EntityRenderers.register(JINPACHI_MUNASHI.get(),
                             (ctx) -> new AbstractShinobiRender(ctx, "jinpachi_munashi", true));
+            EntityRenderers.register(JININ_AKEBINO.get(),
+                            (ctx) -> new AbstractShinobiRender(ctx, "jinin_akebino"));
+            EntityRenderers.register(KUSHIMARU_KURIARARE.get(),
+                            (ctx) -> new AbstractShinobiRender(ctx, "kuriarare_kushimaru"));
+            EntityRenderers.register(AMEYURI_RINGO.get(),
+                            (ctx) -> new AbstractShinobiRender(ctx, "ameyuri_ringo"));
+            EntityRenderers.register(CHOJURO.get(),
+                            (ctx) -> new AbstractShinobiRender(ctx, "chojuro"));
             EntityRenderers.register(KISAME_HOSHIGAKI.get(),
                             (ctx) -> new AbstractShinobiRender(ctx, "kisame_hoshigaki"));
             EntityRenderers.register(ZABUZA_MOMOCHI.get(),

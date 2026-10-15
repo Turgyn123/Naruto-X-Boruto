@@ -52,6 +52,10 @@ public class ForgeEntities {
     //Bosses
     public static final RegistryObject<EntityType<KizameHoshigaki>> KISAME_HOSHIGAKI = registerEntity("kisame_hoshigaki", KizameHoshigaki::new, MobCategory.MONSTER, 0.6F, 1.8F);
     public static final RegistryObject<EntityType<JinpachiMunashi>> JINPACHI_MUNASHI = registerEntity("jinpachi_munashi", JinpachiMunashi::new, MobCategory.MONSTER, 0.6F, 1.8F);
+    public static final RegistryObject<EntityType<JininAkebino>> JININ_AKEBINO = registerEntity("jinin_akebino", JininAkebino::new, MobCategory.MONSTER, 0.6F, 1.8F);
+    public static final RegistryObject<EntityType<KushimaruKuriarare>> KUSHIMARU_KURIARARE = registerEntity("kushimaru_kuriarare", KushimaruKuriarare::new, MobCategory.MONSTER, 0.6F, 1.8F);
+    public static final RegistryObject<EntityType<AmeyuriRingo>> AMEYURI_RINGO = registerEntity("ameyuri_ringo", AmeyuriRingo::new, MobCategory.MONSTER, 0.6F, 1.8F);
+    public static final RegistryObject<EntityType<Chojuro>> CHOJURO = registerEntity("chojuro", Chojuro::new, MobCategory.MONSTER, 0.6F, 1.8F);
     public static final RegistryObject<EntityType<ZabuzaMomochi>> ZABUZA_MOMOCHI = registerEntity("zabuza_momochi", ZabuzaMomochi::new, MobCategory.MONSTER, 0.6F, 1.8F);
 
     public static <T extends Entity> RegistryObject<EntityType<T>> registerEntity(

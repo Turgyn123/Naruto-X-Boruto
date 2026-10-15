@@ -70,6 +70,14 @@ public class FabricClient implements ClientModInitializer {
         // Boss renderers
         EntityRendererRegistry.register(FabricEntities.JINPACHI_MUNASHI,
                 (ctx) -> new AbstractShinobiRender(ctx, "jinpachi_munashi", true));
+        EntityRendererRegistry.register(FabricEntities.JININ_AKEBINO,
+                (ctx) -> new AbstractShinobiRender(ctx, "jinin_akebino"));
+        EntityRendererRegistry.register(FabricEntities.KUSHIMARU_KURIARARE,
+                (ctx) -> new AbstractShinobiRender(ctx, "kuriarare_kushimaru"));
+        EntityRendererRegistry.register(FabricEntities.AMEYURI_RINGO,
+                (ctx) -> new AbstractShinobiRender(ctx, "ameyuri_ringo"));
+        EntityRendererRegistry.register(FabricEntities.CHOJURO,
+                (ctx) -> new AbstractShinobiRender(ctx, "chojuro"));
         EntityRendererRegistry.register(FabricEntities.KISAME_HOSHIGAKI,
                 (ctx) -> new AbstractShinobiRender(ctx, "kisame_hoshigaki"));
         EntityRendererRegistry.register(FabricEntities.ZABUZA_MOMOCHI,

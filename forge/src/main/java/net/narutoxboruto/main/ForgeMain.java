@@ -13,6 +13,10 @@ import net.narutoxboruto.effect.ModEffects;
 import net.narutoxboruto.entities.ForgeEntities;
 import net.narutoxboruto.entities.ModEntities;
 import net.narutoxboruto.entities.shinobis.JinpachiMunashi;
+import net.narutoxboruto.entities.shinobis.JininAkebino;
+import net.narutoxboruto.entities.shinobis.KushimaruKuriarare;
+import net.narutoxboruto.entities.shinobis.AmeyuriRingo;
+import net.narutoxboruto.entities.shinobis.Chojuro;
 import net.narutoxboruto.entities.shinobis.KizameHoshigaki;
 import net.narutoxboruto.entities.shinobis.ZabuzaMomochi;
 import net.narutoxboruto.events.*;
@@ -83,6 +87,10 @@ public class ForgeMain {
             ModEntities.WEAPON_EFFECT = ForgeEntities.WEAPON_EFFECT.get();
             ModEntities.ZABUZA_MOMOCHI = ForgeEntities.ZABUZA_MOMOCHI.get();
             ModEntities.JINPACHI_MUNASHI = ForgeEntities.JINPACHI_MUNASHI.get();
+            ModEntities.JININ_AKEBINO = ForgeEntities.JININ_AKEBINO.get();
+            ModEntities.KUSHIMARU_KURIARARE = ForgeEntities.KUSHIMARU_KURIARARE.get();
+            ModEntities.AMEYURI_RINGO = ForgeEntities.AMEYURI_RINGO.get();
+            ModEntities.CHOJURO = ForgeEntities.CHOJURO.get();
             ModEntities.KISAME_HOSHIGAKI = ForgeEntities.KISAME_HOSHIGAKI.get();
 
             ModItems.SHURIKEN_ITEM = ForgeItems.SHURIKEN.get();
@@ -90,6 +98,10 @@ public class ForgeMain {
             ModItems.SAMEHADA_ITEM = ForgeItems.SAMEHADA.get();
             ModItems.KUBIKIRIBOCHO_ITEM = ForgeItems.KUBIKIRIBOCHO.get();
             ModItems.SHIBUKI_ITEM = ForgeItems.SHIBUKI.get();
+            ModItems.KABUTOWARI_ITEM = ForgeItems.KABUTOWARI.get();
+            ModItems.NUIBARI_ITEM = ForgeItems.NUIBARI.get();
+            ModItems.KIBA_ITEM = ForgeItems.KIBA.get();
+            ModItems.HIRAMEKAREI_ITEM = ForgeItems.HIRAMEKAREI.get();
             ModItems.CHAKRA_PAPER_ITEM = ForgeItems.CHAKRA_PAPER.get();
 
             ModEffects.CHAKRA_CONTROL = Holder.direct(ForgeEffects.CHAKRA_CONTROL.get());
@@ -99,6 +111,10 @@ public class ForgeMain {
     private void attributes(EntityAttributeCreationEvent event) {
         event.put(ForgeEntities.KISAME_HOSHIGAKI.get(), KizameHoshigaki.setAttribute());
         event.put(ForgeEntities.JINPACHI_MUNASHI.get(), JinpachiMunashi.setAttribute());
+        event.put(ForgeEntities.JININ_AKEBINO.get(), JininAkebino.setAttribute());
+        event.put(ForgeEntities.KUSHIMARU_KURIARARE.get(), KushimaruKuriarare.setAttribute());
+        event.put(ForgeEntities.AMEYURI_RINGO.get(), AmeyuriRingo.setAttribute());
+        event.put(ForgeEntities.CHOJURO.get(), Chojuro.setAttribute());
         event.put(ForgeEntities.ZABUZA_MOMOCHI.get(), ZabuzaMomochi.setAttribute());
     }
 }

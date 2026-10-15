@@ -81,6 +81,10 @@ public class ForgeItems {
     public static final RegistryObject<Item> KISAME_SPAWN_EGG = ITEMS.register("kisame_hoshigaki_egg", () -> new ForgeSpawnEggItem(ForgeEntities.KISAME_HOSHIGAKI, 0x14161E, 14278624, new Item.Properties()));
     public static final RegistryObject<Item> ZABUZA_SPAWN_EGG = ITEMS.register("zabuza_momochi_egg", () -> new ForgeSpawnEggItem(ForgeEntities.ZABUZA_MOMOCHI, 4342344, 13948116, new Item.Properties()));
     public static final RegistryObject<Item> JINPACHI_SPAWN_EGG = ITEMS.register("jinpachi_munashi_egg", () -> new ForgeSpawnEggItem(ForgeEntities.JINPACHI_MUNASHI, 12758635, 5000268, new Item.Properties()));
+    public static final RegistryObject<Item> JININ_SPAWN_EGG = ITEMS.register("jinin_akebino_egg", () -> new ForgeSpawnEggItem(ForgeEntities.JININ_AKEBINO, 3885650, 13148794, new Item.Properties()));
+    public static final RegistryObject<Item> KUSHIMARU_SPAWN_EGG = ITEMS.register("kushimaru_kuriarare_egg", () -> new ForgeSpawnEggItem(ForgeEntities.KUSHIMARU_KURIARARE, 4863836, 14209248, new Item.Properties()));
+    public static final RegistryObject<Item> AMEYURI_SPAWN_EGG = ITEMS.register("ameyuri_ringo_egg", () -> new ForgeSpawnEggItem(ForgeEntities.AMEYURI_RINGO, 5913130, 13217898, new Item.Properties()));
+    public static final RegistryObject<Item> CHOJURO_SPAWN_EGG = ITEMS.register("chojuro_egg", () -> new ForgeSpawnEggItem(ForgeEntities.CHOJURO, 3033707, 15261896, new Item.Properties()));
 
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);

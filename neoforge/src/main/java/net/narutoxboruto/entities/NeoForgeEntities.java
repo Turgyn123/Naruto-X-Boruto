@@ -51,6 +51,10 @@ public class NeoForgeEntities {
     //BOSSES
     public static final DeferredHolder<EntityType<?>, EntityType<KizameHoshigaki>> KISAME_HOSHIGAKI = registerEntity("kisame_hoshigaki", KizameHoshigaki::new, MobCategory.MONSTER, 0.6F, 1.8F);
     public static final DeferredHolder<EntityType<?>, EntityType<JinpachiMunashi>> JINPACHI_MUNASHI = registerEntity("jinpachi_munashi", JinpachiMunashi::new, MobCategory.MONSTER, 0.6F, 1.8F);
+    public static final DeferredHolder<EntityType<?>, EntityType<JininAkebino>> JININ_AKEBINO = registerEntity("jinin_akebino", JininAkebino::new, MobCategory.MONSTER, 0.6F, 1.8F);
+    public static final DeferredHolder<EntityType<?>, EntityType<KushimaruKuriarare>> KUSHIMARU_KURIARARE = registerEntity("kushimaru_kuriarare", KushimaruKuriarare::new, MobCategory.MONSTER, 0.6F, 1.8F);
+    public static final DeferredHolder<EntityType<?>, EntityType<AmeyuriRingo>> AMEYURI_RINGO = registerEntity("ameyuri_ringo", AmeyuriRingo::new, MobCategory.MONSTER, 0.6F, 1.8F);
+    public static final DeferredHolder<EntityType<?>, EntityType<Chojuro>> CHOJURO = registerEntity("chojuro", Chojuro::new, MobCategory.MONSTER, 0.6F, 1.8F);
     public static final DeferredHolder<EntityType<?>, EntityType<ZabuzaMomochi>> ZABUZA_MOMOCHI = registerEntity("zabuza_momochi", ZabuzaMomochi::new, MobCategory.MONSTER, 0.6F, 1.8F);
 
     public static <T extends Entity> DeferredHolder<EntityType<?>, EntityType<T>> registerEntity(

@@ -74,6 +74,10 @@ public final class BossSpawner {
         if (ModEntities.ZABUZA_MOMOCHI != null) bosses.add(ModEntities.ZABUZA_MOMOCHI);
         if (ModEntities.JINPACHI_MUNASHI != null) bosses.add(ModEntities.JINPACHI_MUNASHI);
         if (ModEntities.KISAME_HOSHIGAKI != null) bosses.add(ModEntities.KISAME_HOSHIGAKI);
+        if (ModEntities.JININ_AKEBINO != null) bosses.add(ModEntities.JININ_AKEBINO);
+        if (ModEntities.KUSHIMARU_KURIARARE != null) bosses.add(ModEntities.KUSHIMARU_KURIARARE);
+        if (ModEntities.AMEYURI_RINGO != null) bosses.add(ModEntities.AMEYURI_RINGO);
+        if (ModEntities.CHOJURO != null) bosses.add(ModEntities.CHOJURO);
         return bosses;
     }
 

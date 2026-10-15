@@ -13,6 +13,10 @@ import net.narutoxboruto.effect.ModEffects;
 import net.narutoxboruto.entities.FabricEntities;
 import net.narutoxboruto.entities.ModEntities;
 import net.narutoxboruto.entities.shinobis.JinpachiMunashi;
+import net.narutoxboruto.entities.shinobis.JininAkebino;
+import net.narutoxboruto.entities.shinobis.KushimaruKuriarare;
+import net.narutoxboruto.entities.shinobis.AmeyuriRingo;
+import net.narutoxboruto.entities.shinobis.Chojuro;
 import net.narutoxboruto.entities.shinobis.KizameHoshigaki;
 import net.narutoxboruto.entities.shinobis.ZabuzaMomochi;
 import net.narutoxboruto.events.*;
@@ -43,6 +47,10 @@ public class FabricMain implements ModInitializer {
         // Register entity attributes
         FabricDefaultAttributeRegistry.register(FabricEntities.KISAME_HOSHIGAKI, KizameHoshigaki.setAttribute());
         FabricDefaultAttributeRegistry.register(FabricEntities.JINPACHI_MUNASHI, JinpachiMunashi.setAttribute());
+        FabricDefaultAttributeRegistry.register(FabricEntities.JININ_AKEBINO, JininAkebino.setAttribute());
+        FabricDefaultAttributeRegistry.register(FabricEntities.KUSHIMARU_KURIARARE, KushimaruKuriarare.setAttribute());
+        FabricDefaultAttributeRegistry.register(FabricEntities.AMEYURI_RINGO, AmeyuriRingo.setAttribute());
+        FabricDefaultAttributeRegistry.register(FabricEntities.CHOJURO, Chojuro.setAttribute());
         FabricDefaultAttributeRegistry.register(FabricEntities.ZABUZA_MOMOCHI, ZabuzaMomochi.setAttribute());
 
         // Populate common holder fields
@@ -59,6 +67,10 @@ public class FabricMain implements ModInitializer {
         ModEntities.WEAPON_EFFECT = FabricEntities.WEAPON_EFFECT;
         ModEntities.ZABUZA_MOMOCHI = FabricEntities.ZABUZA_MOMOCHI;
         ModEntities.JINPACHI_MUNASHI = FabricEntities.JINPACHI_MUNASHI;
+        ModEntities.JININ_AKEBINO = FabricEntities.JININ_AKEBINO;
+        ModEntities.KUSHIMARU_KURIARARE = FabricEntities.KUSHIMARU_KURIARARE;
+        ModEntities.AMEYURI_RINGO = FabricEntities.AMEYURI_RINGO;
+        ModEntities.CHOJURO = FabricEntities.CHOJURO;
         ModEntities.KISAME_HOSHIGAKI = FabricEntities.KISAME_HOSHIGAKI;
 
         ModItems.SHURIKEN_ITEM = FabricItems.SHURIKEN;
@@ -66,6 +78,10 @@ public class FabricMain implements ModInitializer {
         ModItems.SAMEHADA_ITEM = FabricItems.SAMEHADA;
         ModItems.KUBIKIRIBOCHO_ITEM = FabricItems.KUBIKIRIBOCHO;
         ModItems.SHIBUKI_ITEM = FabricItems.SHIBUKI;
+        ModItems.KABUTOWARI_ITEM = FabricItems.KABUTOWARI;
+        ModItems.NUIBARI_ITEM = FabricItems.NUIBARI;
+        ModItems.KIBA_ITEM = FabricItems.KIBA;
+        ModItems.HIRAMEKAREI_ITEM = FabricItems.HIRAMEKAREI;
         ModItems.CHAKRA_PAPER_ITEM = FabricItems.CHAKRA_PAPER;
 
         ModEffects.CHAKRA_CONTROL = FabricEffects.CHAKRA_CONTROL;
@@ -83,6 +99,10 @@ public class FabricMain implements ModInitializer {
         // Register spawn placements for custom mobs
         SpawnPlacements.register(FabricEntities.ZABUZA_MOMOCHI, SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, AbstractShinobiMob::checkBossSpawnRules);
         SpawnPlacements.register(FabricEntities.JINPACHI_MUNASHI, SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, AbstractShinobiMob::checkBossSpawnRules);
+        SpawnPlacements.register(FabricEntities.JININ_AKEBINO, SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, AbstractShinobiMob::checkBossSpawnRules);
+        SpawnPlacements.register(FabricEntities.KUSHIMARU_KURIARARE, SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, AbstractShinobiMob::checkBossSpawnRules);
+        SpawnPlacements.register(FabricEntities.AMEYURI_RINGO, SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, AbstractShinobiMob::checkBossSpawnRules);
+        SpawnPlacements.register(FabricEntities.CHOJURO, SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, AbstractShinobiMob::checkBossSpawnRules);
         SpawnPlacements.register(FabricEntities.KISAME_HOSHIGAKI, SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, AbstractShinobiMob::checkBossSpawnRules);
 
         // Server tick for EarthWave and WaterPrison

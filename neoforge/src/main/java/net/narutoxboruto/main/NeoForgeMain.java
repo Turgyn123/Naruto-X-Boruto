@@ -7,6 +7,10 @@ import net.narutoxboruto.effect.NeoForgeEffects;
 import net.narutoxboruto.entities.ModEntities;
 import net.narutoxboruto.entities.NeoForgeEntities;
 import net.narutoxboruto.entities.shinobis.JinpachiMunashi;
+import net.narutoxboruto.entities.shinobis.JininAkebino;
+import net.narutoxboruto.entities.shinobis.KushimaruKuriarare;
+import net.narutoxboruto.entities.shinobis.AmeyuriRingo;
+import net.narutoxboruto.entities.shinobis.Chojuro;
 import net.narutoxboruto.entities.shinobis.KizameHoshigaki;
 import net.narutoxboruto.entities.shinobis.ZabuzaMomochi;
 import net.narutoxboruto.events.*;
@@ -80,6 +84,10 @@ public class NeoForgeMain {
         ModEntities.WEAPON_EFFECT = NeoForgeEntities.WEAPON_EFFECT.get();
         ModEntities.ZABUZA_MOMOCHI = NeoForgeEntities.ZABUZA_MOMOCHI.get();
         ModEntities.JINPACHI_MUNASHI = NeoForgeEntities.JINPACHI_MUNASHI.get();
+        ModEntities.JININ_AKEBINO = NeoForgeEntities.JININ_AKEBINO.get();
+        ModEntities.KUSHIMARU_KURIARARE = NeoForgeEntities.KUSHIMARU_KURIARARE.get();
+        ModEntities.AMEYURI_RINGO = NeoForgeEntities.AMEYURI_RINGO.get();
+        ModEntities.CHOJURO = NeoForgeEntities.CHOJURO.get();
         ModEntities.KISAME_HOSHIGAKI = NeoForgeEntities.KISAME_HOSHIGAKI.get();
 
         ModItems.SHURIKEN_ITEM = NeoForgeItems.SHURIKEN.get();
@@ -87,6 +95,10 @@ public class NeoForgeMain {
         ModItems.SAMEHADA_ITEM = NeoForgeItems.SAMEHADA.get();
         ModItems.KUBIKIRIBOCHO_ITEM = NeoForgeItems.KUBIKIRIBOCHO.get();
         ModItems.SHIBUKI_ITEM = NeoForgeItems.SHIBUKI.get();
+        ModItems.KABUTOWARI_ITEM = NeoForgeItems.KABUTOWARI.get();
+        ModItems.NUIBARI_ITEM = NeoForgeItems.NUIBARI.get();
+        ModItems.KIBA_ITEM = NeoForgeItems.KIBA.get();
+        ModItems.HIRAMEKAREI_ITEM = NeoForgeItems.HIRAMEKAREI.get();
         ModItems.CHAKRA_PAPER_ITEM = NeoForgeItems.CHAKRA_PAPER.get();
 
         ModEffects.CHAKRA_CONTROL = NeoForgeEffects.CHAKRA_CONTROL;
@@ -95,6 +107,10 @@ public class NeoForgeMain {
     private void attributes(EntityAttributeCreationEvent event) {
         event.put(NeoForgeEntities.KISAME_HOSHIGAKI.get(), KizameHoshigaki.setAttribute());
         event.put(NeoForgeEntities.JINPACHI_MUNASHI.get(), JinpachiMunashi.setAttribute());
+        event.put(NeoForgeEntities.JININ_AKEBINO.get(), JininAkebino.setAttribute());
+        event.put(NeoForgeEntities.KUSHIMARU_KURIARARE.get(), KushimaruKuriarare.setAttribute());
+        event.put(NeoForgeEntities.AMEYURI_RINGO.get(), AmeyuriRingo.setAttribute());
+        event.put(NeoForgeEntities.CHOJURO.get(), Chojuro.setAttribute());
         event.put(NeoForgeEntities.ZABUZA_MOMOCHI.get(), ZabuzaMomochi.setAttribute());
     }
 

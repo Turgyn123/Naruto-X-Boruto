@@ -70,6 +70,10 @@ public class NeoForgeTab {
             .displayItems((parameters, output) -> {
                 output.accept(KISAME_SPAWN_EGG.get());
                 output.accept(JINPACHI_SPAWN_EGG.get());
+                output.accept(JININ_SPAWN_EGG.get());
+                output.accept(KUSHIMARU_SPAWN_EGG.get());
+                output.accept(AMEYURI_SPAWN_EGG.get());
+                output.accept(CHOJURO_SPAWN_EGG.get());
                 output.accept(ZABUZA_SPAWN_EGG.get());
             }).build());
 

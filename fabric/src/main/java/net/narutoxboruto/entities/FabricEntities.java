@@ -54,6 +54,10 @@ public class FabricEntities {
     //Bosses
     public static final EntityType<KizameHoshigaki> KISAME_HOSHIGAKI = registerEntity("kisame_hoshigaki", KizameHoshigaki::new, MobCategory.MONSTER, 0.6F, 1.8F);
     public static final EntityType<JinpachiMunashi> JINPACHI_MUNASHI = registerEntity("jinpachi_munashi", JinpachiMunashi::new, MobCategory.MONSTER, 0.6F, 1.8F);
+    public static final EntityType<JininAkebino> JININ_AKEBINO = registerEntity("jinin_akebino", JininAkebino::new, MobCategory.MONSTER, 0.6F, 1.8F);
+    public static final EntityType<KushimaruKuriarare> KUSHIMARU_KURIARARE = registerEntity("kushimaru_kuriarare", KushimaruKuriarare::new, MobCategory.MONSTER, 0.6F, 1.8F);
+    public static final EntityType<AmeyuriRingo> AMEYURI_RINGO = registerEntity("ameyuri_ringo", AmeyuriRingo::new, MobCategory.MONSTER, 0.6F, 1.8F);
+    public static final EntityType<Chojuro> CHOJURO = registerEntity("chojuro", Chojuro::new, MobCategory.MONSTER, 0.6F, 1.8F);
     public static final EntityType<ZabuzaMomochi> ZABUZA_MOMOCHI = registerEntity("zabuza_momochi", ZabuzaMomochi::new, MobCategory.MONSTER, 0.6F, 1.8F);
 
     private static <T extends Entity> EntityType<T> registerEntity(

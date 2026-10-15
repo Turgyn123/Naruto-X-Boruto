@@ -68,6 +68,10 @@ public class ModItems {
     public static Item SAMEHADA_ITEM;
     public static Item KUBIKIRIBOCHO_ITEM;
     public static Item SHIBUKI_ITEM;
+    public static Item KABUTOWARI_ITEM;
+    public static Item NUIBARI_ITEM;
+    public static Item KIBA_ITEM;
+    public static Item HIRAMEKAREI_ITEM;
     public static Item FUMA_SHURIKEN_ITEM;
     public static Item CHAKRA_PAPER_ITEM;
 }

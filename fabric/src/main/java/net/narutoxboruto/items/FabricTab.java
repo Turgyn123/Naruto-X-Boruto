@@ -83,6 +83,10 @@ public class FabricTab {
                     .displayItems((parameters, output) -> {
                         output.accept(FabricItems.KISAME_SPAWN_EGG);
                         output.accept(FabricItems.JINPACHI_SPAWN_EGG);
+                        output.accept(FabricItems.JININ_SPAWN_EGG);
+                        output.accept(FabricItems.KUSHIMARU_SPAWN_EGG);
+                        output.accept(FabricItems.AMEYURI_SPAWN_EGG);
+                        output.accept(FabricItems.CHOJURO_SPAWN_EGG);
                         output.accept(FabricItems.ZABUZA_SPAWN_EGG);
                     }).build()
     );
