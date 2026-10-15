@@ -26,7 +26,7 @@ import java.util.List;
  *
  * The blade's own model is drawn again, a little larger, with a wisp texture that flows along the blade. It uses the
  * additive, fully bright "eyes" render type, so it glows in the dark and blends into the blade instead of covering it.
- * Two layers, a bright one close to the blade and a faint wider one for the glow. The loaders' item renderer mixins
+ * Four layers, from a bright one lying on the blade to a faint wide haze, so the whole blade is covered in an aura. The loaders' item renderer mixins
  * just call {@link #render} after the item itself has been drawn.
  */
 public final class HiramekareiChakraRenderer {
@@ -53,10 +53,12 @@ public final class HiramekareiChakraRenderer {
         Matrix4f matrix = poseStack.last().pose();
         VertexConsumer consumer = buffer.getBuffer(RenderType.eyes(TEXTURE));
 
-        // The glow: wide and faint, flowing a little slower
-        layer(consumer, matrix, model, 0.028F, 0.30F, time * 0.55F, 0.8F);
-        // The chakra close to the blade: bright
-        layer(consumer, matrix, model, 0.007F, 0.95F, time, 1.0F);
+        // From the outside in: a faint wide haze, the glow, and the chakra lying on the blade itself. They add up,
+        // so the blade is covered in light that fades off softly into the air around it.
+        layer(consumer, matrix, model, 0.055F, 0.16F, time * 0.5F, 0.7F);
+        layer(consumer, matrix, model, 0.028F, 0.30F, time * 0.7F, 0.85F);
+        layer(consumer, matrix, model, 0.012F, 0.55F, time * 0.85F, 1.0F);
+        layer(consumer, matrix, model, 0.004F, 0.90F, time, 1.15F);
 
         poseStack.popPose();
     }
@@ -87,8 +89,8 @@ public final class HiramekareiChakraRenderer {
             float y = Float.intBitsToFloat(data[o + 1]) + ny * grow;
             float z = Float.intBitsToFloat(data[o + 2]) + nz * grow;
             // The wisps flow along the blade, which runs up the model, and waver a little sideways
-            float u = (x + z) * 5.0F * scale + Mth.sin(time * 1.3F + y * 4.0F) * 0.05F;
-            float w = y * 1.3F * scale - time * 0.9F;
+            float u = (x + z) * 9.0F * scale + Mth.sin(time * 1.3F + y * 4.0F) * 0.05F;
+            float w = y * 1.1F * scale - time * 0.8F;
             consumer.addVertex(matrix, x, y, z)
                     .setColor(255, 255, 255, alpha)
                     .setUv(u, w)
