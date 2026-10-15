@@ -30,10 +30,10 @@ public final class BossSpawner {
 
     private BossSpawner() {}
 
-    /** How often each player gets a roll: 5 minutes. */
-    private static final int CHECK_INTERVAL_TICKS = 20 * 60 * 5;
-    /** Chance per roll. 4% per 5 minutes is one boss about every 2 hours of play. */
-    private static final int SPAWN_CHANCE_PERCENT = 4;
+    /** How often each player gets a roll: 30 seconds. */
+    private static final int CHECK_INTERVAL_TICKS = 20 * 30;
+    /** Chance per roll. 3% every 30 seconds is one boss about every 15 minutes of play. */
+    private static final int SPAWN_CHANCE_PERCENT = 3;
     /** No new boss while another one is alive within this many blocks. */
     private static final int BOSS_FREE_RADIUS = 192;
     private static final int MIN_SPAWN_DISTANCE = 30;

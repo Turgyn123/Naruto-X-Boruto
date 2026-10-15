@@ -39,7 +39,7 @@ Available on **NeoForge**, **Fabric** and **Forge**, built from one shared codeb
   Kenjutsu and chakra, and are toggled with the Special Action key.
 - **Throwing weapons**: shuriken, kunai, explosive kunai, senbon, poison senbon and the Fuma shuriken.
 - **Bosses**: the Seven Swordsmen of the Mist, Zabuza Momochi, Jinpachi Munashi, Kisame Hoshigaki, Jinin Akebino, Kushimaru Kuriarare, Ameyuri Ringo and Chojuro, walk on water, use throwing weapons and carry their own blades.
-  They are rare: each player gets one roll every few minutes (see `BossSpawner`).
+  They are rare: each player gets a 3% roll every 30 seconds (see `BossSpawner`).
 - **Commands**: `/clan`, `/rank`, `/affiliation`, `/dojutsu`, `/shinobi_stat` and `/shinobi_info`.
   Setting values needs operator permission.
 
