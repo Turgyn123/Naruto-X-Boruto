@@ -112,7 +112,7 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
         // ---- the fire itself: a dense cloud of chunky pixel flames pouring out of the caster. Every flame starts at
         // the caster, flies outwards while it grows, goes from yellow to orange to red and burns out, and a new one
         // takes its place. Together they fill the whole fan, like the fire of a flamethrower.
-        int flames = 520;
+        int flames = 760;
         float lifeTicks = 34.0F;
         float[] lifeOf = new float[flames];
         Integer[] sorted = new Integer[flames];
@@ -132,13 +132,18 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
             int seed = i * 31 + cycle * 977;
             double radius = 0.8D + life * (front - 0.8D);
             if (radius < 1.0D) continue;
-            double angle = (hash(seed + 3) * 2.0D - 1.0D) * WeaponEffectEntity.waveHalfAngle(radius) * 0.95D;
+            // About half of the flames burn on the ground, the rest rise above them
+            boolean low = hash(seed + 15) < 0.5F;
+            double half = WeaponEffectEntity.waveHalfAngle(radius);
+            // They sway from side to side while they fly
+            double angle = (hash(seed + 3) * 2.0D - 1.0D) * half * 0.95D
+                    + Math.sin(age * 0.13D + hash(seed + 17) * 6.28D) * 0.05D * life;
             Vec3 spot = forward.scale(Math.cos(angle) * radius).add(right.scale(Math.sin(angle) * radius));
             double groundY = groundAt(level, origin.x + spot.x, origin.z + spot.z, origin.y) - origin.y;
-            double size = (1.6D + 4.4D * Math.sqrt(life)) * (0.75D + 0.5D * hash(seed + 5));
-            // Higher up the further out, and the flames rise as they burn
-            double spread = 0.5D + 4.5D * radius / WeaponEffectEntity.WAVE_RANGE;
-            double y = groundY + size * 0.35D + hash(seed + 9) * spread + life * 1.6D;
+            double size = (low ? 1.4D + 2.0D * Math.sqrt(life) : 1.6D + 3.0D * Math.sqrt(life)) * (0.75D + 0.5D * hash(seed + 5));
+            // The flames stay low and thick on the ground and only a few leap up
+            double spread = 0.2D + 2.3D * radius / WeaponEffectEntity.WAVE_RANGE;
+            double y = groundY + size * 0.35D + (low ? 0.0D : hash(seed + 9) * spread + life * 1.0D);
             // Yellow at the start, orange in the middle, red at the end, and then they fade
             float red = 1.0F;
             float green = Mth.clamp(1.05F - life * 0.75F, 0.35F, 1.0F);
@@ -166,33 +171,16 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
         return ((h ^ (h >>> 16)) & 0xFFFF) / 65535.0F;
     }
 
-    /** Dark smoke that rises off the top of the wave of fire and drifts up. */
+    /** Tiny black specks of soot that fly about in the fire. */
     private void renderWaveSmoke(WeaponEffectEntity entity, float age, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource,
                                  double front, Vec3 forward, Vec3 right, float fade) {
         Level level = entity.level();
         Vec3 origin = entity.getPosition(partialTick);
         org.joml.Quaternionf camera = this.entityRenderDispatcher.cameraOrientation();
         VertexConsumer smoke = bufferSource.getBuffer(RenderType.entityTranslucent(ASH_PUFF_TEXTURE));
-        java.util.Random random = new java.util.Random(entity.getId() * 15485863L + 11L);
         int light = (10 << 20) | (10 << 4);
-        for (int i = 0; i < 14; i++) {
-            double radius = front - random.nextDouble() * 14.0D;
-            if (radius < 3.0D) continue;
-            double angle = (random.nextDouble() * 2.0D - 1.0D) * WeaponEffectEntity.waveHalfAngle(radius) * 0.9D;
-            double wallHeight = 2.5D + 4.5D * radius / WeaponEffectEntity.WAVE_RANGE;
-            // It rises, and starts again at the top of the flames
-            double rise = ((age * 0.05D + random.nextDouble() * 4.0D) % 4.0D);
-            Vec3 spot = forward.scale(Math.cos(angle) * radius).add(right.scale(Math.sin(angle) * radius));
-            double groundY = groundAt(level, origin.x + spot.x, origin.z + spot.z, origin.y) - origin.y;
-            float alpha = (float) (0.55D * (1.0D - rise / 4.0D)) * fade;
-            poseStack.pushPose();
-            poseStack.translate(spot.x, groundY + wallHeight * 0.9D + rise, spot.z);
-            poseStack.mulPose(camera);
-            billboard(smoke, poseStack.last().pose(), (float) (3.0D + random.nextDouble() * 2.5D + rise * 0.4D), alpha, light, 0.8F, 0.8F, 0.8F);
-            poseStack.popPose();
-        }
         // Black specks of soot flying about in the fire
-        for (int i = 0; i < 90; i++) {
+        for (int i = 0; i < 70; i++) {
             float life = ((age + hash(i * 13 + 2) * 30.0F) % 30.0F) / 30.0F;
             double radius = 1.5D + life * (front - 1.5D);
             double angle = (hash(i * 13 + 4) * 2.0D - 1.0D) * WeaponEffectEntity.waveHalfAngle(radius);
@@ -202,7 +190,7 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
             poseStack.pushPose();
             poseStack.translate(spot.x, y, spot.z);
             poseStack.mulPose(camera);
-            billboard(smoke, poseStack.last().pose(), 0.28F + 0.2F * hash(i * 13 + 8), 0.9F * fade * Mth.clamp((1.0F - life) * 3.0F, 0.0F, 1.0F), light, 0.05F, 0.05F, 0.05F);
+            billboard(smoke, poseStack.last().pose(), 0.14F + 0.12F * hash(i * 13 + 8), 0.9F * fade * Mth.clamp((1.0F - life) * 3.0F, 0.0F, 1.0F), light, 0.05F, 0.05F, 0.05F);
             poseStack.popPose();
         }
     }

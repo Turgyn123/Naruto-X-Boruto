@@ -167,15 +167,15 @@ public class WeaponEffectEntity extends Entity {
      */
     public static final double WAVE_RANGE = 50.0D;
     public static final double WAVE_SPEED = 1.5D;
-    public static final double WAVE_HALF_ANGLE = 38.0D;
+    public static final double WAVE_HALF_ANGLE = 44.0D;
     public static final int WAVE_TICKS = 60;
 
     /**
      * Half of the angle of the fan at a distance from the caster, in radians. The fire pours out of the caster and
-     * spreads sideways along curved edges, narrow close up and widening like a trumpet to {@link #WAVE_HALF_ANGLE}.
+     * spreads sideways along curved edges, already wide close up and widening to {@link #WAVE_HALF_ANGLE}.
      */
     public static double waveHalfAngle(double radius) {
-        return Math.max(Math.toRadians(8.0D), Math.toRadians(WAVE_HALF_ANGLE) * (1.0D - Math.exp(-radius / 14.0D)));
+        return Math.toRadians(30.0D + (WAVE_HALF_ANGLE - 30.0D) * (1.0D - Math.exp(-radius / 18.0D)));
     }
     private static final float WAVE_DAMAGE = 3.0F;
     /** How long the fire takes to die down once the caster lets go. */
