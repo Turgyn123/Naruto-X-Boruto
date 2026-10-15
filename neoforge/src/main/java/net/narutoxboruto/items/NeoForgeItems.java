@@ -67,6 +67,7 @@ public class NeoForgeItems {
 
     //Jutsu Items
     public static final DeferredItem<Item> FIRE_BALL_JUTSU = ITEMS.register("fire_ball_jutsu", () -> new FireBall(new Item.Properties().stacksTo(1)));
+    public static final DeferredItem<Item> FLAME_BULLET_JUTSU = ITEMS.register("flame_bullet_jutsu", () -> new FlameBullet(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<Item> GREAT_FIRE_ANNIHILATION_JUTSU = ITEMS.register("great_fire_annihilation_jutsu", () -> new GreatFireAnnihilation(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<Item> ASH_PILE_BURNING_JUTSU = ITEMS.register("ash_pile_burning_jutsu", () -> new AshPileBurning(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<Item> SHARK_BOMB_JUTSU = ITEMS.register("shark_bomb_jutsu", () -> new SharkBomb(new Item.Properties().stacksTo(1)));

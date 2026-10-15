@@ -16,8 +16,13 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.narutoxboruto.entities.ModEntities;
@@ -37,6 +42,8 @@ import java.util.UUID;
  *       The server only does the damage, the renderer draws the fire.</li>
  *   <li>{@link #ASH_CLOUD}: the cloud of ash of Fire Release: Ash Pile Burning, which can be set alight.
  *       Also only particles and damage.</li>
+ *   <li>{@link #FLAME_BULLET}: the bullet of flame of Fire Release: Flame Bullet, which flies straight and bursts on
+ *       the first thing it hits.</li>
  * </ul>
  * The effects only live a short while, are never saved and only the server moves them.
  */
@@ -47,6 +54,7 @@ public class WeaponEffectEntity extends Entity {
     public static final int THREAD = 2;
     public static final int FIRE_WAVE = 3;
     public static final int ASH_CLOUD = 4;
+    public static final int FLAME_BULLET = 5;
 
     private static final EntityDataAccessor<Integer> KIND = SynchedEntityData.defineId(WeaponEffectEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Float> SIZE = SynchedEntityData.defineId(WeaponEffectEntity.class, EntityDataSerializers.FLOAT);
@@ -200,6 +208,66 @@ public class WeaponEffectEntity extends Entity {
         WeaponEffectEntity effect = create(level, FIRE_WAVE, caster.position().add(flat.scale(0.8D)), flat, 1.0F, 0xFFFFFFFF, WAVE_TICKS);
         effect.owner = caster.getUUID();
         level.addFreshEntity(effect);
+    }
+
+    /** The Flame Bullet: how fast it flies, how far, what it does, and how long its burst is seen. */
+    private static final double BULLET_SPEED = 1.8D;
+    public static final int BULLET_TICKS = 14; // 25 meters
+    private static final float BULLET_DAMAGE = 5.0F;
+    private static final int BULLET_BURN_TICKS = 100;
+    public static final int BULLET_BURST_TICKS = 6;
+
+    /** A bullet of flame flying from the face of {@code caster} where they look. */
+    public static void spawnFlameBullet(ServerLevel level, ServerPlayer caster) {
+        Vec3 look = caster.getLookAngle();
+        Vec3 start = caster.getEyePosition().add(look.scale(0.8D)).add(0.0D, -0.25D, 0.0D);
+        WeaponEffectEntity effect = create(level, FLAME_BULLET, start, look, 1.0F, 0xFFFFFFFF, BULLET_TICKS + BULLET_BURST_TICKS);
+        effect.owner = caster.getUUID();
+        effect.setDeltaMovement(look.normalize().scale(BULLET_SPEED));
+        level.addFreshEntity(effect);
+    }
+
+    /**
+     * Flies the bullet on, to the first thing in its way. A living thing takes the damage and burns, and a block stops
+     * it. Then it bursts for a moment (the clients are told, in TARGET, how long ago, to draw the burst).
+     */
+    private void tickFlameBullet() {
+        if (!(level() instanceof ServerLevel serverLevel)) return;
+        if (igniteTicks >= 0) {
+            // Burst
+            igniteTicks++;
+            this.entityData.set(TARGET, igniteTicks);
+            if (igniteTicks >= BULLET_BURST_TICKS) discard();
+            return;
+        }
+        Vec3 motion = getDeltaMovement();
+        Vec3 from = position();
+        Vec3 to = from.add(motion);
+        Entity ownerEntity = owner == null ? null : serverLevel.getEntity(owner);
+        HitResult hit = serverLevel.clip(new ClipContext(from, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this));
+        Vec3 end = hit.getType() == HitResult.Type.MISS ? to : hit.getLocation();
+        EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(serverLevel, this, from, end,
+                new AABB(from, end).inflate(1.0D),
+                e -> e instanceof LivingEntity && e.isAlive() && e != ownerEntity && !e.isSpectator());
+        if (entityHit != null) {
+            Entity victim = entityHit.getEntity();
+            victim.hurt(fireSource(ownerEntity), BULLET_DAMAGE);
+            victim.setRemainingFireTicks(BULLET_BURN_TICKS);
+            burst(entityHit.getLocation());
+        } else if (hit.getType() != HitResult.Type.MISS) {
+            burst(hit.getLocation());
+        } else {
+            setPos(to.x, to.y, to.z);
+            if (--life <= BULLET_BURST_TICKS) discard();
+        }
+    }
+
+    private void burst(Vec3 at) {
+        setPos(at.x, at.y, at.z);
+        setDeltaMovement(Vec3.ZERO);
+        igniteTicks = 0;
+        this.entityData.set(TARGET, 0);
+        level().playSound(null, at.x, at.y, at.z, SoundEvents.GENERIC_BURN, SoundSource.PLAYERS, 0.8F, 1.2F);
     }
 
     /** A cloud of ash hanging in the air around {@code center}. */
@@ -361,6 +429,10 @@ public class WeaponEffectEntity extends Entity {
         }
         if (getKind() == ASH_CLOUD) {
             tickAshCloud();
+            return;
+        }
+        if (getKind() == FLAME_BULLET) {
+            tickFlameBullet();
             return;
         }
 

@@ -29,6 +29,7 @@ public class JutsuGrantHelper {
         switch (releaseType.toLowerCase()) {
             case "fire":
                 grantMultipleJutsus(serverPlayer, storage,
+                        ModItems.FLAME_BULLET_JUTSU, "Flame Bullet",
                         ModItems.FIRE_BALL_JUTSU, "Great Fireball Technique",
                         ModItems.GREAT_FIRE_ANNIHILATION_JUTSU, "Great Fire Annihilation",
                         ModItems.ASH_PILE_BURNING_JUTSU, "Fire Release: Ash Pile Burning");
@@ -128,6 +129,7 @@ public class JutsuGrantHelper {
         boolean modified = false;
 
         if (playerReleases.toLowerCase().contains("fire")) {
+            modified |= restoreIfMissing(serverPlayer, storage, ModItems.FLAME_BULLET_JUTSU, checkInventory);
             modified |= restoreIfMissing(serverPlayer, storage, ModItems.FIRE_BALL_JUTSU, checkInventory);
             modified |= restoreIfMissing(serverPlayer, storage, ModItems.GREAT_FIRE_ANNIHILATION_JUTSU, checkInventory);
             modified |= restoreIfMissing(serverPlayer, storage, ModItems.ASH_PILE_BURNING_JUTSU, checkInventory);

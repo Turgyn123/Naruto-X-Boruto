@@ -70,6 +70,13 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
             return;
         }
 
+        if (kind == WeaponEffectEntity.FLAME_BULLET) {
+            poseStack.pushPose();
+            renderFlameBullet(entity, age, partialTick, poseStack, bufferSource);
+            poseStack.popPose();
+            return;
+        }
+
         poseStack.pushPose();
         if (kind == WeaponEffectEntity.THREAD) {
             renderThread(entity, age, partialTick, poseStack, bufferSource);
@@ -85,6 +92,57 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
     }
 
     // ---------------------------------------------------------------- fire jutsu
+
+    /**
+     * Fire Release: Flame Bullet: a small ball of pixel flames with a tail of flames behind it, and when it hits
+     * something it bursts into flames that fly outwards and die down.
+     */
+    private void renderFlameBullet(WeaponEffectEntity entity, float age, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource) {
+        float yaw = Mth.lerp(partialTick, entity.yRotO, entity.getYRot()) * ((float) Math.PI / 180.0F);
+        float pitch = Mth.lerp(partialTick, entity.xRotO, entity.getXRot()) * ((float) Math.PI / 180.0F);
+        Vec3 dir = new Vec3(-Mth.sin(yaw) * Mth.cos(pitch), -Mth.sin(pitch), Mth.cos(yaw) * Mth.cos(pitch));
+        int ignition = entity.getTargetId();
+        float burstAge = ignition < 0 ? -1.0F : ignition + partialTick;
+        org.joml.Quaternionf camera = this.entityRenderDispatcher.cameraOrientation();
+        VertexConsumer blobs = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(FLAME_BLOB_TEXTURE));
+        int seed = entity.getId() * 131;
+        if (burstAge < 0.0F) {
+            // The bullet: a bright head and a tail that grows thinner and redder
+            float fadeIn = Mth.clamp(age / 2.0F, 0.0F, 1.0F);
+            for (int k = 5; k >= 0; k--) {
+                float t = k / 5.0F;
+                double size = (1.15D - 0.7D * t) * fadeIn;
+                Vec3 at = dir.scale(-0.55D * k);
+                float green = Mth.clamp(1.0F - t * 0.7F, 0.3F, 1.0F);
+                float blue = Mth.clamp(0.9F - t * 1.2F, 0.25F, 1.0F);
+                int frame = (int) (hash(seed + k) * 4.0F + age * 0.5F) & 3;
+                poseStack.pushPose();
+                poseStack.translate(at.x, at.y, at.z);
+                poseStack.mulPose(camera);
+                poseStack.mulPose(Axis.ZP.rotationDegrees(90.0F * ((int) (hash(seed + 20 + k) * 4.0F))));
+                billboardFrame(blobs, poseStack.last().pose(), (float) size, 0.95F * (1.0F - t * 0.4F), FULL_BRIGHT, 1.0F, green, blue, frame);
+                poseStack.popPose();
+            }
+        } else {
+            // The burst: flames fly outwards and die down
+            float t = Mth.clamp(burstAge / WeaponEffectEntity.BULLET_BURST_TICKS, 0.0F, 1.0F);
+            for (int k = 0; k < 14; k++) {
+                double yawK = hash(seed + 40 + k) * Math.PI * 2.0D;
+                double up = hash(seed + 60 + k) * 2.0D - 1.0D;
+                double ring = Math.sqrt(1.0D - up * up);
+                Vec3 out = new Vec3(Math.cos(yawK) * ring, up, Math.sin(yawK) * ring).scale(0.3D + 1.6D * t);
+                double size = (0.9D + 0.6D * hash(seed + 80 + k)) * (1.0D - 0.5D * t);
+                int frame = (int) (hash(seed + 100 + k) * 4.0F) & 3;
+                poseStack.pushPose();
+                poseStack.translate(out.x, out.y, out.z);
+                poseStack.mulPose(camera);
+                poseStack.mulPose(Axis.ZP.rotationDegrees(90.0F * ((int) (hash(seed + 120 + k) * 4.0F))));
+                billboardFrame(blobs, poseStack.last().pose(), (float) size, (1.0F - t) * 0.95F, FULL_BRIGHT,
+                        1.0F, Mth.clamp(1.0F - t * 0.7F, 0.3F, 1.0F), Mth.clamp(0.8F - t * 1.2F, 0.25F, 1.0F), frame);
+                poseStack.popPose();
+            }
+        }
+    }
 
     /**
      * Great Fire Annihilation: a dense cloud of chunky pixel flames pours out of the caster and fills a
