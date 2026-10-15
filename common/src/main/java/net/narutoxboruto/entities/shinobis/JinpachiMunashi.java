@@ -25,7 +25,7 @@ public class JinpachiMunashi extends AbstractShinobiMob {
     public static AttributeSupplier setAttribute() {
         return Monster.createMonsterAttributes()
                 .add(Attributes.MAX_HEALTH, 300.0D)
-                .add(Attributes.ARMOR, 25)
+                .add(Attributes.ARMOR, 10)
                 .add(Attributes.MOVEMENT_SPEED, 0.27D)
                 .add(Attributes.FOLLOW_RANGE, 40.0D)
                 .build();
