@@ -170,6 +170,8 @@ public class WeaponEffectEntity extends Entity {
     public static final double WAVE_HALF_ANGLE = 38.0D;
     public static final int WAVE_TICKS = 60;
     private static final float WAVE_DAMAGE = 3.0F;
+    /** How long the fire takes to die down once the caster lets go. */
+    private static final int WAVE_FADE_TICKS = 14;
     /** The cloud of ash: how big it is, how long it hangs in the air, and what it does when it burns. */
     private static final double CLOUD_RADIUS = 9.0D;
     public static final int CLOUD_TICKS = 20 * 20;
@@ -228,11 +230,29 @@ public class WeaponEffectEntity extends Entity {
     private void tickFireWave() {
         if (!(level() instanceof ServerLevel serverLevel)) return;
         Entity ownerEntity = owner == null ? null : serverLevel.getEntity(owner);
+        ServerPlayer caster = ownerEntity instanceof ServerPlayer p && p.isAlive() ? p : null;
+
+        // As long as the caster holds the jutsu the fire keeps going and turns with them. Once they let go it dies
+        // down for a moment and then goes out. The clients are told when it ends, to fade it out.
+        boolean held = caster != null && caster.isUsingItem()
+                && caster.getUseItem().getItem() instanceof net.narutoxboruto.items.jutsus.GreatFireAnnihilation;
+        if (held) {
+            life = WAVE_FADE_TICKS;
+            this.entityData.set(MAX_LIFE, tickCount + WAVE_FADE_TICKS);
+            Vec3 look = caster.getLookAngle();
+            Vec3 flat = new Vec3(look.x, 0.0D, look.z);
+            if (flat.lengthSqr() > 1.0E-4D) {
+                flat = flat.normalize();
+                Vec3 at = caster.position().add(flat.scale(0.8D));
+                setPos(at.x, at.y, at.z);
+                setYRot(caster.getYRot());
+                yRotO = caster.getYRot();
+            }
+        }
         if (--life <= 0) {
             discard();
             return;
         }
-        ServerPlayer caster = ownerEntity instanceof ServerPlayer p && p.isAlive() ? p : null;
 
         if (tickCount % 6 == 0) {
             serverLevel.playSound(null, getX(), getY() + 1.0D, getZ(), SoundEvents.BLAZE_SHOOT, SoundSource.PLAYERS, 1.2F, 0.5F);

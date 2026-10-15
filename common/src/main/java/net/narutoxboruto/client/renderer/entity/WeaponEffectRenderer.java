@@ -90,7 +90,8 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
      * Fire Release: Great Fire Annihilation: a huge wave of fire that spreads out in front of the caster in a wide fan,
      * as a wall of flame along the ground. The wall is made of curved sheets of flames, one behind the other, each
      * as high as the wave is far, that follow the ground and sway; the front one is the brightest. Round the front
-     * there are balls of fire for volume. It is drawn bright and adds its light to what is behind it. The server
+     * there are balls of fire for volume, and smoke rises off the top. All of it is pixel art in the style of the fire
+     * of Minecraft, bright, and the fire flickers frame by frame. The server
      * burns everything in the fan, using the same numbers (see {@link WeaponEffectEntity#WAVE_RANGE}).
      */
     private void renderFireWave(WeaponEffectEntity entity, float age, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource) {
@@ -105,7 +106,7 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
         double half = Math.toRadians(WeaponEffectEntity.WAVE_HALF_ANGLE);
         float fade = Mth.clamp((entity.getMaxLife() - age) / 14.0F, 0.0F, 1.0F);
         Matrix4f matrix = poseStack.last().pose();
-        VertexConsumer wall = bufferSource.getBuffer(RenderType.eyes(FLAME_WALL_TEXTURE));
+        VertexConsumer wall = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(FLAME_WALL_TEXTURE));
         int columns = 36;
         int sheets = 6;
         for (int k = 0; k < sheets; k++) {
@@ -126,13 +127,18 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
                 double lick = Math.sin(age * 0.35D + i * 0.9D + k * 1.7D) * sway;
                 Vec3 bottom = new Vec3(spot.x, groundY, spot.z);
                 Vec3 top = new Vec3(spot.x + right.x * lick, groundY + height, spot.z + right.z * lick);
-                float u = (float) (i * radius * 2.0D * half / columns / 6.0D) + k * 0.37F + (k % 2 == 0 ? 1 : -1) * age * 0.012F;
+                // The flame sheet is four frames of 16 pixels, one under the other. Every column of every sheet is in its
+                // own frame, so the fire flickers pixel by pixel like the fire of Minecraft.
+                float u = (float) (i * radius * 2.0D * half / columns / 4.0D) + k * 0.37F;
+                int frame = Math.floorMod((int) (age * 0.4F + k * 1.3F + i * 0.45F), 4);
+                float vBottom = (frame + 1) / 4.0F;
+                float vTop = frame / 4.0F;
                 // Every part of the sheet flickers a little on its own
                 float flicker = 0.85F + 0.15F * Mth.sin(age * 0.9F + i * 1.7F + k * 2.3F);
                 float a = alpha * flicker;
                 if (previousBottom != null) {
-                    quad(wall, matrix, previousBottom, previousU, 1.0F, previousAlpha, bottom, u, 1.0F, a,
-                            top, u, 0.0F, a, previousTop, previousU, 0.0F, previousAlpha, 1.0F, 1.0F, 1.0F);
+                    quad(wall, matrix, previousBottom, previousU, vBottom, previousAlpha, bottom, u, vBottom, a,
+                            top, u, vTop, a, previousTop, previousU, vTop, previousAlpha, 1.0F, 1.0F, 1.0F);
                 }
                 previousBottom = bottom;
                 previousTop = top;
@@ -143,7 +149,7 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
 
         // Balls of fire round the front of the wave, for volume
         org.joml.Quaternionf camera = this.entityRenderDispatcher.cameraOrientation();
-        VertexConsumer fire = bufferSource.getBuffer(RenderType.eyes(FIRE_PUFF_TEXTURE));
+        VertexConsumer fire = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(FIRE_PUFF_TEXTURE));
         java.util.Random random = new java.util.Random(entity.getId() * 104729L + 5L);
         for (int i = 0; i < 22; i++) {
             double radius = front - random.nextDouble() * 9.0D;
@@ -157,7 +163,35 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
             poseStack.translate(spot.x, groundY + lift, spot.z);
             poseStack.mulPose(camera);
             poseStack.mulPose(Axis.ZP.rotation((float) (random.nextDouble() * Math.PI * 2.0D + age * 0.05D)));
-            billboard(fire, poseStack.last().pose(), (float) size, 0.55F * fade, FULL_BRIGHT, 1.0F, 1.0F, 1.0F);
+            billboard(fire, poseStack.last().pose(), (float) size, 0.9F * fade, FULL_BRIGHT, 1.0F, 1.0F, 1.0F);
+            poseStack.popPose();
+        }
+        renderWaveSmoke(entity, age, partialTick, poseStack, bufferSource, front, forward, right, half, fade);
+    }
+
+    /** Dark smoke that rises off the top of the wave of fire and drifts up. */
+    private void renderWaveSmoke(WeaponEffectEntity entity, float age, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource,
+                                 double front, Vec3 forward, Vec3 right, double half, float fade) {
+        Level level = entity.level();
+        Vec3 origin = entity.getPosition(partialTick);
+        org.joml.Quaternionf camera = this.entityRenderDispatcher.cameraOrientation();
+        VertexConsumer smoke = bufferSource.getBuffer(RenderType.entityTranslucent(ASH_PUFF_TEXTURE));
+        java.util.Random random = new java.util.Random(entity.getId() * 15485863L + 11L);
+        int light = (10 << 20) | (10 << 4);
+        for (int i = 0; i < 14; i++) {
+            double radius = front - random.nextDouble() * 14.0D;
+            if (radius < 3.0D) continue;
+            double angle = (random.nextDouble() * 2.0D - 1.0D) * half * 0.9D;
+            double wallHeight = 2.5D + 4.5D * radius / WeaponEffectEntity.WAVE_RANGE;
+            // It rises, and starts again at the top of the flames
+            double rise = ((age * 0.05D + random.nextDouble() * 4.0D) % 4.0D);
+            Vec3 spot = forward.scale(Math.cos(angle) * radius).add(right.scale(Math.sin(angle) * radius));
+            double groundY = groundAt(level, origin.x + spot.x, origin.z + spot.z, origin.y) - origin.y;
+            float alpha = (float) (0.55D * (1.0D - rise / 4.0D)) * fade;
+            poseStack.pushPose();
+            poseStack.translate(spot.x, groundY + wallHeight * 0.9D + rise, spot.z);
+            poseStack.mulPose(camera);
+            billboard(smoke, poseStack.last().pose(), (float) (3.0D + random.nextDouble() * 2.5D + rise * 0.4D), alpha, light, 0.8F, 0.8F, 0.8F);
             poseStack.popPose();
         }
     }
@@ -238,7 +272,7 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
                 fireAlpha = 1.0F - t * t;
                 swell = 1.0F + t * 0.9F;
             }
-            VertexConsumer fire = bufferSource.getBuffer(RenderType.eyes(FIRE_PUFF_TEXTURE));
+            VertexConsumer fire = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(FIRE_PUFF_TEXTURE));
             for (float[] p : puff) {
                 poseStack.pushPose();
                 poseStack.translate(p[0], p[1], p[2]);
