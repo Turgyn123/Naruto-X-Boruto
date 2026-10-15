@@ -143,9 +143,9 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
     // ---------------------------------------------------------------- thread
 
     /**
-     * Nuibari, as in the video: a long needle flies from the hand to the target and lands on the ground at its feet,
+     * Nuibari, as in the video: a long needle flies from the hand to the target and sticks in the ground in front of it,
      * the target flashes red, a thin thread runs from the eye of the needle to the target, another from the hand
-     * to the target, and thread winds round the target like stitches.
+     * to the target, and a few loose bands of thread are stitched round its body.
      */
     private void renderThread(WeaponEffectEntity entity, float age, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource) {
         Entity target = entity.level().getEntity(entity.getTargetId());
@@ -158,14 +158,16 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
 
         Vec3 flat = new Vec3(feet.x - hand.x, 0.0D, feet.z - hand.z);
         flat = flat.lengthSqr() < 1.0E-4D ? new Vec3(0.0D, 0.0D, 1.0D) : flat.normalize();
-        Vec3 landTip = feet.add(0.0D, 0.06D, 0.0D);
+        // The needle ends up stuck in the ground in front of the target, leaning over it, and stays there
+        Vec3 landTip = feet.subtract(flat.scale(0.5D)).add(0.0D, -0.1D, 0.0D);
+        Vec3 rest = new Vec3(flat.x * 0.5D, -0.87D, flat.z * 0.5D).normalize();
 
         // The flight of the needle: straight at the target, and flat on the ground when it has landed
         float flight = Mth.clamp(age / NEEDLE_FLIGHT_TICKS, 0.0F, 1.0F);
         Vec3 toTarget = landTip.subtract(hand);
         Vec3 flightDirection = toTarget.lengthSqr() < 1.0E-4D ? flat : toTarget.normalize();
         float settle = flight * flight * flight * flight;
-        Vec3 direction = flightDirection.scale(1.0F - settle).add(flat.scale(settle));
+        Vec3 direction = flightDirection.scale(1.0F - settle).add(rest.scale(settle));
         direction = direction.lengthSqr() < 1.0E-4D ? flat : direction.normalize();
         Vec3 tip = hand.add(landTip.subtract(hand).scale(flight));
         Vec3 tail = tip.subtract(direction.scale(NEEDLE_LENGTH));
@@ -177,12 +179,12 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
         if (flight >= 1.0F) {
             VertexConsumer thread = bufferSource.getBuffer(RenderType.entityTranslucent(THREAD_TEXTURE));
             float grow = Mth.clamp((age - NEEDLE_FLIGHT_TICKS) / 6.0F, 0.0F, 1.0F);
-            // A thread from the hand to the target, so it can be seen what holds it
-            strip(thread, matrix, Vec3.ZERO, chest.subtract(hand).scale(grow), 0.02D, 1.0F, true);
-            // From the eye of the needle to the target
-            strip(thread, matrix, tail.subtract(hand), chest.subtract(hand), 0.012D, 1.0F, true);
-            // Stitches: thread winds round the target from its feet up
-            wrapTarget(thread, matrix, target, feet.subtract(hand), age, grow);
+            // A thin thread from the hand to the target, so it can be seen what holds it
+            strip(thread, matrix, Vec3.ZERO, chest.subtract(hand).scale(grow), 0.006D, 1.0F, true);
+            // From the eye of the needle, which sticks out of the ground, to the target
+            strip(thread, matrix, tail.subtract(hand), chest.subtract(hand), 0.006D, 1.0F, true);
+            // A few loose stitches round the body. They pull tight and then stay where they are.
+            stitches(thread, matrix, target, feet.subtract(hand), grow);
         }
 
         // The target flashes red when the needle lands
@@ -198,19 +200,24 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
         }
     }
 
-    /** Thread winding round a target in a spiral from its feet to its head, like stitches. */
-    private static void wrapTarget(VertexConsumer vc, Matrix4f matrix, Entity target, Vec3 feetFromHand, float age, float grow) {
+    /** Bands of thread across the body: two over the chest and shoulders, two round the legs. They do not move. */
+    private static void stitches(VertexConsumer vc, Matrix4f matrix, Entity target, Vec3 feetFromHand, float grow) {
         double height = target.getBbHeight();
-        double radius = target.getBbWidth() * 0.6D + 0.08D;
-        int segments = 24;
-        double turns = 3.0D;
-        Vec3 previous = null;
-        for (int i = 0; i <= segments; i++) {
-            double progress = (double) i / segments;
-            double angle = progress * turns * Math.PI * 2.0D + age * 0.12D;
-            Vec3 point = feetFromHand.add(Math.cos(angle) * radius, progress * grow * height, Math.sin(angle) * radius);
-            if (previous != null) strip(vc, matrix, previous, point, 0.012D, 1.0F, true);
-            previous = point;
+        double radius = target.getBbWidth() * 0.58D + 0.06D;
+        // Height as a part of the body, how much the band slants, and which way round it starts
+        double[][] bands = {{0.80D, 0.10D, 0.0D}, {0.60D, -0.09D, 1.5D}, {0.36D, 0.05D, 0.7D}, {0.14D, -0.05D, 2.4D}};
+        int segments = 18;
+        // The bands start wide and pull tight over the first moments
+        double r = radius * (1.0D + (1.0D - grow));
+        for (double[] band : bands) {
+            Vec3 previous = null;
+            for (int i = 0; i <= segments; i++) {
+                double angle = (double) i / segments * Math.PI * 2.0D;
+                double y = (band[0] + band[1] * Math.sin(angle + band[2])) * height;
+                Vec3 point = feetFromHand.add(Math.cos(angle) * r, y, Math.sin(angle) * r);
+                if (previous != null) strip(vc, matrix, previous, point, 0.006D, 1.0F, true);
+                previous = point;
+            }
         }
     }
 
