@@ -105,20 +105,16 @@ public class Hiramekarei extends AbstractAbilitySword {
         return stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag().getBoolean(COAT_KEY);
     }
 
-    /** The coat is shown as a glowing shell of chakra around the blades: their own models, see {@link #updateModel}. */
+    /** The coat is drawn as chakra around the blades by {@code HiramekareiChakraRenderer}. */
     private void setCoated(ItemStack stack, boolean coated) {
         CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> tag.putBoolean(COAT_KEY, coated));
         stack.remove(DataComponents.ENCHANTMENT_GLINT_OVERRIDE);
         updateModel(stack);
     }
 
-    /**
-     * The model follows the state: 0 combined, 1 one blade, and 2 and 3 the same with the blades wrapped in chakra
-     * ({@code hiramekarei_two_chakra} and {@code hiramekarei_one_chakra}).
-     */
+    /** The model follows the state: 0 is the combined blades, 1 is one blade. */
     private void updateModel(ItemStack stack) {
-        int model = (super.isActive(stack) ? 1 : 0) + (isCoated(stack) ? 2 : 0);
-        stack.set(DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(model));
+        stack.set(DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(super.isActive(stack) ? 1 : 0));
     }
 
     // ---------------------------------------------------------------- ability 1: both blades
