@@ -2,14 +2,18 @@ package net.narutoxboruto.items.swords;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.particles.DustParticleOptions;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.SwordItem;
@@ -24,6 +28,8 @@ import net.narutoxboruto.capabilities.info.Chakra;
 import net.narutoxboruto.entities.effects.WeaponEffectEntity;
 import net.narutoxboruto.main.platform.Services;
 import net.narutoxboruto.util.ModUtil;
+
+import org.joml.Vector3f;
 
 import java.util.List;
 
@@ -69,6 +75,7 @@ public class Hiramekarei extends AbstractAbilitySword {
     private static final int CHARGE_INTERVAL = 4;
     private static final int MAX_USE_TICKS = 72000;
     private static final int CRESCENT_COLOR = 0xB06FD8FF;
+    private static final DustParticleOptions CHAKRA_DUST = new DustParticleOptions(new Vector3f(0.45F, 0.85F, 1.0F), 0.9F);
     /** Marks the locked copy of the blade that sits in the off hand while the blades are split. */
     private static final String OFFHAND_KEY = "hiramekarei_offhand";
 
@@ -105,10 +112,10 @@ public class Hiramekarei extends AbstractAbilitySword {
         return stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag().getBoolean(COAT_KEY);
     }
 
-    /** The coat is shown with the glow of an enchanted item. */
+    /** The coat is shown as chakra around the blades, see {@link #spawnChakraAura}. */
     private void setCoated(ItemStack stack, boolean coated) {
         CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> tag.putBoolean(COAT_KEY, coated));
-        stack.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, coated ? Boolean.TRUE : null);
+        stack.remove(DataComponents.ENCHANTMENT_GLINT_OVERRIDE);
     }
 
     // ---------------------------------------------------------------- ability 1: both blades
@@ -159,10 +166,37 @@ public class Hiramekarei extends AbstractAbilitySword {
         return copy;
     }
 
+    /** Wisps of chakra along the blade, in the hand it is held in. */
+    private static void spawnChakraAura(ServerLevel level, ServerPlayer player, boolean offhand) {
+        float yaw = player.getYRot() * Mth.DEG_TO_RAD;
+        Vec3 right = new Vec3(-Mth.cos(yaw), 0.0D, -Mth.sin(yaw));
+        boolean rightArm = (player.getMainArm() == HumanoidArm.RIGHT) != offhand;
+        Vec3 look = player.getLookAngle();
+        Vec3 base = player.position()
+                .add(0.0D, player.isCrouching() ? 0.9D : 1.1D, 0.0D)
+                .add(right.scale(rightArm ? 0.4D : -0.4D))
+                .add(look.scale(0.5D));
+        for (int i = 0; i < 3; i++) {
+            Vec3 at = base.add(look.scale(0.35D * i));
+            level.sendParticles(CHAKRA_DUST, at.x, at.y, at.z, 1, 0.07D, 0.07D, 0.07D, 0.0D);
+            if (i == 1) {
+                level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, at.x, at.y, at.z, 1, 0.08D, 0.08D, 0.08D, 0.004D);
+            }
+        }
+    }
+
     /** Runs every tick for a Hiramekarei in an inventory: the main blade, and the off hand copy. */
     @Override
     public void inventoryTick(ItemStack stack, Level level, net.minecraft.world.entity.Entity entity, int slotId, boolean isSelected) {
         super.inventoryTick(stack, level, entity, slotId, isSelected);
+        // The coat: chakra around the blade in the hand
+        if (!level.isClientSide() && entity instanceof ServerPlayer holder && isCoated(stack) && level.getGameTime() % 2 == 0) {
+            if (isOffhandBlade(stack) && stack == holder.getOffhandItem()) {
+                spawnChakraAura((ServerLevel) level, holder, true);
+            } else if (stack == holder.getMainHandItem() && !isOffhandBlade(stack)) {
+                spawnChakraAura((ServerLevel) level, holder, false);
+            }
+        }
         // While the coat is on it drains 2 stored chakra every second, and goes out when it is empty
         if (!level.isClientSide() && entity instanceof ServerPlayer wielder && !isOffhandBlade(stack)
                 && isCoated(stack) && level.getGameTime() % COAT_DRAIN_INTERVAL == 0) {
@@ -212,14 +246,14 @@ public class Hiramekarei extends AbstractAbilitySword {
             if (!splitInMainHand) {
                 player.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
             } else {
-                // The copy follows the real blade: stored chakra and the glow of the coat
+                // The copy follows the real blade: stored chakra and the coat
                 Hiramekarei blade = (Hiramekarei) main.getItem();
                 if (blade.getStored(off) != blade.getStored(main)) {
                     blade.setStored(off, blade.getStored(main));
                 }
-                if (!java.util.Objects.equals(off.get(DataComponents.ENCHANTMENT_GLINT_OVERRIDE),
-                        main.get(DataComponents.ENCHANTMENT_GLINT_OVERRIDE))) {
-                    off.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, main.get(DataComponents.ENCHANTMENT_GLINT_OVERRIDE));
+                boolean coated = blade.isCoated(main);
+                if (blade.isCoated(off) != coated) {
+                    CustomData.update(DataComponents.CUSTOM_DATA, off, tag -> tag.putBoolean(COAT_KEY, coated));
                 }
             }
         } else if (splitInMainHand) {
@@ -251,6 +285,21 @@ public class Hiramekarei extends AbstractAbilitySword {
                 player.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
             }
         }
+        return false;
+    }
+
+    // ---------------------------------------------------------------- no bounce
+
+    /**
+     * The stored chakra changes every second while the coat is on. That must not play the re-equip animation, so
+     * only a different item or slot does. Forge and NeoForge call this one.
+     */
+    public boolean shouldCauseReequipAnimation(ItemStack oldStack, ItemStack newStack, boolean slotChanged) {
+        return slotChanged || oldStack.getItem() != newStack.getItem();
+    }
+
+    /** Fabric's version of the same: a change in the components does not play the re-equip animation. */
+    public boolean allowComponentsUpdateAnimation(Player player, InteractionHand hand, ItemStack oldStack, ItemStack newStack) {
         return false;
     }
 
