@@ -19,18 +19,18 @@ import net.narutoxboruto.items.swords.Hiramekarei;
 import net.narutoxboruto.main.Main;
 import org.joml.Matrix4f;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 
 /**
- * The chakra coat of the Hiramekarei, drawn the way the anime does it: not a tint on the blade but a big flame-like
- * aura of chakra around it, soft pale-blue mist with white highlights, flowing along the blade and licking off past
- * its tip.
+ * The chakra coat of the Hiramekarei: the blades are wrapped in swirling chakra that has the shape of the weapon.
  *
- * The aura is built around the blade: the model is measured once (how wide it is along its length) and three
- * sleeves of flames are wrapped around that outline, one close to the blade and two wider. Each sleeve scrolls a flame
- * texture along the blade and wavers, so the flames stream towards the tip. It is drawn fully bright and see-through.
- * The loaders' item renderer mixins just call {@link #render} after the item itself has been drawn.
+ * The blade's own model is drawn again in layers, each one a little larger than the last, with a soft pale blue mist
+ * texture that drifts along the blade. The layers get fainter the further out they are, so the chakra is thick on
+ * the blade and thins out into the air, and the edge of every layer ripples. It is drawn fully bright and
+ * see-through. The loaders' item renderer mixins just call {@link #render} after the item itself has been drawn.
  */
 public final class HiramekareiChakraRenderer {
 
@@ -41,27 +41,18 @@ public final class HiramekareiChakraRenderer {
 
     private static final RandomSource RANDOM = RandomSource.create(42L);
 
-    /** How wide the blade is along its length: the middle and the half sizes of its outline in slices. */
-    private static final int SLICES = 24;
-    /** The ring of the aura: rows along the blade and columns around it. */
-    private static final int ROWS = 36;
-    private static final int COLUMNS = 24;
-    /** The flames lick on past the tip of the blade, this much of its length. */
-    private static final float TIP_EXTENSION = 0.16F;
+    /** The faces of a model, measured once: the four corners of every face and the way it looks. */
+    private record Mesh(float[] corners, float[] normals, int faces) {}
 
-    private record Outline(float yMin, float yMax, float[] cx, float[] cz, float[] hx, float[] hz) {}
-
-    private static final Map<BakedModel, Outline> OUTLINES = new WeakHashMap<>();
+    private static final Map<BakedModel, Mesh> MESHES = new WeakHashMap<>();
 
     /** Call after the item itself has been drawn. Does nothing unless this is a Hiramekarei with its coat on. */
     public static void render(ItemStack stack, ItemDisplayContext context, boolean leftHand, PoseStack poseStack,
                               MultiBufferSource buffer, BakedModel model) {
         if (!(stack.getItem() instanceof Hiramekarei blade) || !blade.isCoated(stack)) return;
-        // Not in the inventory, where the aura would spill over the icon
-        if (context == ItemDisplayContext.GUI) return;
 
-        Outline outline = OUTLINES.computeIfAbsent(model, HiramekareiChakraRenderer::measure);
-        if (outline == null) return;
+        Mesh mesh = MESHES.computeIfAbsent(model, HiramekareiChakraRenderer::measure);
+        if (mesh.faces == 0) return;
 
         float time = (Util.getMillis() % 1_000_000L) / 1000.0F;
 
@@ -70,7 +61,7 @@ public final class HiramekareiChakraRenderer {
         model.getTransforms().getTransform(context).apply(leftHand, poseStack);
         poseStack.translate(-0.5F, -0.5F, -0.5F);
 
-        // The aura does not write depth, so the blade must be drawn first or it paints over the aura
+        // The chakra does not write depth, so the blade must be drawn first or it paints over the chakra
         if (buffer instanceof MultiBufferSource.BufferSource source) {
             source.endBatch();
         }
@@ -78,175 +69,93 @@ public final class HiramekareiChakraRenderer {
         Matrix4f matrix = poseStack.last().pose();
         VertexConsumer consumer = buffer.getBuffer(RenderType.entityTranslucentEmissive(TEXTURE));
 
-        // From the outside in. Each sleeve has its own size, flame texture speed and turn, so the flames overlap
-        // and cross instead of moving as one.
-        sleeve(consumer, matrix, outline, time, 1.55F, 0.130F, 0.16F, 0.35F, 1, 0.30F);
-        sleeve(consumer, matrix, outline, time, 1.40F, 0.100F, 0.22F, 0.45F, 1, 1.70F);
-        sleeve(consumer, matrix, outline, time, 1.25F, 0.065F, 0.28F, 0.60F, 2, 3.10F);
-        sleeve(consumer, matrix, outline, time, 1.12F, 0.035F, 0.34F, 0.75F, 1, 4.20F);
-        sleeve(consumer, matrix, outline, time, 1.04F, 0.015F, 0.40F, 0.90F, 2, 5.30F);
+        // From the outside in: grow, strength, flow speed, size of the mist. Each layer flows at its own speed, so
+        // the mist crosses itself instead of moving as one.
+        if (context != ItemDisplayContext.GUI) {
+            layer(consumer, matrix, mesh, time, 0.110F, 0.07F, 0.35F, 0.55F);
+            layer(consumer, matrix, mesh, time, 0.075F, 0.11F, 0.45F, 0.65F);
+            layer(consumer, matrix, mesh, time, 0.045F, 0.17F, 0.60F, 0.80F);
+            layer(consumer, matrix, mesh, time, 0.022F, 0.26F, 0.75F, 0.95F);
+        }
+        layer(consumer, matrix, mesh, time, 0.009F, 0.38F, 0.90F, 1.10F);
+        layer(consumer, matrix, mesh, time, 0.003F, 0.50F, 1.00F, 1.20F);
 
         poseStack.popPose();
     }
 
-    /** Measures the blade: its centre and half widths in slices from one end to the other. */
-    private static Outline measure(BakedModel model) {
-        float yMin = Float.MAX_VALUE;
-        float yMax = -Float.MAX_VALUE;
+    /** Reads the faces of the blade model once. */
+    private static Mesh measure(BakedModel model) {
+        List<float[]> faces = new ArrayList<>();
         for (int i = 0; i <= Direction.values().length; i++) {
             Direction side = i < Direction.values().length ? Direction.values()[i] : null;
             for (BakedQuad quad : model.getQuads(null, side, RANDOM)) {
                 int[] data = quad.getVertices();
+                float[] f = new float[15]; // 4 corners, then the normal
                 for (int v = 0; v < 4; v++) {
-                    float y = Float.intBitsToFloat(data[v * 8 + 1]);
-                    yMin = Math.min(yMin, y);
-                    yMax = Math.max(yMax, y);
+                    f[v * 3] = Float.intBitsToFloat(data[v * 8]);
+                    f[v * 3 + 1] = Float.intBitsToFloat(data[v * 8 + 1]);
+                    f[v * 3 + 2] = Float.intBitsToFloat(data[v * 8 + 2]);
                 }
-            }
-        }
-        if (yMax - yMin < 1.0e-4F) return null;
-
-        float[] minX = new float[SLICES];
-        float[] maxX = new float[SLICES];
-        float[] minZ = new float[SLICES];
-        float[] maxZ = new float[SLICES];
-        java.util.Arrays.fill(minX, Float.MAX_VALUE);
-        java.util.Arrays.fill(minZ, Float.MAX_VALUE);
-        java.util.Arrays.fill(maxX, -Float.MAX_VALUE);
-        java.util.Arrays.fill(maxZ, -Float.MAX_VALUE);
-
-        for (int i = 0; i <= Direction.values().length; i++) {
-            Direction side = i < Direction.values().length ? Direction.values()[i] : null;
-            for (BakedQuad quad : model.getQuads(null, side, RANDOM)) {
-                int[] data = quad.getVertices();
-                for (int v = 0; v < 4; v++) {
-                    float x = Float.intBitsToFloat(data[v * 8]);
-                    float y = Float.intBitsToFloat(data[v * 8 + 1]);
-                    float z = Float.intBitsToFloat(data[v * 8 + 2]);
-                    int s = Mth.clamp((int) ((y - yMin) / (yMax - yMin) * SLICES), 0, SLICES - 1);
-                    minX[s] = Math.min(minX[s], x);
-                    maxX[s] = Math.max(maxX[s], x);
-                    minZ[s] = Math.min(minZ[s], z);
-                    maxZ[s] = Math.max(maxZ[s], z);
+                float ax = f[3] - f[0], ay = f[4] - f[1], az = f[5] - f[2];
+                float bx = f[9] - f[0], by = f[10] - f[1], bz = f[11] - f[2];
+                float nx = ay * bz - az * by;
+                float ny = az * bx - ax * bz;
+                float nz = ax * by - ay * bx;
+                float length = Mth.sqrt(nx * nx + ny * ny + nz * nz);
+                if (length < 1.0e-8F) continue;
+                nx /= length;
+                ny /= length;
+                nz /= length;
+                Direction face = quad.getDirection();
+                if (nx * face.getStepX() + ny * face.getStepY() + nz * face.getStepZ() < 0.0F) {
+                    nx = -nx;
+                    ny = -ny;
+                    nz = -nz;
                 }
+                f[12] = nx;
+                f[13] = ny;
+                f[14] = nz;
+                faces.add(f);
             }
         }
-
-        // Empty slices take their neighbour's outline, then everything is smoothed so the aura has no steps
-        for (int s = 1; s < SLICES; s++) copyIfEmpty(minX, maxX, minZ, maxZ, s, s - 1);
-        for (int s = SLICES - 2; s >= 0; s--) copyIfEmpty(minX, maxX, minZ, maxZ, s, s + 1);
-        float[] cx = new float[SLICES];
-        float[] cz = new float[SLICES];
-        float[] hx = new float[SLICES];
-        float[] hz = new float[SLICES];
-        for (int s = 0; s < SLICES; s++) {
-            cx[s] = (minX[s] + maxX[s]) * 0.5F;
-            cz[s] = (minZ[s] + maxZ[s]) * 0.5F;
-            hx[s] = Math.max(0.02F, (maxX[s] - minX[s]) * 0.5F);
-            hz[s] = Math.max(0.02F, (maxZ[s] - minZ[s]) * 0.5F);
+        float[] corners = new float[faces.size() * 12];
+        float[] normals = new float[faces.size() * 3];
+        for (int i = 0; i < faces.size(); i++) {
+            System.arraycopy(faces.get(i), 0, corners, i * 12, 12);
+            System.arraycopy(faces.get(i), 12, normals, i * 3, 3);
         }
-        smooth(cx);
-        smooth(cz);
-        smooth(hx);
-        smooth(hz);
-        return new Outline(yMin, yMax, cx, cz, hx, hz);
+        return new Mesh(corners, normals, faces.size());
     }
 
-    private static void copyIfEmpty(float[] minX, float[] maxX, float[] minZ, float[] maxZ, int to, int from) {
-        if (minX[to] == Float.MAX_VALUE) {
-            minX[to] = minX[from];
-            maxX[to] = maxX[from];
-            minZ[to] = minZ[from];
-            maxZ[to] = maxZ[from];
-        }
-    }
-
-    private static void smooth(float[] values) {
-        for (int pass = 0; pass < 2; pass++) {
-            float[] copy = values.clone();
-            for (int i = 0; i < values.length; i++) {
-                float before = copy[Math.max(0, i - 1)];
-                float after = copy[Math.min(values.length - 1, i + 1)];
-                values[i] = (before + copy[i] * 2.0F + after) * 0.25F;
+    /** One layer of chakra: every face of the blade, pushed outwards by {@code grow}, with the mist on it. */
+    private static void layer(VertexConsumer consumer, Matrix4f matrix, Mesh mesh, float time, float grow,
+                              float strength, float speed, float scale) {
+        int alpha = Mth.clamp((int) (strength * 255.0F), 0, 255);
+        for (int f = 0; f < mesh.faces; f++) {
+            float nx = mesh.normals[f * 3];
+            float ny = mesh.normals[f * 3 + 1];
+            float nz = mesh.normals[f * 3 + 2];
+            for (int v = 0; v < 4; v++) {
+                int o = f * 12 + v * 3;
+                float px = mesh.corners[o];
+                float py = mesh.corners[o + 1];
+                float pz = mesh.corners[o + 2];
+                // The edge of the layer ripples, so the chakra seems alive
+                float ripple = 1.0F + 0.45F * Mth.sin(time * 2.5F * speed + px * 7.0F + py * 5.0F + pz * 9.0F);
+                float g = grow * ripple;
+                float x = px + nx * g;
+                float y = py + ny * g;
+                float z = pz + nz * g;
+                // The mist drifts along the blade towards the tip, and slowly round it
+                float u = (x + z) * 5.0F * scale + time * speed * 0.06F;
+                float w = y * 0.9F * scale - time * speed * 0.55F;
+                consumer.addVertex(matrix, x, y, z)
+                        .setColor(255, 255, 255, alpha)
+                        .setUv(u, w)
+                        .setOverlay(OverlayTexture.NO_OVERLAY)
+                        .setLight(LightTexture.FULL_BRIGHT)
+                        .setNormal(nx, ny, nz);
             }
         }
-    }
-
-    /** The outline at a height, between the slices. */
-    private static float at(float[] values, float t) {
-        float f = Mth.clamp(t, 0.0F, 1.0F) * SLICES - 0.5F;
-        int i = Mth.clamp((int) Math.floor(f), 0, SLICES - 1);
-        int j = Math.min(SLICES - 1, i + 1);
-        return Mth.lerp(Mth.clamp(f - i, 0.0F, 1.0F), values[i], values[j]);
-    }
-
-    /**
-     * One sleeve of flames around the blade: a tube that follows the outline of the blade, grown by a factor and a
-     * margin, tapering to nothing past the tip. It is drawn from both sides.
-     */
-    private static void sleeve(VertexConsumer consumer, Matrix4f matrix, Outline o, float time, float grow,
-                               float margin, float strength, float speed, int turns, float phase) {
-        float length = o.yMax - o.yMin;
-        float total = length * (1.0F + TIP_EXTENSION);
-        float[][][] ring = new float[ROWS + 1][COLUMNS + 1][5]; // x, y, z, u, v
-        float[] fade = new float[ROWS + 1];
-
-        for (int r = 0; r <= ROWS; r++) {
-            float y = o.yMin + total * r / ROWS;
-            float t = (y - o.yMin) / length;
-            // Past the tip the flames narrow to a point
-            float taper = t <= 1.0F ? 1.0F : (float) Math.pow(Math.max(0.0F, 1.0F - (t - 1.0F) / TIP_EXTENSION), 0.5);
-            float cx = at(o.cx, t);
-            float cz = at(o.cz, t);
-            float hx = at(o.hx, t);
-            float hz = at(o.hz, t);
-            // Starts soft at the hilt, and thins out towards the tip
-            fade[r] = Mth.clamp(r / (ROWS * 0.12F), 0.0F, 1.0F) * (t <= 1.0F ? 1.0F : taper);
-
-            for (int c = 0; c <= COLUMNS; c++) {
-                float angle = (float) (2.0D * Math.PI * c / COLUMNS);
-                // The flames waver in size as they flow
-                float wobble = 1.0F + 0.08F * Mth.sin(time * 1.8F * speed + angle * 2.0F + y * 4.0F + phase)
-                        + 0.04F * Mth.sin(time * 2.4F * speed - angle * 3.0F + y * 3.0F);
-                float a = (hx * grow + margin) * wobble * taper;
-                float b = (hz * grow + margin) * wobble * taper;
-                float[] p = ring[r][c];
-                p[0] = cx + a * Mth.cos(angle);
-                p[1] = y;
-                p[2] = cz + b * Mth.sin(angle);
-                // The flame texture: round the blade, and along it so that the flames point at the tip and flow
-                p[3] = (float) c / COLUMNS * turns + phase * 0.1F + time * speed * 0.07F;
-                p[4] = (o.yMax + length * TIP_EXTENSION - y) * 0.55F + time * speed * 0.45F;
-            }
-        }
-
-        for (int r = 0; r < ROWS; r++) {
-            for (int c = 0; c < COLUMNS; c++) {
-                float[] p0 = ring[r][c];
-                float[] p1 = ring[r][c + 1];
-                float[] p2 = ring[r + 1][c + 1];
-                float[] p3 = ring[r + 1][c];
-                float a0 = fade[r];
-                float a1 = fade[r + 1];
-                vertex(consumer, matrix, p0, strength * a0);
-                vertex(consumer, matrix, p1, strength * a0);
-                vertex(consumer, matrix, p2, strength * a1);
-                vertex(consumer, matrix, p3, strength * a1);
-                // The other side
-                vertex(consumer, matrix, p3, strength * a1);
-                vertex(consumer, matrix, p2, strength * a1);
-                vertex(consumer, matrix, p1, strength * a0);
-                vertex(consumer, matrix, p0, strength * a0);
-            }
-        }
-    }
-
-    private static void vertex(VertexConsumer consumer, Matrix4f matrix, float[] p, float alpha) {
-        consumer.addVertex(matrix, p[0], p[1], p[2])
-                .setColor(255, 255, 255, Mth.clamp((int) (alpha * 255.0F), 0, 255))
-                .setUv(p[3], p[4])
-                .setOverlay(OverlayTexture.NO_OVERLAY)
-                .setLight(LightTexture.FULL_BRIGHT)
-                .setNormal(0.0F, 1.0F, 0.0F);
     }
 }
