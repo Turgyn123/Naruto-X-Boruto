@@ -29,6 +29,7 @@ import net.narutoxboruto.effect.ModEffects;
 import net.narutoxboruto.entities.ModeHandler;
 import net.narutoxboruto.items.PreventSlow;
 import net.narutoxboruto.items.swords.Hiramekarei;
+import net.narutoxboruto.items.swords.Kiba;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -150,12 +151,13 @@ public abstract class MixinPlayer extends LivingEntity implements ModeHandler {
         }
     }
 
-    /** The off hand Hiramekarei is never dropped, and throwing the real one combines the blades again. */
+    /** The off hand copies of the Hiramekarei and the Kiba are never dropped, and throwing the real blade removes them. */
     @Inject(method = "drop(Lnet/minecraft/world/item/ItemStack;ZZ)Lnet/minecraft/world/entity/item/ItemEntity;",
             at = @At("HEAD"), cancellable = true)
     private void narutoxboruto$dropSplitBlades(ItemStack dropped, boolean dropAround, boolean includeThrower,
                                                CallbackInfoReturnable<ItemEntity> cir) {
-        if ((Object) this instanceof ServerPlayer serverPlayer && Hiramekarei.onDrop(serverPlayer, dropped)) {
+        if ((Object) this instanceof ServerPlayer serverPlayer
+                && (Hiramekarei.onDrop(serverPlayer, dropped) || Kiba.onDrop(serverPlayer, dropped))) {
             cir.setReturnValue(null);
         }
     }

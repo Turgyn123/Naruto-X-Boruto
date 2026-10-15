@@ -2,6 +2,7 @@ package net.narutoxboruto.items.swords;
 
 import net.narutoxboruto.main.platform.Services;
 
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -9,10 +10,12 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.SwordItem;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.phys.Vec3;
@@ -32,19 +35,121 @@ import java.util.List;
  * - Drains 5 chakra per second while active
  * - Stuns enemies hit while ability is active
  * - Right-click to toggle on/off
+ *
+ * Kiba is a pair of blades: while you hold it in your main hand a second Kiba is in your off hand. That copy is
+ * locked, it cannot be moved or thrown, and it is gone as soon as the real Kiba is not in your main hand. Throwing the
+ * real one away removes it too. It works the same way as the split Hiramekarei.
  */
 public class Kiba extends SwordItem implements Vanishable {
     private static final int CHAKRA_DRAIN_PER_SECOND = 5;
     private static final int STUN_DURATION_TICKS = 40; // 2 seconds
     private static final int STUN_AMPLIFIER = 4; // Slowness V (almost frozen)
 
+    /** Marks the locked copy of the Kiba in the off hand. */
+    private static final String OFFHAND_KEY = "kiba_offhand";
+
     public Kiba(Properties pProperties) {
         super(SwordCustomTiers.KIBA, pProperties);
+    }
+
+    // ---------------------------------------------------------------- the second blade
+
+    /** The locked copy of the Kiba in the off hand. */
+    public static boolean isOffhandBlade(ItemStack stack) {
+        return !stack.isEmpty() && stack.getItem() instanceof Kiba
+                && stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag().getBoolean(OFFHAND_KEY);
+    }
+
+    /** The real Kiba: not the copy. */
+    private static boolean isRealKiba(ItemStack stack) {
+        return !stack.isEmpty() && stack.getItem() instanceof Kiba && !isOffhandBlade(stack);
+    }
+
+    private static ItemStack makeOffhandBlade(ItemStack main) {
+        ItemStack copy = main.copy();
+        copy.setCount(1);
+        CustomData.update(DataComponents.CUSTOM_DATA, copy, tag -> tag.putBoolean(OFFHAND_KEY, true));
+        return copy;
+    }
+
+    /** Runs every tick for a Kiba in an inventory: the real one in the main hand, and the copy in the off hand. */
+    @Override
+    public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected) {
+        super.inventoryTick(stack, level, entity, slotId, isSelected);
+        if (!level.isClientSide() && entity instanceof ServerPlayer player
+                && (isOffhandBlade(stack) || stack == player.getMainHandItem())) {
+            tickTwinBlades(player);
+        }
+    }
+
+    /**
+     * Keeps the second Kiba in the off hand while the real one is in the main hand, and nowhere else. Swapping hands
+     * puts them back, and a copy found in any other slot is removed.
+     */
+    public static void tickTwinBlades(ServerPlayer player) {
+        ItemStack carried = player.containerMenu.getCarried();
+        if (isOffhandBlade(carried)) {
+            player.containerMenu.setCarried(ItemStack.EMPTY);
+        }
+
+        ItemStack main = player.getMainHandItem();
+        ItemStack off = player.getOffhandItem();
+        // The swap hands key: swap them back
+        if (isOffhandBlade(main) && isRealKiba(off)) {
+            player.setItemInHand(InteractionHand.MAIN_HAND, off);
+            player.setItemInHand(InteractionHand.OFF_HAND, main);
+            ItemStack swapped = main;
+            main = off;
+            off = swapped;
+        }
+
+        // A copy in any other slot is not allowed
+        for (int i = 0; i < 40; i++) {
+            if (isOffhandBlade(player.getInventory().getItem(i))) {
+                player.getInventory().setItem(i, ItemStack.EMPTY);
+            }
+        }
+
+        boolean realInMainHand = isRealKiba(main);
+        if (isOffhandBlade(off)) {
+            if (!realInMainHand) {
+                player.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
+            }
+        } else if (realInMainHand) {
+            // Whatever was in the off hand goes to the inventory, or to the floor when it is full
+            if (!off.isEmpty()) {
+                ItemStack displaced = off.copy();
+                player.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
+                if (!player.getInventory().add(displaced)) {
+                    player.drop(displaced, false);
+                }
+            }
+            player.setItemInHand(InteractionHand.OFF_HAND, makeOffhandBlade(main));
+        }
+    }
+
+    /**
+     * Called when a stack is about to be dropped by a player. The copy is never dropped. When the real Kiba is thrown
+     * away the copy in the off hand is gone as well.
+     *
+     * @return true when the drop must be cancelled
+     */
+    public static boolean onDrop(ServerPlayer player, ItemStack dropped) {
+        if (isOffhandBlade(dropped)) {
+            return true;
+        }
+        if (isRealKiba(dropped) && isOffhandBlade(player.getOffhandItem())) {
+            player.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
+        }
+        return false;
     }
 
     @Override
     public InteractionResultHolder<ItemStack> use(Level pLevel, Player pPlayer, InteractionHand pHand) {
         ItemStack stack = pPlayer.getItemInHand(pHand);
+        if (isOffhandBlade(stack)) {
+            return InteractionResultHolder.fail(stack);
+        }
         
         if (pPlayer instanceof ServerPlayer serverPlayer) {
             // Check if player has lightning release
