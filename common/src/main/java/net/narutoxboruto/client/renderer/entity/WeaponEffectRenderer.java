@@ -173,7 +173,7 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
 
         Matrix4f matrix = poseStack.last().pose();
         VertexConsumer needle = bufferSource.getBuffer(RenderType.entityTranslucent(NEEDLE_TEXTURE));
-        strip(needle, matrix, tail.subtract(hand), tip.subtract(hand), 0.035D, NEEDLE_LENGTH, false);
+        strip(needle, matrix, tail.subtract(hand), tip.subtract(hand), 0.035D, (float) NEEDLE_LENGTH, false);
 
         if (flight >= 1.0F) {
             VertexConsumer thread = bufferSource.getBuffer(RenderType.entityTranslucent(THREAD_TEXTURE));
@@ -231,14 +231,13 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
         vertex(vc, m, x1, y1, z0, 1, 1, r, g, b, alpha); vertex(vc, m, x1, y0, z0, 1, 0, r, g, b, alpha);
         vertex(vc, m, x0, y0, z1, 0, 0, r, g, b, alpha); vertex(vc, m, x1, y0, z1, 1, 0, r, g, b, alpha);
         vertex(vc, m, x1, y1, z1, 1, 1, r, g, b, alpha); vertex(vc, m, x0, y1, z1, 0, 1, r, g, b, alpha);
+
         // west, east
         vertex(vc, m, x0, y0, z0, 0, 0, r, g, b, alpha); vertex(vc, m, x0, y0, z1, 1, 0, r, g, b, alpha);
         vertex(vc, m, x0, y1, z1, 1, 1, r, g, b, alpha); vertex(vc, m, x0, y1, z0, 0, 1, r, g, b, alpha);
         vertex(vc, m, x1, y0, z0, 0, 0, r, g, b, alpha); vertex(vc, m, x1, y1, z0, 0, 1, r, g, b, alpha);
         vertex(vc, m, x1, y1, z1, 1, 1, r, g, b, alpha); vertex(vc, m, x1, y0, z1, 1, 0, r, g, b, alpha);
     }
-
-    // ---------------------------------------------------------------- helpers
 
     private static void vertex(VertexConsumer vc, Matrix4f matrix, float x, float y, float z, float u, float v,
                                float red, float green, float blue, float alpha) {
