@@ -219,8 +219,10 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
     }
 
     /**
-     * Bands of thread across the body: over the shoulders, the chest, the hips and the knees. They follow the body, so
-     * they are wider across the shoulders than front to back and turn with it, and they do not move.
+     * Rope tied round the body, as in a drawing of it: two slanted wraps cross over the chest and shoulders, and two
+     * spiral round the hips and the knees. The wraps are not perfect rings: they slant, they are a little uneven, as
+     * if they were tied by hand, and they follow the body, wider across the shoulders than front to back, turning
+     * with it. They do not move.
      */
     private static void stitches(VertexConsumer vc, Matrix4f matrix, Entity target, Vec3 feetFromHand, float grow) {
         double height = target.getBbHeight();
@@ -229,28 +231,60 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
         double yaw = Math.toRadians(target.yBodyRot);
         Vec3 side = new Vec3(Math.cos(yaw), 0.0D, Math.sin(yaw));
         Vec3 front = new Vec3(-Math.sin(yaw), 0.0D, Math.cos(yaw));
-        // Height as a part of the body, how much the band slants, which way round it starts, half width, half depth
-        double[][] bands = {
-                {0.80D, 0.08D, 0.0D, 0.50D, 0.24D},
-                {0.60D, -0.07D, 1.5D, 0.46D, 0.22D},
-                {0.40D, 0.05D, 0.7D, 0.29D, 0.21D},
-                {0.17D, -0.04D, 2.4D, 0.27D, 0.19D}};
-        int segments = 20;
-        // The bands start a little wide and pull tight over the first moments
+        // Start height, end height (both as a part of the body), the angle it starts at and how many turns it makes
+        // (negative the other way round)
+        double[][] wraps = {
+                {0.90D, 0.50D, 2.2D, 1.05D},
+                {0.88D, 0.46D, 0.9D, -1.05D},
+                {0.44D, 0.35D, 0.4D, 1.6D},
+                {0.22D, 0.11D, 2.8D, -1.5D}};
+        // The wraps start a little wide and pull tight over the first moments
         double pull = 1.0D + 0.5D * (1.0D - grow);
-        for (double[] band : bands) {
+        // The same unevenness every frame for the same target, so the rope does not shimmer
+        java.util.Random random = new java.util.Random(target.getId() * 31L + 7L);
+        for (double[] wrap : wraps) {
+            int segments = 30;
+            double jitterPhase = random.nextDouble() * Math.PI * 2.0D;
             Vec3 previous = null;
             for (int i = 0; i <= segments; i++) {
-                double angle = (double) i / segments * Math.PI * 2.0D;
-                double y = (band[0] + band[1] * Math.sin(angle + band[2])) * height;
+                double t = (double) i / segments;
+                double angle = wrap[2] + wrap[3] * Math.PI * 2.0D * t;
+                double along = wrap[0] + (wrap[1] - wrap[0]) * t;
+                // Slightly loose and uneven, with a little sag
+                double loose = 1.0D + 0.05D * Math.sin(t * 9.0D + jitterPhase);
+                double y = (along - 0.015D * Math.sin(t * Math.PI)) * height;
+                double rx = bodyHalfWidth(along) * k * loose * pull;
+                double rz = bodyHalfDepth(along) * k * loose * pull;
                 Vec3 point = feetFromHand
-                        .add(side.scale(Math.cos(angle) * (band[3] + 0.03D) * k * pull))
-                        .add(front.scale(Math.sin(angle) * (band[4] + 0.03D) * k * pull))
+                        .add(side.scale(Math.cos(angle) * rx))
+                        .add(front.scale(Math.sin(angle) * rz))
                         .add(0.0D, y, 0.0D);
                 if (previous != null) strip(vc, matrix, previous, point, 0.006D, 1.0F, true);
                 previous = point;
             }
         }
+    }
+
+    /** Half the width of a person's body across at a part of its height: the legs, the hips, then the arms at the sides. */
+    private static double bodyHalfWidth(double along) {
+        return piecewise(along, 0.0D, 0.28D, 0.30D, 0.28D, 0.46D, 0.38D, 0.60D, 0.47D, 0.88D, 0.50D);
+    }
+
+    /** Half the depth of the body, front to back. */
+    private static double bodyHalfDepth(double along) {
+        return piecewise(along, 0.0D, 0.18D, 0.30D, 0.19D, 0.46D, 0.21D, 0.60D, 0.22D, 0.88D, 0.24D);
+    }
+
+    /** A line through the points (x, value) given in pairs, between them and flat outside them. */
+    private static double piecewise(double x, double... points) {
+        if (x <= points[0]) return points[1];
+        for (int i = 2; i < points.length; i += 2) {
+            if (x <= points[i]) {
+                double t = (x - points[i - 2]) / (points[i] - points[i - 2]);
+                return points[i - 1] + (points[i + 1] - points[i - 1]) * t;
+            }
+        }
+        return points[points.length - 1];
     }
 
     /** A thin strip from one point to another, as two crossed ribbons so it is seen from any side. */
