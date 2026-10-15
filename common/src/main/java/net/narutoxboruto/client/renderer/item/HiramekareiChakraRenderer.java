@@ -19,6 +19,8 @@ import net.narutoxboruto.items.swords.Hiramekarei;
 import net.narutoxboruto.main.Main;
 import org.joml.Matrix4f;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 
@@ -52,7 +54,8 @@ public final class HiramekareiChakraRenderer {
     /** The flames lick on past the tip of the blade, this much of its length. */
     private static final float TIP_EXTENSION = 0.06F;
 
-    private record Outline(float yMin, float yMax, float[] cx, float[] cz, float[] hx, float[] hz) {}
+    /** The blade in slices: the middle of each, and how far the blade reaches from it in every direction round it. */
+    private record Outline(float yMin, float yMax, float[] cx, float[] cz, float[][] reach) {}
 
     private static final Map<BakedModel, Outline> OUTLINES = new WeakHashMap<>();
 
@@ -86,22 +89,28 @@ public final class HiramekareiChakraRenderer {
         // A buffer source ends the buffer before as soon as the next render type is asked for, so each one is fetched
         // just before it is drawn to and never held while another is asked for.
         VertexConsumer mist = buffer.getBuffer(RenderType.entityTranslucentEmissive(TEXTURE));
-        sleeve(mist, matrix, outline, time, 1.22F, 0.050F, 0.10F, 0.45F, 1, 0.30F);
-        sleeve(mist, matrix, outline, time, 1.14F, 0.035F, 0.14F, 0.60F, 2, 1.70F);
+        sleeve(mist, matrix, outline, time, 1.12F, 0.040F, 0.10F, 0.45F, 1, 0.30F);
+        sleeve(mist, matrix, outline, time, 1.07F, 0.028F, 0.14F, 0.60F, 2, 1.70F);
         VertexConsumer glow = buffer.getBuffer(RenderType.entityTranslucentEmissive(GLOW));
-        sleeve(glow, matrix, outline, time, 1.07F, 0.020F, 0.22F, 0.75F, 1, 3.10F);
-        sleeve(glow, matrix, outline, time, 1.02F, 0.008F, 0.32F, 0.90F, 2, 4.20F);
+        sleeve(glow, matrix, outline, time, 1.03F, 0.018F, 0.22F, 0.75F, 1, 3.10F);
+        sleeve(glow, matrix, outline, time, 1.00F, 0.008F, 0.32F, 0.90F, 2, 4.20F);
 
         poseStack.popPose();
     }
 
-    /** Measures the blade: its centre and half widths in slices from one end to the other. */
+    /**
+     * Measures the blade from one end to the other, in slices. For every slice it finds the middle and how far the
+     * blade reaches from there in every direction round it, so the aura goes round the real outline, corners and
+     * all, and not round an oval that cuts them off.
+     */
     private static Outline measure(BakedModel model) {
+        List<BakedQuad> quads = new ArrayList<>();
         float yMin = Float.MAX_VALUE;
         float yMax = -Float.MAX_VALUE;
         for (int i = 0; i <= Direction.values().length; i++) {
             Direction side = i < Direction.values().length ? Direction.values()[i] : null;
             for (BakedQuad quad : model.getQuads(null, side, RANDOM)) {
+                quads.add(quad);
                 int[] data = quad.getVertices();
                 for (int v = 0; v < 4; v++) {
                     float y = Float.intBitsToFloat(data[v * 8 + 1]);
@@ -112,59 +121,77 @@ public final class HiramekareiChakraRenderer {
         }
         if (yMax - yMin < 1.0e-4F) return null;
 
-        float[] minX = new float[SLICES];
-        float[] maxX = new float[SLICES];
-        float[] minZ = new float[SLICES];
-        float[] maxZ = new float[SLICES];
-        java.util.Arrays.fill(minX, Float.MAX_VALUE);
-        java.util.Arrays.fill(minZ, Float.MAX_VALUE);
-        java.util.Arrays.fill(maxX, -Float.MAX_VALUE);
-        java.util.Arrays.fill(maxZ, -Float.MAX_VALUE);
-
-        for (int i = 0; i <= Direction.values().length; i++) {
-            Direction side = i < Direction.values().length ? Direction.values()[i] : null;
-            for (BakedQuad quad : model.getQuads(null, side, RANDOM)) {
-                int[] data = quad.getVertices();
-                for (int v = 0; v < 4; v++) {
-                    float x = Float.intBitsToFloat(data[v * 8]);
-                    float y = Float.intBitsToFloat(data[v * 8 + 1]);
-                    float z = Float.intBitsToFloat(data[v * 8 + 2]);
-                    int s = Mth.clamp((int) ((y - yMin) / (yMax - yMin) * SLICES), 0, SLICES - 1);
-                    minX[s] = Math.min(minX[s], x);
-                    maxX[s] = Math.max(maxX[s], x);
-                    minZ[s] = Math.min(minZ[s], z);
-                    maxZ[s] = Math.max(maxZ[s], z);
-                }
+        // The points of every slice. A long face counts in every slice it runs through, not only the ones where it
+        // has a corner.
+        List<List<float[]>> points = new ArrayList<>();
+        for (int s = 0; s < SLICES; s++) points.add(new ArrayList<>());
+        for (BakedQuad quad : quads) {
+            int[] data = quad.getVertices();
+            float[] xs = new float[4];
+            float[] zs = new float[4];
+            float lo = Float.MAX_VALUE;
+            float hi = -Float.MAX_VALUE;
+            for (int v = 0; v < 4; v++) {
+                xs[v] = Float.intBitsToFloat(data[v * 8]);
+                float y = Float.intBitsToFloat(data[v * 8 + 1]);
+                zs[v] = Float.intBitsToFloat(data[v * 8 + 2]);
+                lo = Math.min(lo, y);
+                hi = Math.max(hi, y);
+            }
+            int first = Mth.clamp((int) ((lo - yMin) / (yMax - yMin) * SLICES), 0, SLICES - 1);
+            int last = Mth.clamp((int) ((hi - yMin) / (yMax - yMin) * SLICES), 0, SLICES - 1);
+            for (int s = first; s <= last; s++) {
+                for (int v = 0; v < 4; v++) points.get(s).add(new float[] {xs[v], zs[v]});
             }
         }
 
-        // Empty slices take their neighbour's outline, then everything is smoothed so the aura has no steps
-        for (int s = 1; s < SLICES; s++) copyIfEmpty(minX, maxX, minZ, maxZ, s, s - 1);
-        for (int s = SLICES - 2; s >= 0; s--) copyIfEmpty(minX, maxX, minZ, maxZ, s, s + 1);
+        // Empty slices take their neighbour's points
+        for (int s = 1; s < SLICES; s++) if (points.get(s).isEmpty()) points.set(s, points.get(s - 1));
+        for (int s = SLICES - 2; s >= 0; s--) if (points.get(s).isEmpty()) points.set(s, points.get(s + 1));
+
         float[] cx = new float[SLICES];
         float[] cz = new float[SLICES];
-        float[] hx = new float[SLICES];
-        float[] hz = new float[SLICES];
+        float[][] reach = new float[SLICES][COLUMNS + 1];
         for (int s = 0; s < SLICES; s++) {
-            cx[s] = (minX[s] + maxX[s]) * 0.5F;
-            cz[s] = (minZ[s] + maxZ[s]) * 0.5F;
-            hx[s] = Math.max(0.02F, (maxX[s] - minX[s]) * 0.5F);
-            hz[s] = Math.max(0.02F, (maxZ[s] - minZ[s]) * 0.5F);
+            float minX = Float.MAX_VALUE, maxX = -Float.MAX_VALUE, minZ = Float.MAX_VALUE, maxZ = -Float.MAX_VALUE;
+            for (float[] p : points.get(s)) {
+                minX = Math.min(minX, p[0]);
+                maxX = Math.max(maxX, p[0]);
+                minZ = Math.min(minZ, p[1]);
+                maxZ = Math.max(maxZ, p[1]);
+            }
+            cx[s] = (minX + maxX) * 0.5F;
+            cz[s] = (minZ + maxZ) * 0.5F;
+            for (int c = 0; c <= COLUMNS; c++) {
+                float angle = (float) (2.0D * Math.PI * c / COLUMNS);
+                float dx = Mth.cos(angle);
+                float dz = Mth.sin(angle);
+                // The furthest the blade reaches in this direction: no point of it is outside
+                float far = 0.02F;
+                for (float[] p : points.get(s)) {
+                    far = Math.max(far, (p[0] - cx[s]) * dx + (p[1] - cz[s]) * dz);
+                }
+                reach[s][c] = far;
+            }
+        }
+
+        // Smooth from slice to slice so there are no steps, but never smaller than the blade
+        float[][] original = new float[SLICES][];
+        for (int s = 0; s < SLICES; s++) original[s] = reach[s].clone();
+        for (int pass = 0; pass < 2; pass++) {
+            float[][] copy = new float[SLICES][];
+            for (int s = 0; s < SLICES; s++) copy[s] = reach[s].clone();
+            for (int s = 0; s < SLICES; s++) {
+                for (int c = 0; c <= COLUMNS; c++) {
+                    float before = copy[Math.max(0, s - 1)][c];
+                    float after = copy[Math.min(SLICES - 1, s + 1)][c];
+                    reach[s][c] = Math.max(original[s][c], (before + copy[s][c] * 2.0F + after) * 0.25F);
+                }
+            }
         }
         smooth(cx);
         smooth(cz);
-        smooth(hx);
-        smooth(hz);
-        return new Outline(yMin, yMax, cx, cz, hx, hz);
-    }
-
-    private static void copyIfEmpty(float[] minX, float[] maxX, float[] minZ, float[] maxZ, int to, int from) {
-        if (minX[to] == Float.MAX_VALUE) {
-            minX[to] = minX[from];
-            maxX[to] = maxX[from];
-            minZ[to] = minZ[from];
-            maxZ[to] = maxZ[from];
-        }
+        return new Outline(yMin, yMax, cx, cz, reach);
     }
 
     private static void smooth(float[] values) {
@@ -178,7 +205,7 @@ public final class HiramekareiChakraRenderer {
         }
     }
 
-    /** The outline at a height, between the slices. */
+    /** A value of the outline at a height, between the slices. */
     private static float at(float[] values, float t) {
         float f = Mth.clamp(t, 0.0F, 1.0F) * SLICES - 0.5F;
         int i = Mth.clamp((int) Math.floor(f), 0, SLICES - 1);
@@ -186,9 +213,17 @@ public final class HiramekareiChakraRenderer {
         return Mth.lerp(Mth.clamp(f - i, 0.0F, 1.0F), values[i], values[j]);
     }
 
+    /** How far the blade reaches at a height and in one of the directions round it. */
+    private static float reachAt(float[][] reach, float t, int column) {
+        float f = Mth.clamp(t, 0.0F, 1.0F) * SLICES - 0.5F;
+        int i = Mth.clamp((int) Math.floor(f), 0, SLICES - 1);
+        int j = Math.min(SLICES - 1, i + 1);
+        return Mth.lerp(Mth.clamp(f - i, 0.0F, 1.0F), reach[i][column], reach[j][column]);
+    }
+
     /**
-     * One sleeve of flames around the blade: a tube that follows the outline of the blade, grown by a factor and a
-     * margin, tapering to nothing past the tip. It is drawn from both sides.
+     * One sleeve around the blade: a tube that follows the real outline of the blade, grown by a factor and a margin,
+     * tapering to nothing past the tip. It is drawn from both sides.
      */
     private static void sleeve(VertexConsumer consumer, Matrix4f matrix, Outline o, float time, float grow,
                                float margin, float strength, float speed, int turns, float phase) {
@@ -204,8 +239,6 @@ public final class HiramekareiChakraRenderer {
             float taper = t <= 1.0F ? 1.0F : (float) Math.pow(Math.max(0.0F, 1.0F - (t - 1.0F) / TIP_EXTENSION), 0.5);
             float cx = at(o.cx, t);
             float cz = at(o.cz, t);
-            float hx = at(o.hx, t);
-            float hz = at(o.hz, t);
             // Starts soft at the hilt, and thins out towards the tip
             fade[r] = Mth.clamp(r / (ROWS * 0.12F), 0.0F, 1.0F) * (t <= 1.0F ? 1.0F : taper);
 
@@ -214,12 +247,11 @@ public final class HiramekareiChakraRenderer {
                 // The flames waver in size as they flow
                 float wobble = 1.0F + 0.08F * Mth.sin(time * 1.8F * speed + angle * 2.0F + y * 4.0F + phase)
                         + 0.04F * Mth.sin(time * 2.4F * speed - angle * 3.0F + y * 3.0F);
-                float a = (hx * grow + margin) * wobble * taper;
-                float b = (hz * grow + margin) * wobble * taper;
+                float radius = (reachAt(o.reach, t, c) * grow + margin) * wobble * taper;
                 float[] p = ring[r][c];
-                p[0] = cx + a * Mth.cos(angle);
+                p[0] = cx + radius * Mth.cos(angle);
                 p[1] = y;
-                p[2] = cz + b * Mth.sin(angle);
+                p[2] = cz + radius * Mth.sin(angle);
                 // The flame texture: round the blade, and along it so that the flames point at the tip and flow
                 p[3] = (float) c / COLUMNS * turns + phase * 0.1F + time * speed * 0.07F;
                 p[4] = (o.yMax + length * TIP_EXTENSION - y) * 0.55F + time * speed * 0.45F;
