@@ -10,13 +10,14 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.SwordItem;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.UseAnim;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.component.CustomModelData;
+import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.narutoxboruto.capabilities.info.Chakra;
@@ -33,8 +34,8 @@ import java.util.List;
  *   <li><b>Passive, stored chakra:</b> like Samehada, the blades take in chakra with every hit, a little of your
  *       own and, from a player you hit, some of theirs, up to 150. Hold right click while sneaking to pour more of
  *       your chakra in. The stored chakra is shown in the tooltip.</li>
- *   <li><b>Ability 1, both blades</b>: the blades start combined, two handed (model {@code hiramekarei_two}), and
- *       every hit is a double strike. The Special Action key splits them: one blade (model
+ *   <li><b>Ability 1, both blades</b>: the blades start combined, two handed (model {@code hiramekarei_two}), slow
+ *       and heavy with double the damage of one blade. The Special Action key splits them, fast and light: one blade (model
  *       {@code hiramekarei_one}) in the main hand and a copy of it in the off hand. The off hand blade is locked, it
  *       cannot be moved or dropped, and it is gone while the main blade is not in the main hand. If the main blade is
  *       thrown away the off hand blade vanishes and the thrown blade is combined again.</li>
@@ -55,7 +56,12 @@ public class Hiramekarei extends AbstractAbilitySword {
     private static final int COAT_MINIMUM = 10;
     private static final int COAT_PER_HIT = 4;
     private static final float COAT_DAMAGE = 5.0F;
-    private static final float SECOND_STRIKE = 0.6F;
+    /** Combined, two handed: slow and heavy, double the damage of a single blade (14 against 7 shown). */
+    private static final int COMBINED_DAMAGE = 4;
+    private static final float COMBINED_SPEED = -2.4F;
+    /** Split, one blade in each hand: fast, with half the damage (7 shown). */
+    private static final int SINGLE_DAMAGE = -3;
+    private static final float SINGLE_SPEED = -1.0F;
     /** Chakra poured into the blades every few ticks while charging. */
     private static final int CHARGE_PER_STEP = 2;
     private static final int CHARGE_INTERVAL = 4;
@@ -66,11 +72,20 @@ public class Hiramekarei extends AbstractAbilitySword {
 
     public Hiramekarei(Properties pProperties) {
         super(SwordCustomTiers.HIRAMEKAREI, pProperties);
+        // The combined blades hit hard already, so there is no extra strike that costs chakra or needs a cooldown
+        this.cooldown = 0;
+    }
+
+    /** The attack damage and speed of the blades: combined (two handed) or one blade (split). */
+    public static ItemAttributeModifiers attributes(boolean combined) {
+        return combined
+                ? SwordItem.createAttributes(SwordCustomTiers.HIRAMEKAREI, COMBINED_DAMAGE, COMBINED_SPEED)
+                : SwordItem.createAttributes(SwordCustomTiers.HIRAMEKAREI, SINGLE_DAMAGE, SINGLE_SPEED);
     }
 
     @Override
     public int getChakraCost() {
-        return 1;
+        return 0;
     }
 
     // ---------------------------------------------------------------- the stored chakra and the coat
@@ -112,11 +127,12 @@ public class Hiramekarei extends AbstractAbilitySword {
         super.toggleAbility(pPlayer, pStack);
     }
 
-    /** Keeps the model in step with the state: 0 is the combined model, 1 the single blade. */
+    /** Keeps the model and the attack stats in step with the state: combined is slow and heavy, split is fast. */
     @Override
     protected void setActive(ItemStack pStack, boolean pActive) {
         super.setActive(pStack, !pActive);
         pStack.set(DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(pActive ? 0 : 1));
+        pStack.set(DataComponents.ATTRIBUTE_MODIFIERS, attributes(pActive));
     }
 
     // ---------------------------------------------------------------- the split blades
@@ -224,14 +240,6 @@ public class Hiramekarei extends AbstractAbilitySword {
             }
         }
         return false;
-    }
-
-    /** Both blades drawn: the second blade strikes right after the first. */
-    @Override
-    protected void doSpecialAbility(LivingEntity pTarget, ServerPlayer serverPlayer) {
-        float damage = (float) serverPlayer.getAttributeValue(Attributes.ATTACK_DAMAGE) * SECOND_STRIKE;
-        pTarget.invulnerableTime = 0;
-        pTarget.hurt(serverPlayer.damageSources().playerAttack(serverPlayer), damage);
     }
 
     // ---------------------------------------------------------------- ability 2: the chakra coat
