@@ -65,8 +65,5 @@ public class FireBall extends AbstractJutsuItem {
         super.appendHoverText(stack, context, tooltip, flag);
         tooltip.add(Component.literal("Rank: C").withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.literal("Range: 30 meters").withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.literal("Handseals: Snake, Ram, Monkey, Boar, Horse, Tiger").withStyle(ChatFormatting.DARK_GRAY));
-        tooltip.add(Component.literal("A massive orb of roaring flame. It engulfs its target and leaves a crater.")
-                .withStyle(ChatFormatting.GRAY));
     }
 }
