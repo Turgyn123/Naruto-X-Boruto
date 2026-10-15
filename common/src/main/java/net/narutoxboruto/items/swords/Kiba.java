@@ -47,12 +47,37 @@ public class Kiba extends SwordItem implements Vanishable {
 
     /** Marks the locked copy of the Kiba in the off hand. */
     private static final String OFFHAND_KEY = "kiba_offhand";
+    /**
+     * Saved on the blade itself while its lightning is on. The lightning is drawn from this and not from a flag of the
+     * local player, so it shows on the blades of the player who turned it on, and on nobody else's.
+     */
+    private static final String LIGHTNING_KEY = "kiba_lightning";
+
+    /** Whether the lightning is on for this blade, which is what the renderers draw. */
+    public static boolean isLightningOn(ItemStack stack) {
+        return !stack.isEmpty() && stack.getItem() instanceof Kiba
+                && stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag().getBoolean(LIGHTNING_KEY);
+    }
+
+    private static void setLightning(ItemStack stack, boolean on) {
+        CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> tag.putBoolean(LIGHTNING_KEY, on));
+    }
 
     public Kiba(Properties pProperties) {
         super(SwordCustomTiers.KIBA, pProperties);
     }
 
     // ---------------------------------------------------------------- the second blade
+
+    /** Forge and NeoForge: only a different item or slot plays the re-equip animation, not the lightning turning on. */
+    public boolean shouldCauseReequipAnimation(ItemStack oldStack, ItemStack newStack, boolean slotChanged) {
+        return slotChanged || oldStack.getItem() != newStack.getItem();
+    }
+
+    /** Fabric's version of the same. */
+    public boolean allowComponentsUpdateAnimation(Player player, InteractionHand hand, ItemStack oldStack, ItemStack newStack) {
+        return false;
+    }
 
     /** The locked copy of the Kiba in the off hand. */
     public static boolean isOffhandBlade(ItemStack stack) {
@@ -76,8 +101,16 @@ public class Kiba extends SwordItem implements Vanishable {
     @Override
     public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected) {
         super.inventoryTick(stack, level, entity, slotId, isSelected);
-        if (!level.isClientSide() && entity instanceof ServerPlayer player
-                && (isOffhandBlade(stack) || stack == player.getMainHandItem())) {
+        if (level.isClientSide() || !(entity instanceof ServerPlayer player)) return;
+
+        // The lightning is on for the blades in this player's hands while their ability is on, and for no other
+        boolean held = stack == player.getMainHandItem() || (isOffhandBlade(stack) && stack == player.getOffhandItem());
+        boolean on = held && Services.PLATFORM.getKibaActive(player).isActive();
+        if (isLightningOn(stack) != on) {
+            setLightning(stack, on);
+        }
+
+        if (isOffhandBlade(stack) || stack == player.getMainHandItem()) {
             tickTwinBlades(player);
         }
     }
@@ -138,8 +171,14 @@ public class Kiba extends SwordItem implements Vanishable {
         if (isOffhandBlade(dropped)) {
             return true;
         }
-        if (isRealKiba(dropped) && isOffhandBlade(player.getOffhandItem())) {
-            player.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
+        if (isRealKiba(dropped)) {
+            // A Kiba that is thrown away has no lightning
+            if (isLightningOn(dropped)) {
+                setLightning(dropped, false);
+            }
+            if (isOffhandBlade(player.getOffhandItem())) {
+                player.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
+            }
         }
         return false;
     }
@@ -177,6 +216,7 @@ public class Kiba extends SwordItem implements Vanishable {
             
             // Toggle the ability
             kibaActive.toggle(serverPlayer);
+            setLightning(stack, kibaActive.isActive());
             
             // NOTE: Activation particles now handled by client-side burst system in MixinItemRenderer
             // which detects state change and renders intense lightning for 0.5 seconds

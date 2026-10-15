@@ -55,7 +55,8 @@ public final class KibaLightningRenderer {
     public static void render(ItemStack stack, ItemDisplayContext context, PoseStack poseStack,
                               MultiBufferSource buffer, BakedModel model) {
         if (!(stack.getItem() instanceof Kiba)) return;
-        if (!PlayerData.isKibaActive()) return;
+        // The lightning is on for this blade only, not for every Kiba because the local player turned theirs on
+        if (!Kiba.isLightningOn(stack)) return;
         if (context == ItemDisplayContext.GUI || context == ItemDisplayContext.GROUND
                 || context == ItemDisplayContext.FIXED) {
             return;
@@ -77,7 +78,7 @@ public final class KibaLightningRenderer {
         long now = level.getGameTime();
         if (now != lastTick) { // once per game tick, however many times the sword is drawn
             lastTick = now;
-            tick(vertices, now, PlayerData.isKibaBurstActive());
+            tick(vertices, now, PlayerData.isKibaBurstActive() && isLocalPlayersBlade(stack));
         }
 
         VertexConsumer consumer = buffer.getBuffer(RenderType.lightning());
@@ -87,6 +88,12 @@ public final class KibaLightningRenderer {
         }
 
         poseStack.popPose();
+    }
+
+    /** The burst when the ability is turned on belongs to the local player, so only their own blades use it. */
+    private static boolean isLocalPlayersBlade(ItemStack stack) {
+        var player = Minecraft.getInstance().player;
+        return player != null && (stack == player.getMainHandItem() || stack == player.getOffhandItem());
     }
 
     // ------------------------------------------------------------------ generation

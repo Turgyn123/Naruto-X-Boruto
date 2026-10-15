@@ -62,7 +62,7 @@ public class KibaSwordRenderer extends BlockEntityWithoutLevelRenderer {
         poseStack.popPose();
         
         // Only render lightning if Kiba ability is active
-        if (!PlayerData.isKibaActive()) {
+        if (!net.narutoxboruto.items.swords.Kiba.isLightningOn(stack)) {
             return;
         }
         
