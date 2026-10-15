@@ -26,7 +26,7 @@ import java.util.List;
  *
  * The blade's own model is drawn again, a little larger, with a wisp texture that flows along the blade. It uses the
  * additive, fully bright "eyes" render type, so it glows in the dark and blends into the blade instead of covering it.
- * Three layers, from a bright one lying on the blade to a faint wide haze, so the whole blade is covered in an aura. The loaders' item renderer mixins
+ * Six layers, from a bright one lying on the blade to a very faint wide haze, so the whole blade is covered in an aura that fades softly. The loaders' item renderer mixins
  * just call {@link #render} after the item itself has been drawn.
  */
 public final class HiramekareiChakraRenderer {
@@ -50,14 +50,23 @@ public final class HiramekareiChakraRenderer {
         model.getTransforms().getTransform(context).apply(leftHand, poseStack);
         poseStack.translate(-0.5F, -0.5F, -0.5F);
 
+        // The glow does not write depth, so the blade must be drawn first or it paints over the glow and only the
+        // part outside the blade is left: a hard outline instead of an aura
+        if (buffer instanceof MultiBufferSource.BufferSource source) {
+            source.endBatch();
+        }
+
         Matrix4f matrix = poseStack.last().pose();
         VertexConsumer consumer = buffer.getBuffer(RenderType.eyes(TEXTURE));
 
-        // From the outside in: a faint wide haze, the glow, and the chakra lying on the blade itself. They add up,
-        // so the blade is covered in light that fades off softly into the air around it.
-        layer(consumer, matrix, model, 0.040F, 0.20F, time * 0.5F, 0.75F);
-        layer(consumer, matrix, model, 0.018F, 0.42F, time * 0.75F, 0.95F);
-        layer(consumer, matrix, model, 0.006F, 0.85F, time, 1.15F);
+        // From the outside in: a haze that fades off softly into the air, the glow, and the chakra lying on the
+        // blade itself. They add up, so the blade turns luminous blue and the light thins out around it.
+        layer(consumer, matrix, model, 0.130F, 0.050F, time * 0.40F, 0.55F);
+        layer(consumer, matrix, model, 0.090F, 0.080F, time * 0.50F, 0.65F);
+        layer(consumer, matrix, model, 0.055F, 0.140F, time * 0.60F, 0.75F);
+        layer(consumer, matrix, model, 0.028F, 0.240F, time * 0.75F, 0.90F);
+        layer(consumer, matrix, model, 0.012F, 0.380F, time * 0.90F, 1.00F);
+        layer(consumer, matrix, model, 0.004F, 0.520F, time, 1.10F);
 
         poseStack.popPose();
     }
@@ -75,8 +84,7 @@ public final class HiramekareiChakraRenderer {
     }
 
     /**
-     * One quad of the blade, pushed a little outwards. It is drawn from both sides: the render type culls back faces,
-     * and with only one side the chakra shows up on the edge of the blade and not on its flat faces.
+     * One quad of the blade, pushed outwards along its real normal.
      */
     private static void draw(VertexConsumer consumer, Matrix4f matrix, BakedQuad quad, float grow, int alpha,
                              float time, float scale) {
@@ -109,24 +117,20 @@ public final class HiramekareiChakraRenderer {
             nz = -nz;
         }
 
-        for (int pass = 0; pass < 2; pass++) {
-            float sign = pass == 0 ? 1.0F : -1.0F;
-            for (int i = 0; i < 4; i++) {
-                int v = pass == 0 ? i : 3 - i;
-                // A little outwards, so the chakra wraps the blade
-                float x = px[v] + nx * grow;
-                float y = py[v] + ny * grow;
-                float z = pz[v] + nz * grow;
-                // The wisps flow along the blade, which runs up the model, and waver a little sideways
-                float u = (x + z) * 9.0F * scale + Mth.sin(time * 1.3F + y * 4.0F) * 0.05F;
-                float w = y * 1.1F * scale - time * 0.8F;
-                consumer.addVertex(matrix, x, y, z)
-                        .setColor(255, 255, 255, alpha)
-                        .setUv(u, w)
-                        .setOverlay(OverlayTexture.NO_OVERLAY)
-                        .setLight(LightTexture.FULL_BRIGHT)
-                        .setNormal(nx * sign, ny * sign, nz * sign);
-            }
+        for (int v = 0; v < 4; v++) {
+            // A little outwards, so the chakra wraps the blade
+            float x = px[v] + nx * grow;
+            float y = py[v] + ny * grow;
+            float z = pz[v] + nz * grow;
+            // The wisps flow along the blade, which runs up the model, and waver a little sideways
+            float u = (x + z) * 6.0F * scale + Mth.sin(time * 1.3F + y * 4.0F) * 0.05F;
+            float w = y * 0.9F * scale - time * 0.7F;
+            consumer.addVertex(matrix, x, y, z)
+                    .setColor(255, 255, 255, alpha)
+                    .setUv(u, w)
+                    .setOverlay(OverlayTexture.NO_OVERLAY)
+                    .setLight(LightTexture.FULL_BRIGHT)
+                    .setNormal(nx, ny, nz);
         }
     }
 }
