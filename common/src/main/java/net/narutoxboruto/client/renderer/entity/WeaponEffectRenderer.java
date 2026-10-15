@@ -44,6 +44,7 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
     private static final ResourceLocation THREAD_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/thread.png");
     private static final ResourceLocation WHITE_TEXTURE = ResourceLocation.withDefaultNamespace("textures/misc/white.png");
     private static final ResourceLocation FLAME_WALL_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/flame_wall.png");
+    private static final ResourceLocation EMBER_GROUND_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/ember_ground.png");
     private static final ResourceLocation FIRE_PUFF_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/fire_puff.png");
     private static final ResourceLocation ASH_PUFF_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/ash_puff.png");
     private static final int FULL_BRIGHT = 0xF000F0;
@@ -88,12 +89,18 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
 
     /**
      * Fire Release: Great Fire Annihilation: the fire pours out of the caster and spreads sideways along curved edges,
-     * widening like a trumpet, until the whole fan in front of the caster is a sea of flames. It is drawn as many curved
-     * sheets of flames, one behind the other from the caster to the front of the wave, that follow the ground and
-     * sway. The sheets are low close to the caster and get higher with the distance, and the one at the front is the
-     * brightest and the highest. Smoke rises off the top. All of it is pixel art in the style of the fire of Minecraft,
-     * bright, and the fire flickers frame by frame. The server burns everything in the same fan, using the same
-     * numbers (see {@link WeaponEffectEntity#waveHalfAngle}).
+     * widening like a trumpet, until the whole fan in front of the caster is a sea of flames.
+     * <ul>
+     *   <li>The ground of the fan is burning: a flat layer of scorched pixels with glowing cracks that glimmer.</li>
+     *   <li>On it stand curved sheets of flames, one behind the other, that follow the ground. They keep flowing
+     *       outwards from the caster to the front of the wave, growing as they go, so the fire never stands still,
+     *       also once the wave has reached its full length. A second, lower row stands in between to fill the gaps.</li>
+     *   <li>The flames are not all as high: some leap up, some dip.</li>
+     *   <li>The front of the wave is its own tall sheet, that surges, and it has a glow of light over it.</li>
+     *   <li>Smoke rises off the top.</li>
+     * </ul>
+     * All of it is pixel art in the style of the fire of Minecraft, and flickers frame by frame. The server burns
+     * everything in the same fan, using the same numbers (see {@link WeaponEffectEntity#waveHalfAngle}).
      */
     private void renderFireWave(WeaponEffectEntity entity, float age, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource) {
         Level level = entity.level();
@@ -101,53 +108,127 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
         float yaw = Mth.lerp(partialTick, entity.yRotO, entity.getYRot()) * ((float) Math.PI / 180.0F);
         Vec3 forward = new Vec3(-Mth.sin(yaw), 0.0D, Mth.cos(yaw));
         Vec3 right = new Vec3(Mth.cos(yaw), 0.0D, Mth.sin(yaw));
-        double front = Math.min(WeaponEffectEntity.WAVE_RANGE, age * WeaponEffectEntity.WAVE_SPEED);
-        if (front < 1.5D) return;
+        double reach = Math.min(WeaponEffectEntity.WAVE_RANGE, age * WeaponEffectEntity.WAVE_SPEED);
+        if (reach < 1.5D) return;
+        // The front surges a little, forwards and back
+        double front = reach - (reach >= WeaponEffectEntity.WAVE_RANGE - 0.5D ? 1.2D * (0.5D + 0.5D * Math.sin(age * 0.22D)) : 0.0D);
 
         float fade = Mth.clamp((entity.getMaxLife() - age) / 14.0F, 0.0F, 1.0F);
         Matrix4f matrix = poseStack.last().pose();
-        VertexConsumer wall = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(FLAME_WALL_TEXTURE));
-        int columns = 30;
-        // From the front back to the caster, every 3 blocks. The ones further away are drawn first, so the nearer ones
-        // are drawn over them.
-        int sheet = 0;
-        for (double radius = front; radius > 1.8D; radius -= 3.0D, sheet++) {
-            double half = WeaponEffectEntity.waveHalfAngle(radius);
-            // Low and small close to the caster, high far away, and the front of the wave is the highest
-            double height = (1.1D + 5.0D * radius / WeaponEffectEntity.WAVE_RANGE) * Math.min(1.0D, (radius - 1.0D) / 3.0D);
-            if (sheet == 0) height *= 1.2D;
-            float alpha = fade * (sheet == 0 ? 1.0F : 0.9F);
-            double sway = 0.12D * height;
-            Vec3 previousBottom = null;
-            Vec3 previousTop = null;
-            float previousU = 0.0F;
-            float previousAlpha = 0.0F;
-            for (int i = 0; i <= columns; i++) {
-                double angle = -half + 2.0D * half * i / columns;
-                Vec3 spot = forward.scale(Math.cos(angle) * radius).add(right.scale(Math.sin(angle) * radius));
-                double groundY = groundAt(level, origin.x + spot.x, origin.z + spot.z, origin.y) - origin.y;
-                double lick = Math.sin(age * 0.35D + i * 0.9D + sheet * 1.7D) * sway;
-                Vec3 bottom = new Vec3(spot.x, groundY, spot.z);
-                Vec3 top = new Vec3(spot.x + right.x * lick, groundY + height, spot.z + right.z * lick);
-                // The flame sheet is four frames of 16 pixels, one under the other. Every column of every sheet is in its
-                // own frame, so the fire flickers pixel by pixel like the fire of Minecraft.
-                float u = (float) (i * radius * 2.0D * half / columns / 4.0D) + sheet * 0.37F;
-                int frame = Math.floorMod((int) (age * 0.4F + sheet * 1.3F + i * 0.45F), 4);
-                float vBottom = (frame + 1) / 4.0F;
-                float vTop = frame / 4.0F;
-                float a = alpha * (0.88F + 0.12F * Mth.sin(age * 0.9F + i * 1.7F + sheet * 2.3F));
-                if (previousBottom != null) {
-                    quad(wall, matrix, previousBottom, previousU, vBottom, previousAlpha, bottom, u, vBottom, a,
-                            top, u, vTop, a, previousTop, previousU, vTop, previousAlpha, 1.0F, 1.0F, 1.0F);
-                }
-                previousBottom = bottom;
-                previousTop = top;
-                previousU = u;
-                previousAlpha = a;
+
+        // ---- the burning ground
+        VertexConsumer ground = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(EMBER_GROUND_TEXTURE));
+        double rowStep = 2.5D;
+        int groundColumns = 22;
+        for (double radius = 1.6D; radius < front; radius += rowStep) {
+            double next = Math.min(front, radius + rowStep);
+            for (int i = 0; i < groundColumns; i++) {
+                double halfA = WeaponEffectEntity.waveHalfAngle(radius);
+                double halfB = WeaponEffectEntity.waveHalfAngle(next);
+                Vec3 p0 = groundPoint(level, origin, forward, right, radius, -halfA + 2.0D * halfA * i / groundColumns, 0.05D);
+                Vec3 p1 = groundPoint(level, origin, forward, right, radius, -halfA + 2.0D * halfA * (i + 1) / groundColumns, 0.05D);
+                Vec3 p2 = groundPoint(level, origin, forward, right, next, -halfB + 2.0D * halfB * (i + 1) / groundColumns, 0.05D);
+                Vec3 p3 = groundPoint(level, origin, forward, right, next, -halfB + 2.0D * halfB * i / groundColumns, 0.05D);
+                int frame = Math.floorMod((int) (age * 0.25F + i * 0.31F + radius * 0.17F), 4);
+                float vt = frame / 4.0F;
+                float vb = (frame + 1) / 4.0F;
+                float uA = (float) (i * radius * 2.0D * halfA / groundColumns / 4.0D);
+                float uB = (float) ((i + 1) * radius * 2.0D * halfA / groundColumns / 4.0D);
+                // The ground fades in near the caster, and at the front of the wave
+                float edge = (float) Mth.clamp((radius - 1.6D) / 3.0D, 0.0D, 1.0D) * fade * 0.9F;
+                quad(ground, matrix, p0, uA, vt, edge, p1, uB, vt, edge, p2, uB, vb, edge, p3, uA, vb, edge, 1.0F, 1.0F, 1.0F);
             }
         }
 
+        // ---- the sheets of flames. The ones further out are drawn first, so the nearer ones are drawn over them.
+        VertexConsumer wall = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(FLAME_WALL_TEXTURE));
+        double spacing = 3.0D;
+        // The sheets flow outwards for as long as the wave lasts. Every sheet has a number of its own and moves out
+        // from the caster, growing as it goes and fading out before the front, while new ones start at the caster. A
+        // second, lower row stands half a step behind to fill the gaps. So the fire never stands still, also once the
+        // wave has reached its full length.
+        double travelled = age * 0.55D;
+        for (int row = 0; row < 2; row++) {
+            double rowOffset = row * spacing * 0.5D;
+            int first = (int) Math.ceil((1.8D - travelled - rowOffset) / spacing);
+            int last = (int) Math.floor((front - 0.3D - travelled - rowOffset) / spacing);
+            for (int m = last; m >= first; m--) {
+                double at = m * spacing + travelled + rowOffset;
+                drawFlameSheet(wall, matrix, level, origin, forward, right, at, front, age, fade, m * 2 + row, row == 1 ? 0.45D : 1.0D, false);
+            }
+        }
+        // The front of the wave: tall, bright and uneven
+        drawFlameSheet(wall, matrix, level, origin, forward, right, front, front, age, fade, 99, 1.25D, true);
+
+        // A glow of light over the front sheets
+        VertexConsumer glow = bufferSource.getBuffer(RenderType.eyes(FLAME_WALL_TEXTURE));
+        for (int k = 0; k < 3; k++) {
+            double r = front - k * spacing;
+            if (r < 2.0D) break;
+            drawFlameSheet(glow, matrix, level, origin, forward, right, r, front, age + 3.0F, fade * 0.32F, 120 + k, 1.0D, k == 0);
+        }
+
         renderWaveSmoke(entity, age, partialTick, poseStack, bufferSource, front, forward, right, fade);
+    }
+
+    /** A point on the ground of the fan, a little above it. */
+    private static Vec3 groundPoint(Level level, Vec3 origin, Vec3 forward, Vec3 right, double radius, double angle, double lift) {
+        Vec3 spot = forward.scale(Math.cos(angle) * radius).add(right.scale(Math.sin(angle) * radius));
+        return new Vec3(spot.x, groundAt(level, origin.x + spot.x, origin.z + spot.z, origin.y) - origin.y + lift, spot.z);
+    }
+
+    /** A pseudo random number from 0 to 1 for a whole number, always the same for the same number. */
+    private static float hash(int n) {
+        int h = n * 374761393 + 668265263;
+        h = (h ^ (h >>> 13)) * 1274126177;
+        return ((h ^ (h >>> 16)) & 0xFFFF) / 65535.0F;
+    }
+
+    /**
+     * One curved sheet of flames at a distance from the caster. It is low close to the caster and higher far away. The
+     * flames along it are not all the same: some leap up and some dip, and they change slowly.
+     */
+    private static void drawFlameSheet(VertexConsumer vc, Matrix4f matrix, Level level, Vec3 origin, Vec3 forward, Vec3 right,
+                                       double radius, double front, float age, float fade, int sheet, double size, boolean surge) {
+        int columns = 30;
+        double half = WeaponEffectEntity.waveHalfAngle(radius);
+        double baseHeight = (1.1D + 5.0D * radius / WeaponEffectEntity.WAVE_RANGE) * Math.min(1.0D, (radius - 1.0D) / 3.0D) * size;
+        // New sheets fade in at the caster, and they fade out before the front
+        float edge = (float) Mth.clamp((radius - 1.8D) / 3.0D, 0.0D, 1.0D) * (surge ? 1.0F : (float) Mth.clamp((front - radius) / 3.0D, 0.0D, 1.0D));
+        float alpha = fade * (surge ? 1.0F : 0.92F) * edge;
+        if (alpha < 0.02F) return;
+        int slow = (int) (age * 0.12F);
+        Vec3 previousBottom = null;
+        Vec3 previousTop = null;
+        float previousU = 0.0F;
+        float previousAlpha = 0.0F;
+        for (int i = 0; i <= columns; i++) {
+            double angle = -half + 2.0D * half * i / columns;
+            Vec3 spot = forward.scale(Math.cos(angle) * radius).add(right.scale(Math.sin(angle) * radius));
+            double groundY = groundAt(level, origin.x + spot.x, origin.z + spot.z, origin.y) - origin.y;
+            // Some flames leap up, some dip
+            float n = hash(i * 31 + sheet * 7 + slow * 13);
+            double height = baseHeight * (0.7D + 0.6D * n) * (hash(i * 17 + sheet * 3 + 5) > 0.84F ? 1.4D : 1.0D);
+            if (surge) height *= 0.85D + 0.3D * Mth.sin(age * 0.3F + i * 0.7F);
+            double lick = Math.sin(age * 0.35D + i * 0.9D + sheet * 1.7D) * 0.12D * height;
+            Vec3 bottom = new Vec3(spot.x, groundY, spot.z);
+            Vec3 top = new Vec3(spot.x + right.x * lick, groundY + height, spot.z + right.z * lick);
+            // The sheet of flames is eight frames of 16 pixels, one under the other. Every column is in its own frame,
+            // so the fire flickers pixel by pixel like the fire of Minecraft, and the flames slide sideways a little.
+            float u = (float) (i * radius * 2.0D * half / columns / 4.0D) + sheet * 0.37F + age * 0.01F * (Math.floorMod(sheet, 2) == 0 ? 1 : -1);
+            int frame = Math.floorMod((int) (age * 0.5F + sheet * 1.3F + i * 0.45F), 8);
+            float vBottom = (frame + 1) / 8.0F;
+            float vTop = frame / 8.0F;
+            float a = alpha * (0.9F + 0.1F * Mth.sin(age * 0.9F + i * 1.7F + sheet * 2.3F));
+            if (previousBottom != null) {
+                quad(vc, matrix, previousBottom, previousU, vBottom, previousAlpha, bottom, u, vBottom, a,
+                        top, u, vTop, a, previousTop, previousU, vTop, previousAlpha, 1.0F, 1.0F, 1.0F);
+            }
+            previousBottom = bottom;
+            previousTop = top;
+            previousU = u;
+            previousAlpha = a;
+        }
     }
 
     /** Dark smoke that rises off the top of the wave of fire and drifts up. */
