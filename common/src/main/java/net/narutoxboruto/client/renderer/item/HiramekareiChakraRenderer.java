@@ -47,10 +47,10 @@ public final class HiramekareiChakraRenderer {
     private static final RandomSource RANDOM = RandomSource.create(42L);
 
     /** How wide the blade is along its length: the middle and the half sizes of its outline in slices. */
-    private static final int SLICES = 40;
+    private static final int SLICES = 48;
     /** The ring of the aura: rows along the blade and columns around it. */
-    private static final int ROWS = 36;
-    private static final int COLUMNS = 24;
+    private static final int ROWS = 56;
+    private static final int COLUMNS = 36;
     /** The flames lick on past the tip of the blade, this much of its length. */
     private static final float TIP_EXTENSION = 0.04F;
 
@@ -89,11 +89,11 @@ public final class HiramekareiChakraRenderer {
         // A buffer source ends the buffer before as soon as the next render type is asked for, so each one is fetched
         // just before it is drawn to and never held while another is asked for.
         VertexConsumer mist = buffer.getBuffer(RenderType.entityTranslucentEmissive(TEXTURE));
-        sleeve(mist, matrix, outline, time, 1.06F, 0.020F, 0.10F, 0.90F, 1, 0.30F);
-        sleeve(mist, matrix, outline, time, 1.035F, 0.012F, 0.14F, 1.20F, 2, 1.70F);
+        sleeve(mist, matrix, outline, time, 1.06F, 0.028F, 0.10F, 0.90F, 1, 0.30F);
+        sleeve(mist, matrix, outline, time, 1.035F, 0.020F, 0.14F, 1.20F, 2, 1.70F);
         VertexConsumer glow = buffer.getBuffer(RenderType.entityTranslucentEmissive(GLOW));
-        sleeve(glow, matrix, outline, time, 1.015F, 0.007F, 0.22F, 1.50F, 1, 3.10F);
-        sleeve(glow, matrix, outline, time, 1.000F, 0.003F, 0.32F, 1.80F, 2, 4.20F);
+        sleeve(glow, matrix, outline, time, 1.015F, 0.014F, 0.22F, 1.50F, 1, 3.10F);
+        sleeve(glow, matrix, outline, time, 1.000F, 0.008F, 0.32F, 1.80F, 2, 4.20F);
 
         poseStack.popPose();
     }
@@ -181,20 +181,43 @@ public final class HiramekareiChakraRenderer {
             }
         }
 
-        // Smooth from slice to slice so there are no steps, but never smaller than the blade
-        float[][] original = new float[SLICES][];
-        for (int s = 0; s < SLICES; s++) original[s] = reach[s].clone();
+        // Round it off. First every value is replaced by the biggest one near it, then the result is blurred, so the
+        // aura stays outside the blade but the corners and steps of the blade turn into smooth curves. The blur is
+        // never wider than the first step, so it cannot pull the aura inside the blade.
+        float[][] grown = new float[SLICES][COLUMNS + 1];
+        for (int s = 0; s < SLICES; s++) {
+            for (int c = 0; c < COLUMNS; c++) {
+                float biggest = 0.0F;
+                for (int ds = -2; ds <= 2; ds++) {
+                    for (int dc = -2; dc <= 2; dc++) {
+                        biggest = Math.max(biggest, reach[Mth.clamp(s + ds, 0, SLICES - 1)][Math.floorMod(c + dc, COLUMNS)]);
+                    }
+                }
+                grown[s][c] = biggest;
+            }
+        }
         for (int pass = 0; pass < 2; pass++) {
             float[][] copy = new float[SLICES][];
-            for (int s = 0; s < SLICES; s++) copy[s] = reach[s].clone();
+            for (int s = 0; s < SLICES; s++) copy[s] = grown[s].clone();
             for (int s = 0; s < SLICES; s++) {
-                for (int c = 0; c <= COLUMNS; c++) {
-                    float before = copy[Math.max(0, s - 1)][c];
-                    float after = copy[Math.min(SLICES - 1, s + 1)][c];
-                    reach[s][c] = Math.max(original[s][c], (before + copy[s][c] * 2.0F + after) * 0.25F);
+                for (int c = 0; c < COLUMNS; c++) {
+                    float sum = 0.0F;
+                    for (int ds = -1; ds <= 1; ds++) {
+                        for (int dc = -1; dc <= 1; dc++) {
+                            float w = (ds == 0 ? 0.5F : 0.25F) * (dc == 0 ? 0.5F : 0.25F);
+                            sum += w * copy[Mth.clamp(s + ds, 0, SLICES - 1)][Math.floorMod(c + dc, COLUMNS)];
+                        }
+                    }
+                    grown[s][c] = sum;
                 }
             }
         }
+        for (int s = 0; s < SLICES; s++) {
+            System.arraycopy(grown[s], 0, reach[s], 0, COLUMNS);
+            reach[s][COLUMNS] = reach[s][0];
+        }
+        smooth(cx);
+        smooth(cz);
         smooth(cx);
         smooth(cz);
         return new Outline(yMin, yMax, cx, cz, reach);
