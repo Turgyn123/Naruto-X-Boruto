@@ -54,14 +54,16 @@ public class Hiramekarei extends AbstractAbilitySword {
     private static final int ABSORB_FROM_TARGET = 4;
     private static final int ABSORB_FROM_WIELDER = 3;
     private static final int COAT_MINIMUM = 10;
-    private static final int COAT_PER_HIT = 4;
+    /** The coat drains 2 stored chakra every second it is on. */
+    private static final int COAT_DRAIN = 2;
+    private static final int COAT_DRAIN_INTERVAL = 20;
     private static final float COAT_DAMAGE = 5.0F;
-    /** Combined, two handed: slow and heavy, double the damage of a single blade (14 against 7 shown). */
+    /** Combined, two handed: slow and heavy (1.3 attack speed), double the damage of a single blade (14 against 7 shown). */
     private static final int COMBINED_DAMAGE = 4;
-    private static final float COMBINED_SPEED = -2.4F;
-    /** Split, one blade in each hand: fast, with half the damage (7 shown). */
+    private static final float COMBINED_SPEED = -2.7F;
+    /** Split, one blade in each hand: faster (2.6 attack speed), with half the damage (7 shown). */
     private static final int SINGLE_DAMAGE = -3;
-    private static final float SINGLE_SPEED = -1.0F;
+    private static final float SINGLE_SPEED = -1.4F;
     /** Chakra poured into the blades every few ticks while charging. */
     private static final int CHARGE_PER_STEP = 2;
     private static final int CHARGE_INTERVAL = 4;
@@ -161,6 +163,16 @@ public class Hiramekarei extends AbstractAbilitySword {
     @Override
     public void inventoryTick(ItemStack stack, Level level, net.minecraft.world.entity.Entity entity, int slotId, boolean isSelected) {
         super.inventoryTick(stack, level, entity, slotId, isSelected);
+        // While the coat is on it drains 2 stored chakra every second, and goes out when it is empty
+        if (!level.isClientSide() && entity instanceof ServerPlayer wielder && !isOffhandBlade(stack)
+                && isCoated(stack) && level.getGameTime() % COAT_DRAIN_INTERVAL == 0) {
+            int left = getStored(stack) - COAT_DRAIN;
+            setStored(stack, left);
+            if (left <= 0) {
+                setCoated(stack, false);
+                wielder.displayClientMessage(Component.translatable("hiramekarei.coat_off").withStyle(ChatFormatting.GRAY), true);
+            }
+        }
         if (!level.isClientSide() && entity instanceof ServerPlayer player
                 && (isOffhandBlade(stack) || stack == player.getMainHandItem())) {
             tickSplitBlades(player);
@@ -272,12 +284,11 @@ public class Hiramekarei extends AbstractAbilitySword {
         }
 
         if (isCoated(stack) && attacker instanceof ServerPlayer player && player.level() instanceof ServerLevel level) {
-            if (getStored(stack) < COAT_PER_HIT) {
+            if (getStored(stack) <= 0) {
                 setCoated(stack, false);
                 player.displayClientMessage(Component.translatable("hiramekarei.coat_off").withStyle(ChatFormatting.GRAY), true);
                 return result;
             }
-            setStored(stack, getStored(stack) - COAT_PER_HIT);
 
             target.invulnerableTime = 0;
             target.hurt(player.damageSources().playerAttack(player), COAT_DAMAGE);

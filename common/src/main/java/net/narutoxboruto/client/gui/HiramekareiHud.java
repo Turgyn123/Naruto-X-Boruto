@@ -7,15 +7,13 @@ import net.minecraft.world.item.ItemStack;
 import net.narutoxboruto.items.swords.Hiramekarei;
 
 /**
- * The chakra stored in the Hiramekarei, always shown above the hotbar while it is held. Drawn by the HUD overlay
+ * The chakra stored in the Hiramekarei, always shown in white above the hotbar while it is held. Drawn by the HUD overlay
  * of each loader.
  */
 public class HiramekareiHud {
 
-    private static final int BAR_WIDTH = 80;
-    private static final int BAR_HEIGHT = 4;
-    /** Above the action bar messages, which sit just over the hotbar. */
-    private static final int ABOVE_BOTTOM = 80;
+    /** Just above the hotbar and the health and food rows. */
+    private static final int ABOVE_BOTTOM = 50;
 
     public static void render(GuiGraphics gui, Minecraft minecraft) {
         if (minecraft.player == null) return;
@@ -27,16 +25,6 @@ public class HiramekareiHud {
         int height = minecraft.getWindow().getGuiScaledHeight();
 
         Component text = Component.translatable("hiramekarei.stored", stored, Hiramekarei.MAX_STORED);
-        int textY = height - ABOVE_BOTTOM;
-        gui.drawCenteredString(minecraft.font, text, width / 2, textY, 0x55FFFF);
-
-        int x = (width - BAR_WIDTH) / 2;
-        int y = textY + minecraft.font.lineHeight + 2;
-        int filled = (int) (BAR_WIDTH * stored / (float) Hiramekarei.MAX_STORED);
-        gui.fill(x - 1, y - 1, x + BAR_WIDTH + 1, y + BAR_HEIGHT + 1, 0xAA000000);
-        gui.fill(x, y, x + BAR_WIDTH, y + BAR_HEIGHT, 0xFF1B3A4B);
-        if (filled > 0) {
-            gui.fill(x, y, x + filled, y + BAR_HEIGHT, 0xFF55D8FF);
-        }
+        gui.drawCenteredString(minecraft.font, text, width / 2, height - ABOVE_BOTTOM, 0xFFFFFF);
     }
 }
