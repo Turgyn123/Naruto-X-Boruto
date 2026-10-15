@@ -15,8 +15,8 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.ClipContext;
-import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 import net.narutoxboruto.entities.effects.WeaponEffectEntity;
 import net.narutoxboruto.items.ModItems;
@@ -43,10 +43,9 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
     private static final float RED_FLASH_TICKS = 14.0F;
     private static final ResourceLocation THREAD_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/thread.png");
     private static final ResourceLocation WHITE_TEXTURE = ResourceLocation.withDefaultNamespace("textures/misc/white.png");
-    private static final ResourceLocation FLAME_STREAM_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/flame_stream.png");
+    private static final ResourceLocation FLAME_WALL_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/flame_wall.png");
     private static final ResourceLocation FIRE_PUFF_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/fire_puff.png");
     private static final ResourceLocation ASH_PUFF_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/ash_puff.png");
-    private static final double STREAM_RANGE = 70.0D;
     private static final int FULL_BRIGHT = 0xF000F0;
 
     public WeaponEffectRenderer(EntityRendererProvider.Context context) {
@@ -58,9 +57,9 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
                        MultiBufferSource bufferSource, int packedLight) {
         float age = entity.tickCount + partialTick;
         int kind = entity.getKind();
-        if (kind == WeaponEffectEntity.FLAME_STREAM) {
+        if (kind == WeaponEffectEntity.FIRE_WAVE) {
             poseStack.pushPose();
-            renderFlameStream(entity, age, partialTick, poseStack, bufferSource);
+            renderFireWave(entity, age, partialTick, poseStack, bufferSource);
             poseStack.popPose();
             return;
         }
@@ -88,52 +87,86 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
     // ---------------------------------------------------------------- fire jutsu
 
     /**
-     * Fire Release Stream: a long stream of flames from the mouth along the way the caster looks, as far as 70 meters
-     * or the first block. Three layers of crossed ribbons that twist round the stream and scroll a flame texture away
-     * from the mouth: a faint wide glow, the body of the fire and a narrow hot core. It widens with the distance, as
-     * the real stream does, and thins out at the far end. It is drawn bright and adds its light to what is behind it.
+     * Fire Release: Great Fire Annihilation: a huge wave of fire that spreads out in front of the caster in a wide fan,
+     * as a wall of flame along the ground. The wall is made of curved sheets of flames, one behind the other, each
+     * as high as the wave is far, that follow the ground and sway; the front one is the brightest. Round the front
+     * there are balls of fire for volume. It is drawn bright and adds its light to what is behind it. The server
+     * burns everything in the fan, using the same numbers (see {@link WeaponEffectEntity#WAVE_RANGE}).
      */
-    private void renderFlameStream(WeaponEffectEntity entity, float age, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource) {
-        Vec3 start = entity.getPosition(partialTick);
-        Vec3 dir = Vec3.directionFromRotation(Mth.lerp(partialTick, entity.xRotO, entity.getXRot()),
-                Mth.lerp(partialTick, entity.yRotO, entity.getYRot())).normalize();
-        var hit = entity.level().clip(new ClipContext(start, start.add(dir.scale(STREAM_RANGE)),
-                ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, entity));
-        double length = hit.getType() == HitResult.Type.MISS ? STREAM_RANGE : start.distanceTo(hit.getLocation());
-        if (length < 0.5D) return;
+    private void renderFireWave(WeaponEffectEntity entity, float age, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource) {
+        Level level = entity.level();
+        Vec3 origin = entity.getPosition(partialTick);
+        float yaw = Mth.lerp(partialTick, entity.yRotO, entity.getYRot()) * ((float) Math.PI / 180.0F);
+        Vec3 forward = new Vec3(-Mth.sin(yaw), 0.0D, Mth.cos(yaw));
+        Vec3 right = new Vec3(Mth.cos(yaw), 0.0D, Mth.sin(yaw));
+        double front = Math.min(WeaponEffectEntity.WAVE_RANGE, age * WeaponEffectEntity.WAVE_SPEED);
+        if (front < 1.5D) return;
 
-        float fade = Math.min(Mth.clamp(age / 3.0F, 0.0F, 1.0F), Mth.clamp((entity.getMaxLife() - age) / 6.0F, 0.0F, 1.0F));
-        Vec3 reference = Math.abs(dir.y) > 0.9D ? new Vec3(1.0D, 0.0D, 0.0D) : new Vec3(0.0D, 1.0D, 0.0D);
-        Vec3 sideA = dir.cross(reference).normalize();
-        Vec3 sideB = dir.cross(sideA).normalize();
-
-        VertexConsumer vc = bufferSource.getBuffer(RenderType.eyes(FLAME_STREAM_TEXTURE));
+        double half = Math.toRadians(WeaponEffectEntity.WAVE_HALF_ANGLE);
+        float fade = Mth.clamp((entity.getMaxLife() - age) / 14.0F, 0.0F, 1.0F);
         Matrix4f matrix = poseStack.last().pose();
-        int segments = (int) Math.min(48.0D, Math.max(8.0D, length / 1.5D));
-        // Width, brightness, red, green, blue of each layer
-        float[][] layers = {{1.00F, 0.50F, 1.0F, 0.55F, 0.30F}, {0.62F, 0.85F, 1.0F, 1.0F, 1.0F}, {0.28F, 1.00F, 1.0F, 1.0F, 0.95F}};
-        for (int layer = 0; layer < layers.length; layer++) {
-            float[] l = layers[layer];
-            for (int ribbon = 0; ribbon < 4; ribbon++) {
-                double angle = ribbon * Math.PI / 4.0D + layer * 0.5D + age * (0.10D + 0.04D * layer);
-                Vec3 across = sideA.scale(Math.cos(angle)).add(sideB.scale(Math.sin(angle)));
-                for (int segment = 0; segment < segments; segment++) {
-                    double d0 = length * segment / segments;
-                    double d1 = length * (segment + 1) / segments;
-                    double w0 = (0.16D + d0 * 0.05D) * l[0];
-                    double w1 = (0.16D + d1 * 0.05D) * l[0];
-                    // The flames thin out towards the far end
-                    float a0 = l[1] * fade * (float) (1.0D - 0.8D * d0 / length);
-                    float a1 = l[1] * fade * (float) (1.0D - 0.8D * d1 / length);
-                    float v0 = (float) (d0 * 0.11D - age * 0.5D);
-                    float v1 = (float) (d1 * 0.11D - age * 0.5D);
-                    Vec3 b0 = dir.scale(d0);
-                    Vec3 b1 = dir.scale(d1);
-                    quad(vc, matrix, b0.subtract(across.scale(w0)), 0.0F, v0, a0, b0.add(across.scale(w0)), 1.0F, v0, a0,
-                            b1.add(across.scale(w1)), 1.0F, v1, a1, b1.subtract(across.scale(w1)), 0.0F, v1, a1, l[2], l[3], l[4]);
+        VertexConsumer wall = bufferSource.getBuffer(RenderType.eyes(FLAME_WALL_TEXTURE));
+        int columns = 36;
+        int sheets = 6;
+        for (int k = 0; k < sheets; k++) {
+            double radius = front - k * 3.6D;
+            if (radius < 1.5D) break;
+            double height = (2.5D + 4.5D * radius / WeaponEffectEntity.WAVE_RANGE) * Math.min(1.0D, radius / 6.0D);
+            // The front sheet is the brightest, the ones behind it fade
+            float alpha = fade * (1.0F - k * 0.11F);
+            double sway = 0.12D * height;
+            Vec3 previousBottom = null;
+            Vec3 previousTop = null;
+            float previousU = 0.0F;
+            float previousAlpha = 0.0F;
+            for (int i = 0; i <= columns; i++) {
+                double angle = -half + 2.0D * half * i / columns;
+                Vec3 spot = forward.scale(Math.cos(angle) * radius).add(right.scale(Math.sin(angle) * radius));
+                double groundY = groundAt(level, origin.x + spot.x, origin.z + spot.z, origin.y) - origin.y;
+                double lick = Math.sin(age * 0.35D + i * 0.9D + k * 1.7D) * sway;
+                Vec3 bottom = new Vec3(spot.x, groundY, spot.z);
+                Vec3 top = new Vec3(spot.x + right.x * lick, groundY + height, spot.z + right.z * lick);
+                float u = (float) (i * radius * 2.0D * half / columns / 6.0D) + k * 0.37F + (k % 2 == 0 ? 1 : -1) * age * 0.012F;
+                // Every part of the sheet flickers a little on its own
+                float flicker = 0.85F + 0.15F * Mth.sin(age * 0.9F + i * 1.7F + k * 2.3F);
+                float a = alpha * flicker;
+                if (previousBottom != null) {
+                    quad(wall, matrix, previousBottom, previousU, 1.0F, previousAlpha, bottom, u, 1.0F, a,
+                            top, u, 0.0F, a, previousTop, previousU, 0.0F, previousAlpha, 1.0F, 1.0F, 1.0F);
                 }
+                previousBottom = bottom;
+                previousTop = top;
+                previousU = u;
+                previousAlpha = a;
             }
         }
+
+        // Balls of fire round the front of the wave, for volume
+        org.joml.Quaternionf camera = this.entityRenderDispatcher.cameraOrientation();
+        VertexConsumer fire = bufferSource.getBuffer(RenderType.eyes(FIRE_PUFF_TEXTURE));
+        java.util.Random random = new java.util.Random(entity.getId() * 104729L + 5L);
+        for (int i = 0; i < 22; i++) {
+            double radius = front - random.nextDouble() * 9.0D;
+            double angle = (random.nextDouble() * 2.0D - 1.0D) * half * 0.9D;
+            double size = 3.5D + random.nextDouble() * 4.0D;
+            double lift = 0.5D + random.nextDouble() * (2.0D + 0.08D * radius) + Math.sin(age * 0.2D + i) * 0.4D;
+            if (radius < 2.0D) continue;
+            Vec3 spot = forward.scale(Math.cos(angle) * radius).add(right.scale(Math.sin(angle) * radius));
+            double groundY = groundAt(level, origin.x + spot.x, origin.z + spot.z, origin.y) - origin.y;
+            poseStack.pushPose();
+            poseStack.translate(spot.x, groundY + lift, spot.z);
+            poseStack.mulPose(camera);
+            poseStack.mulPose(Axis.ZP.rotation((float) (random.nextDouble() * Math.PI * 2.0D + age * 0.05D)));
+            billboard(fire, poseStack.last().pose(), (float) size, 0.55F * fade, FULL_BRIGHT, 1.0F, 1.0F, 1.0F);
+            poseStack.popPose();
+        }
+    }
+
+    /** The height of the ground at a spot, as far as is loaded, kept near {@code around} so a tree or a cliff does not lift the fire. */
+    private static double groundAt(Level level, double x, double z, double around) {
+        int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, Mth.floor(x), Mth.floor(z));
+        if (y <= level.getMinBuildHeight()) return around;
+        return Mth.clamp(y, around - 3.0D, around + 3.0D);
     }
 
     /** A quad drawn from both sides: its four corners with their uv and alpha, and a colour. */

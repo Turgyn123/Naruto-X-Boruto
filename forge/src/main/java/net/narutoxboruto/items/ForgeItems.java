@@ -70,7 +70,7 @@ public class ForgeItems {
 
     //Jutsu Items
     public static final RegistryObject<Item> FIRE_BALL_JUTSU = ITEMS.register("fire_ball_jutsu", () -> new FireBall(new Item.Properties().stacksTo(1)));
-    public static final RegistryObject<Item> FIRE_STREAM_JUTSU = ITEMS.register("fire_stream_jutsu", () -> new FireStream(new Item.Properties().stacksTo(1)));
+    public static final RegistryObject<Item> GREAT_FIRE_ANNIHILATION_JUTSU = ITEMS.register("great_fire_annihilation_jutsu", () -> new GreatFireAnnihilation(new Item.Properties().stacksTo(1)));
     public static final RegistryObject<Item> ASH_PILE_BURNING_JUTSU = ITEMS.register("ash_pile_burning_jutsu", () -> new AshPileBurning(new Item.Properties().stacksTo(1)));
     public static final RegistryObject<Item> SHARK_BOMB_JUTSU = ITEMS.register("shark_bomb_jutsu", () -> new SharkBomb(new Item.Properties().stacksTo(1)));
     public static final RegistryObject<Item> WATER_DRAGON_JUTSU = ITEMS.register("water_dragon_jutsu", () -> new WaterDragon(new Item.Properties().stacksTo(1)));

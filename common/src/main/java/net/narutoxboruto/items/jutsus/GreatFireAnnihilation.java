@@ -14,19 +14,19 @@ import net.narutoxboruto.entities.effects.WeaponEffectEntity;
 import java.util.List;
 
 /**
- * Fire Release Stream. Rank A, 50 chakra, range 70 meters. The caster gathers chakra in their lungs and blows out a
- * considerable stream of flames that travels across far distances. It is blown for 2.5 seconds in the way the caster
- * looks, and everything in it is burnt. Requires Fire release affinity.
+ * Fire Release: Great Fire Annihilation. Rank A, 70 chakra, range 50 meters. The caster expels a massive wave of fire
+ * that spreads out in front of them like a wall of flame, covering a wide area and burning everything in it. It is
+ * drawn with textures of the mod, there are no particles. Requires Fire release affinity.
  */
-public class FireStream extends AbstractJutsuItem {
+public class GreatFireAnnihilation extends AbstractJutsuItem {
 
-    public FireStream(Properties pProperties) {
+    public GreatFireAnnihilation(Properties pProperties) {
         super(pProperties);
     }
 
     @Override
     public String getJutsuName() {
-        return "Fire Release Stream";
+        return "Fire Release: Great Fire Annihilation";
     }
 
     @Override
@@ -36,12 +36,12 @@ public class FireStream extends AbstractJutsuItem {
 
     @Override
     public int getChakraCost() {
-        return 50;
+        return 70;
     }
 
     @Override
     public int getCooldownTicks() {
-        return 200; // 10 seconds
+        return 400; // 20 seconds
     }
 
     @Override
@@ -49,9 +49,9 @@ public class FireStream extends AbstractJutsuItem {
         if (!(level instanceof ServerLevel serverLevel)) {
             return false;
         }
-        WeaponEffectEntity.spawnFlameStream(serverLevel, serverPlayer);
+        WeaponEffectEntity.spawnFireWave(serverLevel, serverPlayer);
         level.playSound(null, serverPlayer.getX(), serverPlayer.getY(), serverPlayer.getZ(),
-                SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 1.5F, 0.5F);
+                SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 2.0F, 0.4F);
         return true;
     }
 
@@ -59,6 +59,6 @@ public class FireStream extends AbstractJutsuItem {
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, context, tooltip, flag);
         tooltip.add(Component.literal("Rank: A").withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.literal("Range: 70 meters").withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.literal("Range: 50 meters").withStyle(ChatFormatting.GRAY));
     }
 }

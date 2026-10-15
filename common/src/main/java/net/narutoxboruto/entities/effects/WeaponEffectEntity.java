@@ -17,11 +17,8 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.narutoxboruto.entities.ModEntities;
 
@@ -36,8 +33,8 @@ import java.util.UUID;
  *       chakra slash of Hiramekarei).</li>
  *   <li>{@link #THREAD}: the chakra thread of Nuibari between the wielder and the bound target. This one also
  *       holds the target in place, see {@link #tickThread}.</li>
- *   <li>{@link #FLAME_STREAM}: the Fire Release Stream, a long stream of flames blown from the mouth of the caster.
- *       It is only particles and damage, nothing is drawn by the renderer.</li>
+ *   <li>{@link #FIRE_WAVE}: the Great Fire Annihilation, a huge wave of fire that spreads out in front of the caster.
+ *       The server only does the damage, the renderer draws the fire.</li>
  *   <li>{@link #ASH_CLOUD}: the cloud of ash of Fire Release: Ash Pile Burning, which can be set alight.
  *       Also only particles and damage.</li>
  * </ul>
@@ -48,7 +45,7 @@ public class WeaponEffectEntity extends Entity {
     public static final int WIND = 0;
     public static final int CRESCENT = 1;
     public static final int THREAD = 2;
-    public static final int FLAME_STREAM = 3;
+    public static final int FIRE_WAVE = 3;
     public static final int ASH_CLOUD = 4;
 
     private static final EntityDataAccessor<Integer> KIND = SynchedEntityData.defineId(WeaponEffectEntity.class, EntityDataSerializers.INT);
@@ -164,10 +161,15 @@ public class WeaponEffectEntity extends Entity {
 
     // ---------------------------------------------------------------- fire jutsu
 
-    /** How far the Fire Release Stream reaches, how hard it hits every few ticks, and how long it is blown. */
-    private static final double STREAM_RANGE = 70.0D;
-    private static final float STREAM_DAMAGE = 2.5F;
-    public static final int STREAM_TICKS = 50;
+    /**
+     * The Great Fire Annihilation: how far the wave of fire spreads, how fast, how wide the fan is (half of the angle,
+     * in degrees), how long it burns and what it does. The renderer uses the same numbers.
+     */
+    public static final double WAVE_RANGE = 50.0D;
+    public static final double WAVE_SPEED = 1.5D;
+    public static final double WAVE_HALF_ANGLE = 38.0D;
+    public static final int WAVE_TICKS = 60;
+    private static final float WAVE_DAMAGE = 3.0F;
     /** The cloud of ash: how big it is, how long it hangs in the air, and what it does when it burns. */
     private static final double CLOUD_RADIUS = 9.0D;
     public static final int CLOUD_TICKS = 20 * 20;
@@ -178,9 +180,12 @@ public class WeaponEffectEntity extends Entity {
     public static final int ASH_BURN = 14;
     public static final double ASH_RADIUS = CLOUD_RADIUS;
 
-    /** A stream of flames blown out of the mouth of {@code caster}, in the way they look, for 2.5 seconds. */
-    public static void spawnFlameStream(ServerLevel level, ServerPlayer caster) {
-        WeaponEffectEntity effect = create(level, FLAME_STREAM, caster.getEyePosition(), caster.getLookAngle(), 1.0F, 0xFFFFFFFF, STREAM_TICKS);
+    /** A wave of fire spreading out in front of {@code caster}, the way they face, for 3 seconds. */
+    public static void spawnFireWave(ServerLevel level, ServerPlayer caster) {
+        // A wall of flame along the ground: only the way the caster faces counts, not up or down
+        Vec3 flat = new Vec3(caster.getLookAngle().x, 0.0D, caster.getLookAngle().z);
+        flat = flat.lengthSqr() < 1.0E-4D ? new Vec3(0.0D, 0.0D, 1.0D) : flat.normalize();
+        WeaponEffectEntity effect = create(level, FIRE_WAVE, caster.position().add(flat.scale(0.8D)), flat, 1.0F, 0xFFFFFFFF, WAVE_TICKS);
         effect.owner = caster.getUUID();
         level.addFreshEntity(effect);
     }
@@ -216,47 +221,40 @@ public class WeaponEffectEntity extends Entity {
     }
 
     /**
-     * The Fire Release Stream: for as long as it lasts, flames are blown from the mouth of the caster in the way
-     * they look, as far as 70 meters or the first block. Everything in the stream is burnt. The flames themselves are
-     * drawn by the renderer with its own textures.
+     * The Great Fire Annihilation: the front of the wave spreads out at 1.5 blocks a tick, to 50 meters, in a fan 76
+     * degrees wide, and everything in the fan the front has passed burns for as long as the wave lasts. Whatever the
+     * caster cannot see, because there is a wall in the way, is spared. The fire itself is drawn by the renderer.
      */
-    private void tickFlameStream() {
+    private void tickFireWave() {
         if (!(level() instanceof ServerLevel serverLevel)) return;
         Entity ownerEntity = owner == null ? null : serverLevel.getEntity(owner);
-        if (!(ownerEntity instanceof ServerPlayer caster) || !caster.isAlive() || --life <= 0) {
+        if (--life <= 0) {
             discard();
             return;
         }
+        ServerPlayer caster = ownerEntity instanceof ServerPlayer p && p.isAlive() ? p : null;
 
-        Vec3 look = caster.getLookAngle();
-        Vec3 mouth = caster.getEyePosition().add(look.scale(0.6D)).add(0.0D, -0.15D, 0.0D);
-        setPos(mouth.x, mouth.y, mouth.z);
-        BlockHitResult block = serverLevel.clip(new ClipContext(mouth, mouth.add(look.scale(STREAM_RANGE)),
-                ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, caster));
-        double length = block.getType() == HitResult.Type.MISS ? STREAM_RANGE : mouth.distanceTo(block.getLocation());
-
-        // The stream is drawn by the renderer, which needs to know which way it points
-        setYRot(caster.getYRot());
-        setXRot(caster.getXRot());
-        yRotO = caster.getYRot();
-        xRotO = caster.getXRot();
         if (tickCount % 6 == 0) {
-            serverLevel.playSound(null, mouth.x, mouth.y, mouth.z, SoundEvents.BLAZE_SHOOT, SoundSource.PLAYERS, 0.7F, 0.6F);
+            serverLevel.playSound(null, getX(), getY() + 1.0D, getZ(), SoundEvents.BLAZE_SHOOT, SoundSource.PLAYERS, 1.2F, 0.5F);
         }
 
-        // Everything in the stream burns
-        if (tickCount % 4 == 0) {
-            AABB box = new AABB(mouth, mouth.add(look.scale(length))).inflate(1.0D + length * 0.04D);
-            for (LivingEntity target : serverLevel.getEntitiesOfClass(LivingEntity.class, box, e -> e != caster && e.isAlive())) {
-                Vec3 centre = target.getBoundingBox().getCenter();
-                double along = centre.subtract(mouth).dot(look);
-                if (along < 0.0D || along > length) continue;
-                double off = centre.distanceTo(mouth.add(look.scale(along)));
-                if (off > 0.7D + along * 0.04D + target.getBbWidth() * 0.5D) continue;
-                target.invulnerableTime = 0;
-                target.hurt(fireSource(caster), STREAM_DAMAGE);
-                target.setRemainingFireTicks(100);
-            }
+        // Everything in the fan the front has passed burns
+        if (tickCount % 5 != 0) return;
+        double front = Math.min(WAVE_RANGE, (tickCount + 1) * WAVE_SPEED);
+        float yaw = getYRot() * ((float) Math.PI / 180.0F);
+        Vec3 forward = new Vec3(-Mth.sin(yaw), 0.0D, Mth.cos(yaw));
+        double cosHalf = Math.cos(Math.toRadians(WAVE_HALF_ANGLE));
+        AABB box = new AABB(position(), position()).inflate(front + 2.0D, 6.0D, front + 2.0D);
+        for (LivingEntity target : serverLevel.getEntitiesOfClass(LivingEntity.class, box, e -> e != ownerEntity && e.isAlive())) {
+            Vec3 to = new Vec3(target.getX() - getX(), 0.0D, target.getZ() - getZ());
+            double distance = to.length();
+            if (distance > front) continue;
+            if (distance > 1.5D && to.dot(forward) / distance < cosHalf) continue;
+            if (target.getY() < getY() - 3.0D || target.getY() > getY() + 8.0D) continue;
+            if (caster != null && !caster.hasLineOfSight(target)) continue;
+            target.invulnerableTime = 0;
+            target.hurt(fireSource(ownerEntity), WAVE_DAMAGE);
+            target.setRemainingFireTicks(160);
         }
     }
 
@@ -324,8 +322,8 @@ public class WeaponEffectEntity extends Entity {
             tickThread();
             return;
         }
-        if (getKind() == FLAME_STREAM) {
-            tickFlameStream();
+        if (getKind() == FIRE_WAVE) {
+            tickFireWave();
             return;
         }
         if (getKind() == ASH_CLOUD) {
