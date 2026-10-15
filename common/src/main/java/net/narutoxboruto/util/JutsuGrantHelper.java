@@ -30,7 +30,7 @@ public class JutsuGrantHelper {
             case "fire":
                 grantMultipleJutsus(serverPlayer, storage,
                         ModItems.FIRE_BALL_JUTSU, "Great Fireball Technique",
-                        ModItems.GREAT_FIRE_ANNIHILATION_JUTSU, "Fire Release: Great Fire Annihilation",
+                        ModItems.GREAT_FIRE_ANNIHILATION_JUTSU, "Great Fire Annihilation",
                         ModItems.ASH_PILE_BURNING_JUTSU, "Fire Release: Ash Pile Burning");
                 break;
             case "earth":

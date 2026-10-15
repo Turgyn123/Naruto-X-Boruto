@@ -87,7 +87,7 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
     // ---------------------------------------------------------------- fire jutsu
 
     /**
-     * Fire Release: Great Fire Annihilation: a dense cloud of chunky pixel flames pours out of the caster and fills a
+     * Great Fire Annihilation: a dense cloud of chunky pixel flames pours out of the caster and fills a
      * fan in front of the caster that widens like a trumpet.
      * <ul>
      *   <li>Hundreds of flames start at the caster, fly outwards while they grow, turn from yellow to orange to red

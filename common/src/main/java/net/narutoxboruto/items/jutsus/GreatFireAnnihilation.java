@@ -21,7 +21,7 @@ import net.narutoxboruto.main.platform.Services;
 import java.util.List;
 
 /**
- * Fire Release: Great Fire Annihilation. Rank A, range 50 meters. The caster expels a massive wave of fire that
+ * Great Fire Annihilation. Rank A, range 50 meters. The caster expels a massive wave of fire that
  * spreads out in front of them like a wall of flame, covering a wide area and burning everything in it. It costs 70
  * chakra to start, and as long as the right mouse button is held it keeps going, for 10 chakra a second, turning with
  * the caster. When it is let go of, or the chakra runs out, the fire dies down and the jutsu rests for 15 seconds. It
@@ -35,7 +35,7 @@ public class GreatFireAnnihilation extends AbstractJutsuItem {
 
     @Override
     public String getJutsuName() {
-        return "Fire Release: Great Fire Annihilation";
+        return "Great Fire Annihilation";
     }
 
     @Override
