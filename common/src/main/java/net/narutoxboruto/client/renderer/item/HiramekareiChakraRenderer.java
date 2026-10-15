@@ -45,8 +45,6 @@ public final class HiramekareiChakraRenderer {
 
     private static final ResourceLocation GLOW = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID,
             "textures/effect/hiramekarei_glow.png");
-    private static final ResourceLocation LINES = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID,
-            "textures/effect/hiramekarei_lines.png");
     private static final RandomSource RANDOM = RandomSource.create(42L);
 
     /** How wide the blade is along its length: the middle and the half sizes of its outline in slices. */
@@ -54,8 +52,8 @@ public final class HiramekareiChakraRenderer {
     /** The ring of the aura: rows along the blade and columns around it. */
     private static final int ROWS = 56;
     private static final int COLUMNS = 36;
-    /** The flames lick on past the tip of the blade, this much of its length. */
-    private static final float TIP_EXTENSION = 0.04F;
+    /** The aura closes over the tip of the blade, in a rounded cap over the last part of its length. */
+    private static final float CAP_START = 0.93F;
 
     /** The blade in slices: the middle of each, and how far the blade reaches from it in every direction round it. */
     private record Outline(float yMin, float yMax, float[] cx, float[] cz, float[][] reach) {}
@@ -90,7 +88,7 @@ public final class HiramekareiChakraRenderer {
         Vector3f camera = new Matrix4f(matrix).invert().transformPosition(new Vector3f());
 
         // From the outside in. The outer layers are thin mist, so the sword can be seen through them. The two next
-        // to the blade are a near white glow: bright at the blade and fading blue outwards. Each layer has its own
+        // to the blade are a light blue glow, brightest along the rim of the blade. Each layer has its own
         // size, speed and turn, so the mist crosses itself.
         // A buffer source ends the buffer before as soon as the next render type is asked for, so each one is fetched
         // just before it is drawn to and never held while another is asked for.
@@ -99,9 +97,6 @@ public final class HiramekareiChakraRenderer {
         VertexConsumer glow = buffer.getBuffer(RenderType.entityTranslucentEmissive(GLOW));
         sleeve(glow, matrix, outline, time, 1.02F, 0.016F, 0.24F, 1.50F, 1, 3.10F, camera, 0.15F, 2.20F);
         sleeve(glow, matrix, outline, time, 1.00F, 0.008F, 0.32F, 1.80F, 2, 4.20F, camera, 0.25F, 2.60F);
-        // Bright lines of energy racing along the blade
-        VertexConsumer lines = buffer.getBuffer(RenderType.entityTranslucentEmissive(LINES));
-        sleeve(lines, matrix, outline, time, 1.03F, 0.020F, 0.60F, 2.60F, 3, 6.00F, camera, 0.70F, 0.60F);
 
         poseStack.popPose();
     }
@@ -313,19 +308,21 @@ public final class HiramekareiChakraRenderer {
         strength *= 0.88F + 0.12F * Mth.sin(time * 3.2F + phase);
         grow *= 1.0F + 0.015F * Mth.sin(time * 5.0F + phase * 2.0F);
         float length = o.yMax - o.yMin;
-        float total = length * (1.0F + TIP_EXTENSION);
+        float total = length;
         float[][][] ring = new float[ROWS + 1][COLUMNS + 1][6]; // x, y, z, u, v, rim
         float[] fade = new float[ROWS + 1];
 
         for (int r = 0; r <= ROWS; r++) {
             float y = o.yMin + total * r / ROWS;
             float t = (y - o.yMin) / length;
-            // Past the tip the flames narrow to a point
-            float taper = t <= 1.0F ? 1.0F : Math.max(0.0F, 1.0F - (t - 1.0F) / TIP_EXTENSION);
+            // Over the last part of the blade the aura closes in a rounded cap, so it ends at the tip and does not
+            // bulge or run on past it
+            float cap = Mth.clamp((t - CAP_START) / (1.0F - CAP_START), 0.0F, 1.0F);
+            float taper = Mth.sqrt(Math.max(0.0F, 1.0F - cap * cap));
             float cx = at(o.cx, t);
             float cz = at(o.cz, t);
-            // Starts soft at the hilt, and thins out towards the tip
-            fade[r] = Mth.clamp(r / (ROWS * 0.12F), 0.0F, 1.0F) * (t <= 1.0F ? 1.0F : taper);
+            // Starts soft at the hilt
+            fade[r] = Mth.clamp(r / (ROWS * 0.12F), 0.0F, 1.0F);
 
             for (int c = 0; c <= COLUMNS; c++) {
                 float angle = (float) (2.0D * Math.PI * c / COLUMNS);
@@ -339,7 +336,7 @@ public final class HiramekareiChakraRenderer {
                 p[2] = cz + radius * Mth.sin(angle);
                 // The flame texture: round the blade, and along it so that the flames point at the tip and flow
                 p[3] = (float) c / COLUMNS * turns + phase * 0.1F + time * speed * 0.07F;
-                p[4] = (o.yMax + length * TIP_EXTENSION - y) * 0.55F + time * speed * 0.9F;
+                p[4] = (o.yMax - y) * 0.55F + time * speed * 0.9F;
                 // How much the surface is seen edge on from the camera: 0 face on, 1 along the edge
                 float vx = camera.x - p[0];
                 float vy = camera.y - p[1];
@@ -378,9 +375,11 @@ public final class HiramekareiChakraRenderer {
                                float rimGain) {
         float rim = p[5];
         float alpha = strength * (rimBase + rimGain * rim);
-        int shade = Mth.clamp((int) (200.0F + 55.0F * rim), 0, 255);
+        // Blue in the middle, a lighter blue at the rim, and never white
+        int red = Mth.clamp((int) (105.0F + 85.0F * rim), 0, 255);
+        int green = Mth.clamp((int) (180.0F + 55.0F * rim), 0, 255);
         consumer.addVertex(matrix, p[0], p[1], p[2])
-                .setColor(shade, shade, 255, Mth.clamp((int) (alpha * 255.0F), 0, 255))
+                .setColor(red, green, 255, Mth.clamp((int) (alpha * 255.0F), 0, 255))
                 .setUv(p[3], p[4])
                 .setOverlay(OverlayTexture.NO_OVERLAY)
                 .setLight(LightTexture.FULL_BRIGHT)
