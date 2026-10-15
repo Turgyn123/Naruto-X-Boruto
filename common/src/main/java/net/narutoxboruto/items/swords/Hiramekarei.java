@@ -33,8 +33,8 @@ import java.util.List;
  *   <li><b>Passive, stored chakra:</b> like Samehada, the blades take in chakra with every hit, a little of your
  *       own and, from a player you hit, some of theirs, up to 150. Hold right click while sneaking to pour more of
  *       your chakra in. The stored chakra is shown in the tooltip.</li>
- *   <li><b>Ability 1, both blades</b> (the Special Action key): you hold both blades instead of one (the model
- *       changes to {@code hiramekarei_to}). With both blades drawn every hit is a double strike.</li>
+ *   <li><b>Ability 1, both blades</b>: the blades start combined (model {@code hiramekarei_two}) and every hit is
+ *       a double strike. The Special Action key splits off a single blade (model {@code hiramekarei_one}) and back.</li>
  *   <li><b>Ability 2, chakra coating</b> (right click): the whole blade is covered in chakra and glows. While it
  *       is on, every hit uses stored chakra and deals more damage, with a crescent of chakra flying off the
  *       blade. It goes out when the stored chakra runs out, or with another right click.</li>
@@ -91,13 +91,20 @@ public class Hiramekarei extends AbstractAbilitySword {
 
     // ---------------------------------------------------------------- ability 1: both blades
 
-    /** The Special Action key: both blades in the hands, or one. The model follows. */
+    /**
+     * The blades start combined, so "active" (both blades, double strike) is the default and the stored flag means
+     * the opposite: one blade drawn. The Special Action key switches between the two.
+     */
     @Override
-    public void toggleAbility(Player pPlayer, ItemStack pStack) {
-        super.toggleAbility(pPlayer, pStack);
-        if (!pPlayer.level().isClientSide()) {
-            pStack.set(DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(isActive(pStack) ? 1 : 0));
-        }
+    public boolean isActive(ItemStack pStack) {
+        return !super.isActive(pStack);
+    }
+
+    /** Keeps the model in step with the state: 0 is the combined model, 1 the single blade. */
+    @Override
+    protected void setActive(ItemStack pStack, boolean pActive) {
+        super.setActive(pStack, !pActive);
+        pStack.set(DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(pActive ? 0 : 1));
     }
 
     /** Both blades drawn: the second blade strikes right after the first. */
