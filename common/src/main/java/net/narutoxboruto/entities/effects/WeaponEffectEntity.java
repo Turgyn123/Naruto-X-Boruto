@@ -169,6 +169,14 @@ public class WeaponEffectEntity extends Entity {
     public static final double WAVE_SPEED = 1.5D;
     public static final double WAVE_HALF_ANGLE = 38.0D;
     public static final int WAVE_TICKS = 60;
+
+    /**
+     * Half of the angle of the fan at a distance from the caster, in radians. The fire pours out of the caster and
+     * spreads sideways along curved edges, narrow close up and widening like a trumpet to {@link #WAVE_HALF_ANGLE}.
+     */
+    public static double waveHalfAngle(double radius) {
+        return Math.max(Math.toRadians(8.0D), Math.toRadians(WAVE_HALF_ANGLE) * (1.0D - Math.exp(-radius / 14.0D)));
+    }
     private static final float WAVE_DAMAGE = 3.0F;
     /** How long the fire takes to die down once the caster lets go. */
     private static final int WAVE_FADE_TICKS = 14;
@@ -223,8 +231,8 @@ public class WeaponEffectEntity extends Entity {
     }
 
     /**
-     * The Great Fire Annihilation: the front of the wave spreads out at 1.5 blocks a tick, to 50 meters, in a fan 76
-     * degrees wide, and everything in the fan the front has passed burns for as long as the wave lasts. Whatever the
+     * The Great Fire Annihilation: the front of the wave spreads out at 1.5 blocks a tick, to 50 meters, in a fan that
+     * widens like a trumpet to 76 degrees, and everything in the fan the front has passed burns for as long as the wave lasts. Whatever the
      * caster cannot see, because there is a wall in the way, is spared. The fire itself is drawn by the renderer.
      */
     private void tickFireWave() {
@@ -263,13 +271,12 @@ public class WeaponEffectEntity extends Entity {
         double front = Math.min(WAVE_RANGE, (tickCount + 1) * WAVE_SPEED);
         float yaw = getYRot() * ((float) Math.PI / 180.0F);
         Vec3 forward = new Vec3(-Mth.sin(yaw), 0.0D, Mth.cos(yaw));
-        double cosHalf = Math.cos(Math.toRadians(WAVE_HALF_ANGLE));
         AABB box = new AABB(position(), position()).inflate(front + 2.0D, 6.0D, front + 2.0D);
         for (LivingEntity target : serverLevel.getEntitiesOfClass(LivingEntity.class, box, e -> e != ownerEntity && e.isAlive())) {
             Vec3 to = new Vec3(target.getX() - getX(), 0.0D, target.getZ() - getZ());
             double distance = to.length();
             if (distance > front) continue;
-            if (distance > 1.5D && to.dot(forward) / distance < cosHalf) continue;
+            if (distance > 1.5D && to.dot(forward) / distance < Math.cos(waveHalfAngle(distance))) continue;
             if (target.getY() < getY() - 3.0D || target.getY() > getY() + 8.0D) continue;
             if (caster != null && !caster.hasLineOfSight(target)) continue;
             target.invulnerableTime = 0;

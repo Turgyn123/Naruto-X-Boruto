@@ -87,12 +87,13 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
     // ---------------------------------------------------------------- fire jutsu
 
     /**
-     * Fire Release: Great Fire Annihilation: a huge wave of fire that spreads out in front of the caster in a wide fan,
-     * as a wall of flame along the ground. The wall is made of curved sheets of flames, one behind the other, each
-     * as high as the wave is far, that follow the ground and sway; the front one is the brightest. Round the front
-     * there are balls of fire for volume, and smoke rises off the top. All of it is pixel art in the style of the fire
-     * of Minecraft, bright, and the fire flickers frame by frame. The server
-     * burns everything in the fan, using the same numbers (see {@link WeaponEffectEntity#WAVE_RANGE}).
+     * Fire Release: Great Fire Annihilation: the fire pours out of the caster and spreads sideways along curved edges,
+     * widening like a trumpet, until the whole fan in front of the caster is a sea of flames. It is drawn as many curved
+     * sheets of flames, one behind the other from the caster to the front of the wave, that follow the ground and
+     * sway. The sheets are low close to the caster and get higher with the distance, and the one at the front is the
+     * brightest and the highest. Smoke rises off the top. All of it is pixel art in the style of the fire of Minecraft,
+     * bright, and the fire flickers frame by frame. The server burns everything in the same fan, using the same
+     * numbers (see {@link WeaponEffectEntity#waveHalfAngle}).
      */
     private void renderFireWave(WeaponEffectEntity entity, float age, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource) {
         Level level = entity.level();
@@ -103,18 +104,19 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
         double front = Math.min(WeaponEffectEntity.WAVE_RANGE, age * WeaponEffectEntity.WAVE_SPEED);
         if (front < 1.5D) return;
 
-        double half = Math.toRadians(WeaponEffectEntity.WAVE_HALF_ANGLE);
         float fade = Mth.clamp((entity.getMaxLife() - age) / 14.0F, 0.0F, 1.0F);
         Matrix4f matrix = poseStack.last().pose();
         VertexConsumer wall = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(FLAME_WALL_TEXTURE));
-        int columns = 36;
-        int sheets = 6;
-        for (int k = 0; k < sheets; k++) {
-            double radius = front - k * 3.6D;
-            if (radius < 1.5D) break;
-            double height = (2.5D + 4.5D * radius / WeaponEffectEntity.WAVE_RANGE) * Math.min(1.0D, radius / 6.0D);
-            // The front sheet is the brightest, the ones behind it fade
-            float alpha = fade * (1.0F - k * 0.11F);
+        int columns = 30;
+        // From the front back to the caster, every 3 blocks. The ones further away are drawn first, so the nearer ones
+        // are drawn over them.
+        int sheet = 0;
+        for (double radius = front; radius > 1.8D; radius -= 3.0D, sheet++) {
+            double half = WeaponEffectEntity.waveHalfAngle(radius);
+            // Low and small close to the caster, high far away, and the front of the wave is the highest
+            double height = (1.1D + 5.0D * radius / WeaponEffectEntity.WAVE_RANGE) * Math.min(1.0D, (radius - 1.0D) / 3.0D);
+            if (sheet == 0) height *= 1.2D;
+            float alpha = fade * (sheet == 0 ? 1.0F : 0.9F);
             double sway = 0.12D * height;
             Vec3 previousBottom = null;
             Vec3 previousTop = null;
@@ -124,18 +126,16 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
                 double angle = -half + 2.0D * half * i / columns;
                 Vec3 spot = forward.scale(Math.cos(angle) * radius).add(right.scale(Math.sin(angle) * radius));
                 double groundY = groundAt(level, origin.x + spot.x, origin.z + spot.z, origin.y) - origin.y;
-                double lick = Math.sin(age * 0.35D + i * 0.9D + k * 1.7D) * sway;
+                double lick = Math.sin(age * 0.35D + i * 0.9D + sheet * 1.7D) * sway;
                 Vec3 bottom = new Vec3(spot.x, groundY, spot.z);
                 Vec3 top = new Vec3(spot.x + right.x * lick, groundY + height, spot.z + right.z * lick);
                 // The flame sheet is four frames of 16 pixels, one under the other. Every column of every sheet is in its
                 // own frame, so the fire flickers pixel by pixel like the fire of Minecraft.
-                float u = (float) (i * radius * 2.0D * half / columns / 4.0D) + k * 0.37F;
-                int frame = Math.floorMod((int) (age * 0.4F + k * 1.3F + i * 0.45F), 4);
+                float u = (float) (i * radius * 2.0D * half / columns / 4.0D) + sheet * 0.37F;
+                int frame = Math.floorMod((int) (age * 0.4F + sheet * 1.3F + i * 0.45F), 4);
                 float vBottom = (frame + 1) / 4.0F;
                 float vTop = frame / 4.0F;
-                // Every part of the sheet flickers a little on its own
-                float flicker = 0.85F + 0.15F * Mth.sin(age * 0.9F + i * 1.7F + k * 2.3F);
-                float a = alpha * flicker;
+                float a = alpha * (0.88F + 0.12F * Mth.sin(age * 0.9F + i * 1.7F + sheet * 2.3F));
                 if (previousBottom != null) {
                     quad(wall, matrix, previousBottom, previousU, vBottom, previousAlpha, bottom, u, vBottom, a,
                             top, u, vTop, a, previousTop, previousU, vTop, previousAlpha, 1.0F, 1.0F, 1.0F);
@@ -147,31 +147,12 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
             }
         }
 
-        // Balls of fire round the front of the wave, for volume
-        org.joml.Quaternionf camera = this.entityRenderDispatcher.cameraOrientation();
-        VertexConsumer fire = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(FIRE_PUFF_TEXTURE));
-        java.util.Random random = new java.util.Random(entity.getId() * 104729L + 5L);
-        for (int i = 0; i < 22; i++) {
-            double radius = front - random.nextDouble() * 9.0D;
-            double angle = (random.nextDouble() * 2.0D - 1.0D) * half * 0.9D;
-            double size = 3.5D + random.nextDouble() * 4.0D;
-            double lift = 0.5D + random.nextDouble() * (2.0D + 0.08D * radius) + Math.sin(age * 0.2D + i) * 0.4D;
-            if (radius < 2.0D) continue;
-            Vec3 spot = forward.scale(Math.cos(angle) * radius).add(right.scale(Math.sin(angle) * radius));
-            double groundY = groundAt(level, origin.x + spot.x, origin.z + spot.z, origin.y) - origin.y;
-            poseStack.pushPose();
-            poseStack.translate(spot.x, groundY + lift, spot.z);
-            poseStack.mulPose(camera);
-            poseStack.mulPose(Axis.ZP.rotation((float) (random.nextDouble() * Math.PI * 2.0D + age * 0.05D)));
-            billboard(fire, poseStack.last().pose(), (float) size, 0.9F * fade, FULL_BRIGHT, 1.0F, 1.0F, 1.0F);
-            poseStack.popPose();
-        }
-        renderWaveSmoke(entity, age, partialTick, poseStack, bufferSource, front, forward, right, half, fade);
+        renderWaveSmoke(entity, age, partialTick, poseStack, bufferSource, front, forward, right, fade);
     }
 
     /** Dark smoke that rises off the top of the wave of fire and drifts up. */
     private void renderWaveSmoke(WeaponEffectEntity entity, float age, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource,
-                                 double front, Vec3 forward, Vec3 right, double half, float fade) {
+                                 double front, Vec3 forward, Vec3 right, float fade) {
         Level level = entity.level();
         Vec3 origin = entity.getPosition(partialTick);
         org.joml.Quaternionf camera = this.entityRenderDispatcher.cameraOrientation();
@@ -181,7 +162,7 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
         for (int i = 0; i < 14; i++) {
             double radius = front - random.nextDouble() * 14.0D;
             if (radius < 3.0D) continue;
-            double angle = (random.nextDouble() * 2.0D - 1.0D) * half * 0.9D;
+            double angle = (random.nextDouble() * 2.0D - 1.0D) * WeaponEffectEntity.waveHalfAngle(radius) * 0.9D;
             double wallHeight = 2.5D + 4.5D * radius / WeaponEffectEntity.WAVE_RANGE;
             // It rises, and starts again at the top of the flames
             double rise = ((age * 0.05D + random.nextDouble() * 4.0D) % 4.0D);
