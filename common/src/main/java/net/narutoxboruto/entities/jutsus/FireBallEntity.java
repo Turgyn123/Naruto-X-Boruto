@@ -23,30 +23,30 @@ import net.minecraft.world.phys.Vec3;
 import net.narutoxboruto.entities.ModEntities;
 
 /**
- * Great Fireball: a guided fireball. It starts small, grows to full size as it flies, and turns toward
- * wherever the caster is looking (a limited angle per tick, so it curves instead of snapping). It has
- * no gravity, so it flies where it is aimed. On impact it explodes, burns everything in the blast and
- * scorches the ground.
+ * Great Fireball Technique: a massive orb of roaring flame. It starts small, grows to full size as it flies and flies
+ * straight, with no tracking and no gravity, for up to 30 meters. On impact it engulfs its target and explodes, burning
+ * everything in the blast and leaving a crater in the ground (the crater respects the mob griefing rule).
  */
 public class FireBallEntity extends Projectile {
 
     private int age = 0;
     private float rotation = 0;
+    /** Where it was first seen flying, to know how far it has gone. */
+    private Vec3 launchPos;
     
     // Configuration
-    private static final float EXPLOSION_RADIUS = 2.25F;
-    private static final float FIRE_DAMAGE = 8.0F;      // Direct hit
-    private static final float BLAST_DAMAGE = 6.0F;     // Everything else in the blast, at the centre
-    private static final float BLAST_RADIUS = 3.5F;     // Everything inside is damaged and set on fire
-    private static final int FIRE_SECONDS = 5;
-    private static final int MAX_LIFETIME = 100;        // 5 seconds max flight time
-    private static final double START_SPEED = 0.7;      // Speed on launch, builds up to SPEED
+    private static final float EXPLOSION_RADIUS = 3.5F;  // The crater
+    private static final float FIRE_DAMAGE = 12.0F;      // Direct hit
+    private static final float BLAST_DAMAGE = 9.0F;      // Everything else in the blast, at the centre
+    private static final float BLAST_RADIUS = 5.0F;      // Everything inside is damaged and set on fire
+    private static final int FIRE_SECONDS = 6;
+    /** How far it flies before it burns out: 30 meters. */
+    private static final double RANGE = 30.0;
+    private static final int MAX_LIFETIME = 100;         // Never lives longer than this, whatever happens
+    private static final double START_SPEED = 0.7;       // Speed on launch, builds up to SPEED
     private static final double SPEED = 1.2;
     private static final double SPEED_UP_PER_TICK = 0.05;
-    private static final double TURN_RATE = Math.toRadians(6.0); // Max turn per tick toward the crosshair
-    private static final double AIM_DISTANCE = 40.0;    // How far ahead the crosshair is followed
-    private static final double TERRAIN_LOOKAHEAD = 3.0;
-    private static final int GROW_TICKS = 10;           // Ticks to reach full size
+    private static final int GROW_TICKS = 10;            // Ticks to reach full size
 
     public FireBallEntity(EntityType<? extends FireBallEntity> entityType, Level level) {
         super(entityType, level);
@@ -80,8 +80,10 @@ public class FireBallEntity extends Projectile {
             this.rotation -= 360.0F;
         }
         
-        // Out of fuel: burn out in a small burst instead of vanishing
-        if (this.age > MAX_LIFETIME) {
+        if (this.launchPos == null) this.launchPos = this.position();
+
+        // Out of range (30 meters): burn out in a small burst instead of vanishing
+        if (this.age > MAX_LIFETIME || this.position().distanceToSqr(this.launchPos) > RANGE * RANGE) {
             if (this.level() instanceof ServerLevel serverLevel) {
                 serverLevel.sendParticles(ParticleTypes.FLAME, this.getX(), this.getY(), this.getZ(), 20, 0.4, 0.4, 0.4, 0.05);
                 serverLevel.sendParticles(ParticleTypes.LARGE_SMOKE, this.getX(), this.getY(), this.getZ(), 6, 0.3, 0.3, 0.3, 0.02);
@@ -90,19 +92,15 @@ public class FireBallEntity extends Projectile {
             return;
         }
         
-        // Guidance (server side; the client follows the motion it is sent)
-        if (!this.level().isClientSide() && this.getOwner() instanceof LivingEntity caster) {
+        // It flies straight where it was aimed, only speeding up as it gets going (no tracking)
+        if (!this.level().isClientSide()) {
             Vec3 velocity = this.getDeltaMovement();
-            Vec3 desired = JutsuSteering.aimPoint(caster, AIM_DISTANCE).subtract(this.position());
-            // Close to the aim point: stop turning so it does not circle around it.
-            if (desired.lengthSqr() < 4.0) desired = velocity;
-            
-            Vec3 direction = JutsuSteering.turnToward(velocity, desired, TURN_RATE);
-            direction = JutsuSteering.avoidTerrain(this, direction, TERRAIN_LOOKAHEAD);
-            double speed = Math.min(SPEED, START_SPEED + SPEED_UP_PER_TICK * this.age);
-            this.setDeltaMovement(direction.scale(speed));
+            if (velocity.lengthSqr() > 1.0E-6) {
+                double speed = Math.min(SPEED, START_SPEED + SPEED_UP_PER_TICK * this.age);
+                this.setDeltaMovement(velocity.normalize().scale(speed));
+            }
         }
-        
+
         // Hit detection. A hit explodes and removes the fireball, so stop there.
         HitResult hitResult = ProjectileUtil.getHitResultOnMoveVector(this, this::canHitEntity);
         if (hitResult.getType() != HitResult.Type.MISS) {

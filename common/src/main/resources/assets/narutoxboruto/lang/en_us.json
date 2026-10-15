@@ -82,8 +82,8 @@
   "item.narutoxboruto.speed_scroll":"Speed Scroll",
   "item.narutoxboruto.summoning_scroll":"Summoning Scroll",
   "item.narutoxboruto.earth_wall":"Earth Wall Jutsu",
-  "item.narutoxboruto.fire_ball":"Fire Ball Jutsu",
-  "item.narutoxboruto.fire_ball_jutsu":"Fire Ball Jutsu",
+  "item.narutoxboruto.fire_ball":"Great Fireball Technique",
+  "item.narutoxboruto.fire_ball_jutsu":"Great Fireball Technique",
   "item.narutoxboruto.shark_bomb_jutsu":"Shark Bomb Jutsu",  "item.narutoxboruto.water_dragon_jutsu":"Water Dragon Jutsu",  "item.narutoxboruto.earth_wall_jutsu":"Earth Wall Jutsu",
   "item.narutoxboruto.earth_wave_jutsu":"Earth Wave Jutsu",
   "item.narutoxboruto.water_prison_jutsu":"Water Prison Jutsu",
@@ -249,7 +249,7 @@
   "command.shinobi_info.add.multiple": "Added %s to %s for %s players",
 
   "jutsu.earth_wall": "Earth Style: Mud Wall",
-  "jutsu.fire_ball": "Fire Style: Fireball Jutsu",
+  "jutsu.fire_ball": "Fire Release: Great Fireball Technique",
 
   "shinobiStat.kekkei_genkai": "Kekkei Genkai",
   "shinobiStat.dojutsu": "Dōjutsu",
