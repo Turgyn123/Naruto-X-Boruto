@@ -33,8 +33,11 @@ import java.util.List;
  *   <li><b>Passive, stored chakra:</b> like Samehada, the blades take in chakra with every hit, a little of your
  *       own and, from a player you hit, some of theirs, up to 150. Hold right click while sneaking to pour more of
  *       your chakra in. The stored chakra is shown in the tooltip.</li>
- *   <li><b>Ability 1, both blades</b>: the blades start combined (model {@code hiramekarei_two}) and every hit is
- *       a double strike. The Special Action key splits off a single blade (model {@code hiramekarei_one}) and back.</li>
+ *   <li><b>Ability 1, both blades</b>: the blades start combined, two handed (model {@code hiramekarei_two}), and
+ *       every hit is a double strike. The Special Action key splits them: one blade (model
+ *       {@code hiramekarei_one}) in the main hand and a copy of it in the off hand. The off hand blade is locked, it
+ *       cannot be moved or dropped, and it is gone while the main blade is not in the main hand. If the main blade is
+ *       thrown away the off hand blade vanishes and the thrown blade is combined again.</li>
  *   <li><b>Ability 2, chakra coating</b> (right click): the whole blade is covered in chakra and glows. While it
  *       is on, every hit uses stored chakra and deals more damage, with a crescent of chakra flying off the
  *       blade. It goes out when the stored chakra runs out, or with another right click.</li>
@@ -58,6 +61,8 @@ public class Hiramekarei extends AbstractAbilitySword {
     private static final int CHARGE_INTERVAL = 4;
     private static final int MAX_USE_TICKS = 72000;
     private static final int CRESCENT_COLOR = 0xB06FD8FF;
+    /** Marks the locked copy of the blade that sits in the off hand while the blades are split. */
+    private static final String OFFHAND_KEY = "hiramekarei_offhand";
 
     public Hiramekarei(Properties pProperties) {
         super(SwordCustomTiers.HIRAMEKAREI, pProperties);
@@ -100,11 +105,115 @@ public class Hiramekarei extends AbstractAbilitySword {
         return !super.isActive(pStack);
     }
 
+    /** The off hand blade is only a copy, it has no ability of its own. */
+    @Override
+    public void toggleAbility(Player pPlayer, ItemStack pStack) {
+        if (isOffhandBlade(pStack)) return;
+        super.toggleAbility(pPlayer, pStack);
+    }
+
     /** Keeps the model in step with the state: 0 is the combined model, 1 the single blade. */
     @Override
     protected void setActive(ItemStack pStack, boolean pActive) {
         super.setActive(pStack, !pActive);
         pStack.set(DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(pActive ? 0 : 1));
+    }
+
+    // ---------------------------------------------------------------- the split blades
+
+    /** The locked copy of the blade in the off hand. */
+    public static boolean isOffhandBlade(ItemStack stack) {
+        return !stack.isEmpty() && stack.getItem() instanceof Hiramekarei
+                && stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag().getBoolean(OFFHAND_KEY);
+    }
+
+    /** The real blade while the blades are split: one blade in the main hand, a copy in the off hand. */
+    private static boolean isSplitBlade(ItemStack stack) {
+        return !stack.isEmpty() && stack.getItem() instanceof Hiramekarei blade && !isOffhandBlade(stack)
+                && !blade.isActive(stack);
+    }
+
+    private ItemStack makeOffhandBlade(ItemStack main) {
+        ItemStack copy = main.copy();
+        copy.setCount(1);
+        CustomData.update(DataComponents.CUSTOM_DATA, copy, tag -> tag.putBoolean(OFFHAND_KEY, true));
+        copy.set(DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(1));
+        return copy;
+    }
+
+    /**
+     * Every tick, for every player: keeps the off hand blade there while the split blade is in the main hand, and
+     * nowhere else. Swapping hands puts it back, and a copy found in any other slot is removed.
+     */
+    public static void tickSplitBlades(ServerPlayer player) {
+        ItemStack carried = player.containerMenu.getCarried();
+        if (isOffhandBlade(carried)) {
+            player.containerMenu.setCarried(ItemStack.EMPTY);
+        }
+
+        ItemStack main = player.getMainHandItem();
+        ItemStack off = player.getOffhandItem();
+        // The swap hands key: swap them back
+        if (isOffhandBlade(main) && isSplitBlade(off)) {
+            player.setItemInHand(InteractionHand.MAIN_HAND, off);
+            player.setItemInHand(InteractionHand.OFF_HAND, main);
+            ItemStack swapped = main;
+            main = off;
+            off = swapped;
+        }
+
+        // A copy in any other slot is not allowed
+        for (int i = 0; i < 40; i++) {
+            if (isOffhandBlade(player.getInventory().getItem(i))) {
+                player.getInventory().setItem(i, ItemStack.EMPTY);
+            }
+        }
+
+        boolean splitInMainHand = isSplitBlade(main);
+        if (isOffhandBlade(off)) {
+            if (!splitInMainHand) {
+                player.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
+            } else {
+                // The copy follows the real blade: stored chakra and the glow of the coat
+                Hiramekarei blade = (Hiramekarei) main.getItem();
+                if (blade.getStored(off) != blade.getStored(main)) {
+                    blade.setStored(off, blade.getStored(main));
+                }
+                if (!java.util.Objects.equals(off.get(DataComponents.ENCHANTMENT_GLINT_OVERRIDE),
+                        main.get(DataComponents.ENCHANTMENT_GLINT_OVERRIDE))) {
+                    off.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, main.get(DataComponents.ENCHANTMENT_GLINT_OVERRIDE));
+                }
+            }
+        } else if (splitInMainHand) {
+            // Whatever was in the off hand goes to the inventory, or to the floor when it is full
+            if (!off.isEmpty()) {
+                ItemStack displaced = off.copy();
+                player.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
+                if (!player.getInventory().add(displaced)) {
+                    player.drop(displaced, false);
+                }
+            }
+            player.setItemInHand(InteractionHand.OFF_HAND, ((Hiramekarei) main.getItem()).makeOffhandBlade(main));
+        }
+    }
+
+    /**
+     * Called when a stack is about to be dropped by a player. The off hand blade is never dropped. When the real
+     * split blade is thrown away the off hand blade is gone and the thrown blade is combined again.
+     *
+     * @return true when the drop must be cancelled
+     */
+    public static boolean onDrop(ServerPlayer player, ItemStack dropped) {
+        if (isOffhandBlade(dropped)) {
+            return true;
+        }
+        if (isSplitBlade(dropped)) {
+            ((Hiramekarei) dropped.getItem()).setActive(dropped, true);
+            if (isOffhandBlade(player.getOffhandItem())) {
+                player.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
+            }
+        }
+        return false;
     }
 
     /** Both blades drawn: the second blade strikes right after the first. */
@@ -170,6 +279,9 @@ public class Hiramekarei extends AbstractAbilitySword {
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
+        if (isOffhandBlade(stack)) {
+            return InteractionResultHolder.fail(stack);
+        }
         if (level.isClientSide() || !(player instanceof ServerPlayer serverPlayer)) {
             return InteractionResultHolder.consume(stack);
         }

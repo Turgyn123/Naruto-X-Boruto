@@ -6,7 +6,8 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "MixinLiquidBlock",
-    "MixinPlayer"
+    "MixinPlayer",
+    "MixinSlot"
   ],
   "client": [
     "MixinEntityGlowing",

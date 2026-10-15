@@ -12,6 +12,8 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Abilities;
 import net.minecraft.world.entity.player.Player;
@@ -26,12 +28,14 @@ import net.narutoxboruto.dojutsu.DojutsuProgression;
 import net.narutoxboruto.effect.ModEffects;
 import net.narutoxboruto.entities.ModeHandler;
 import net.narutoxboruto.items.PreventSlow;
+import net.narutoxboruto.items.swords.Hiramekarei;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 
 @Mixin(Player.class)
@@ -143,6 +147,17 @@ public abstract class MixinPlayer extends LivingEntity implements ModeHandler {
             this.entityData.set(DATA_NARUTO_RUNNING, shouldNarutoRun);
 
             DojutsuProgression.tick(serverPlayer);
+            Hiramekarei.tickSplitBlades(serverPlayer);
+        }
+    }
+
+    /** The off hand Hiramekarei is never dropped, and throwing the real one combines the blades again. */
+    @Inject(method = "drop(Lnet/minecraft/world/item/ItemStack;ZZ)Lnet/minecraft/world/entity/item/ItemEntity;",
+            at = @At("HEAD"), cancellable = true)
+    private void narutoxboruto$dropSplitBlades(ItemStack dropped, boolean dropAround, boolean includeThrower,
+                                               CallbackInfoReturnable<ItemEntity> cir) {
+        if ((Object) this instanceof ServerPlayer serverPlayer && Hiramekarei.onDrop(serverPlayer, dropped)) {
+            cir.setReturnValue(null);
         }
     }
 }
