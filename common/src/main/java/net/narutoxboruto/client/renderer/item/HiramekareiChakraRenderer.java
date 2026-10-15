@@ -124,27 +124,39 @@ public final class HiramekareiChakraRenderer {
         }
         if (yMax - yMin < 1.0e-4F) return null;
 
-        // The points of every slice. A long face counts in every slice it runs through, not only the ones where it
-        // has a corner.
+        // The points of every slice: the corners of the faces in it, and where the edges of the faces cross the
+        // slice borders. A long face that narrows towards the tip then gives the true narrow cross section at the
+        // tip, not its wide corners from the base.
         List<List<float[]>> points = new ArrayList<>();
         for (int s = 0; s < SLICES; s++) points.add(new ArrayList<>());
+        float step = (yMax - yMin) / SLICES;
         for (BakedQuad quad : quads) {
             int[] data = quad.getVertices();
             float[] xs = new float[4];
+            float[] ys = new float[4];
             float[] zs = new float[4];
-            float lo = Float.MAX_VALUE;
-            float hi = -Float.MAX_VALUE;
             for (int v = 0; v < 4; v++) {
                 xs[v] = Float.intBitsToFloat(data[v * 8]);
-                float y = Float.intBitsToFloat(data[v * 8 + 1]);
+                ys[v] = Float.intBitsToFloat(data[v * 8 + 1]);
                 zs[v] = Float.intBitsToFloat(data[v * 8 + 2]);
-                lo = Math.min(lo, y);
-                hi = Math.max(hi, y);
+                int own = Mth.clamp((int) ((ys[v] - yMin) / step), 0, SLICES - 1);
+                points.get(own).add(new float[] {xs[v], zs[v]});
             }
-            int first = Mth.clamp((int) ((lo - yMin) / (yMax - yMin) * SLICES), 0, SLICES - 1);
-            int last = Mth.clamp((int) ((hi - yMin) / (yMax - yMin) * SLICES), 0, SLICES - 1);
-            for (int s = first; s <= last; s++) {
-                for (int v = 0; v < 4; v++) points.get(s).add(new float[] {xs[v], zs[v]});
+            for (int v = 0; v < 4; v++) {
+                int w = (v + 1) % 4;
+                if (Math.abs(ys[v] - ys[w]) < 1.0e-6F) continue;
+                float lowY = Math.min(ys[v], ys[w]);
+                float highY = Math.max(ys[v], ys[w]);
+                int fromBorder = (int) Math.ceil((lowY - yMin) / step);
+                int toBorder = (int) Math.floor((highY - yMin) / step);
+                for (int k = Mth.clamp(fromBorder, 0, SLICES); k <= Mth.clamp(toBorder, 0, SLICES); k++) {
+                    float t = (yMin + k * step - ys[v]) / (ys[w] - ys[v]);
+                    if (t < 0.0F || t > 1.0F) continue;
+                    float[] point = {Mth.lerp(t, xs[v], xs[w]), Mth.lerp(t, zs[v], zs[w])};
+                    // A border belongs to the slice below it and the slice above it
+                    if (k > 0) points.get(k - 1).add(point);
+                    if (k < SLICES) points.get(k).add(point);
+                }
             }
         }
 
