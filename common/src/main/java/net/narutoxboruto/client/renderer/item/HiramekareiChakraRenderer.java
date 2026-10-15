@@ -52,7 +52,7 @@ public final class HiramekareiChakraRenderer {
     private static final int ROWS = 36;
     private static final int COLUMNS = 24;
     /** The flames lick on past the tip of the blade, this much of its length. */
-    private static final float TIP_EXTENSION = 0.06F;
+    private static final float TIP_EXTENSION = 0.04F;
 
     /** The blade in slices: the middle of each, and how far the blade reaches from it in every direction round it. */
     private record Outline(float yMin, float yMax, float[] cx, float[] cz, float[][] reach) {}
@@ -89,11 +89,11 @@ public final class HiramekareiChakraRenderer {
         // A buffer source ends the buffer before as soon as the next render type is asked for, so each one is fetched
         // just before it is drawn to and never held while another is asked for.
         VertexConsumer mist = buffer.getBuffer(RenderType.entityTranslucentEmissive(TEXTURE));
-        sleeve(mist, matrix, outline, time, 1.12F, 0.040F, 0.10F, 0.45F, 1, 0.30F);
-        sleeve(mist, matrix, outline, time, 1.07F, 0.028F, 0.14F, 0.60F, 2, 1.70F);
+        sleeve(mist, matrix, outline, time, 1.06F, 0.020F, 0.10F, 0.90F, 1, 0.30F);
+        sleeve(mist, matrix, outline, time, 1.035F, 0.012F, 0.14F, 1.20F, 2, 1.70F);
         VertexConsumer glow = buffer.getBuffer(RenderType.entityTranslucentEmissive(GLOW));
-        sleeve(glow, matrix, outline, time, 1.03F, 0.018F, 0.22F, 0.75F, 1, 3.10F);
-        sleeve(glow, matrix, outline, time, 1.00F, 0.008F, 0.32F, 0.90F, 2, 4.20F);
+        sleeve(glow, matrix, outline, time, 1.015F, 0.007F, 0.22F, 1.50F, 1, 3.10F);
+        sleeve(glow, matrix, outline, time, 1.000F, 0.003F, 0.32F, 1.80F, 2, 4.20F);
 
         poseStack.popPose();
     }
@@ -153,25 +153,31 @@ public final class HiramekareiChakraRenderer {
         float[] cz = new float[SLICES];
         float[][] reach = new float[SLICES][COLUMNS + 1];
         for (int s = 0; s < SLICES; s++) {
-            float minX = Float.MAX_VALUE, maxX = -Float.MAX_VALUE, minZ = Float.MAX_VALUE, maxZ = -Float.MAX_VALUE;
-            for (float[] p : points.get(s)) {
-                minX = Math.min(minX, p[0]);
-                maxX = Math.max(maxX, p[0]);
-                minZ = Math.min(minZ, p[1]);
-                maxZ = Math.max(maxZ, p[1]);
+            // The outline of the slice is the convex hull of its points, and its middle is the average of the
+            // corners of that hull, which is always inside it
+            List<float[]> hull = hull(points.get(s));
+            float mx = 0.0F;
+            float mz = 0.0F;
+            for (float[] p : hull) {
+                mx += p[0];
+                mz += p[1];
             }
-            cx[s] = (minX + maxX) * 0.5F;
-            cz[s] = (minZ + maxZ) * 0.5F;
+            cx[s] = mx / hull.size();
+            cz[s] = mz / hull.size();
             for (int c = 0; c <= COLUMNS; c++) {
                 float angle = (float) (2.0D * Math.PI * c / COLUMNS);
                 float dx = Mth.cos(angle);
                 float dz = Mth.sin(angle);
-                // The furthest the blade reaches in this direction: no point of it is outside
-                float far = 0.02F;
-                for (float[] p : points.get(s)) {
-                    far = Math.max(far, (p[0] - cx[s]) * dx + (p[1] - cz[s]) * dz);
+                // Where a line out of the middle leaves the hull. A very thin slice has no real hull, then the
+                // furthest point in that direction does.
+                float far = hull.size() >= 3 ? rayReach(hull, cx[s], cz[s], dx, dz) : -1.0F;
+                if (far < 0.0F) {
+                    far = 0.0F;
+                    for (float[] p : points.get(s)) {
+                        far = Math.max(far, (p[0] - cx[s]) * dx + (p[1] - cz[s]) * dz);
+                    }
                 }
-                reach[s][c] = far;
+                reach[s][c] = Math.max(far, 0.015F);
             }
         }
 
@@ -192,6 +198,50 @@ public final class HiramekareiChakraRenderer {
         smooth(cx);
         smooth(cz);
         return new Outline(yMin, yMax, cx, cz, reach);
+    }
+
+    /** The convex hull of some points, counter clockwise (Andrew's monotone chain). */
+    private static List<float[]> hull(List<float[]> points) {
+        List<float[]> sorted = new ArrayList<>(points);
+        sorted.sort((p, q) -> p[0] != q[0] ? Float.compare(p[0], q[0]) : Float.compare(p[1], q[1]));
+        int n = sorted.size();
+        if (n < 3) return sorted;
+        float[][] h = new float[2 * n][];
+        int k = 0;
+        for (int i = 0; i < n; i++) {
+            while (k >= 2 && cross(h[k - 2], h[k - 1], sorted.get(i)) <= 0.0F) k--;
+            h[k++] = sorted.get(i);
+        }
+        for (int i = n - 2, t = k + 1; i >= 0; i--) {
+            while (k >= t && cross(h[k - 2], h[k - 1], sorted.get(i)) <= 0.0F) k--;
+            h[k++] = sorted.get(i);
+        }
+        List<float[]> result = new ArrayList<>();
+        for (int i = 0; i < k - 1; i++) result.add(h[i]);
+        return result;
+    }
+
+    private static float cross(float[] o, float[] a, float[] b) {
+        return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+    }
+
+    /** How far a line from a point inside the hull, in a direction, goes before it leaves the hull. -1 if none. */
+    private static float rayReach(List<float[]> hull, float ox, float oz, float dx, float dz) {
+        float best = -1.0F;
+        for (int i = 0; i < hull.size(); i++) {
+            float[] a = hull.get(i);
+            float[] b = hull.get((i + 1) % hull.size());
+            float ex = b[0] - a[0];
+            float ez = b[1] - a[1];
+            float denom = dx * ez - dz * ex;
+            if (Math.abs(denom) < 1.0e-9F) continue;
+            float wx = a[0] - ox;
+            float wz = a[1] - oz;
+            float t = (wx * ez - wz * ex) / denom;
+            float u = (wx * dz - wz * dx) / denom;
+            if (t > 0.0F && u >= -1.0e-4F && u <= 1.0001F) best = Math.max(best, t);
+        }
+        return best;
     }
 
     private static void smooth(float[] values) {
@@ -236,7 +286,7 @@ public final class HiramekareiChakraRenderer {
             float y = o.yMin + total * r / ROWS;
             float t = (y - o.yMin) / length;
             // Past the tip the flames narrow to a point
-            float taper = t <= 1.0F ? 1.0F : (float) Math.pow(Math.max(0.0F, 1.0F - (t - 1.0F) / TIP_EXTENSION), 0.5);
+            float taper = t <= 1.0F ? 1.0F : Math.max(0.0F, 1.0F - (t - 1.0F) / TIP_EXTENSION);
             float cx = at(o.cx, t);
             float cz = at(o.cz, t);
             // Starts soft at the hilt, and thins out towards the tip
@@ -254,7 +304,7 @@ public final class HiramekareiChakraRenderer {
                 p[2] = cz + radius * Mth.sin(angle);
                 // The flame texture: round the blade, and along it so that the flames point at the tip and flow
                 p[3] = (float) c / COLUMNS * turns + phase * 0.1F + time * speed * 0.07F;
-                p[4] = (o.yMax + length * TIP_EXTENSION - y) * 0.55F + time * speed * 0.45F;
+                p[4] = (o.yMax + length * TIP_EXTENSION - y) * 0.55F + time * speed * 0.9F;
             }
         }
 
