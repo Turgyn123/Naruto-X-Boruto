@@ -147,7 +147,6 @@ public abstract class MixinPlayer extends LivingEntity implements ModeHandler {
             this.entityData.set(DATA_NARUTO_RUNNING, shouldNarutoRun);
 
             DojutsuProgression.tick(serverPlayer);
-            Hiramekarei.tickSplitBlades(serverPlayer);
         }
     }
 

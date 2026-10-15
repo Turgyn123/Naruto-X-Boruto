@@ -141,8 +141,18 @@ public class Hiramekarei extends AbstractAbilitySword {
         return copy;
     }
 
+    /** Runs every tick for a Hiramekarei in an inventory: the main blade, and the off hand copy. */
+    @Override
+    public void inventoryTick(ItemStack stack, Level level, net.minecraft.world.entity.Entity entity, int slotId, boolean isSelected) {
+        super.inventoryTick(stack, level, entity, slotId, isSelected);
+        if (!level.isClientSide() && entity instanceof ServerPlayer player
+                && (isOffhandBlade(stack) || stack == player.getMainHandItem())) {
+            tickSplitBlades(player);
+        }
+    }
+
     /**
-     * Every tick, for every player: keeps the off hand blade there while the split blade is in the main hand, and
+     * Keeps the off hand blade there while the split blade is in the main hand, and
      * nowhere else. Swapping hands puts it back, and a copy found in any other slot is removed.
      */
     public static void tickSplitBlades(ServerPlayer player) {
