@@ -41,7 +41,7 @@ public class FlameBullet extends AbstractJutsuItem {
 
     @Override
     public int getCooldownTicks() {
-        return 40; // 2 seconds
+        return 20; // 1 second
     }
 
     @Override
