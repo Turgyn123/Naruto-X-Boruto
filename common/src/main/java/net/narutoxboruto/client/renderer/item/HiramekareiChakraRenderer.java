@@ -18,6 +18,7 @@ import net.minecraft.world.item.ItemStack;
 import net.narutoxboruto.items.swords.Hiramekarei;
 import net.narutoxboruto.main.Main;
 import org.joml.Matrix4f;
+import org.joml.Vector3f;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -44,6 +45,8 @@ public final class HiramekareiChakraRenderer {
 
     private static final ResourceLocation GLOW = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID,
             "textures/effect/hiramekarei_glow.png");
+    private static final ResourceLocation LINES = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID,
+            "textures/effect/hiramekarei_lines.png");
     private static final RandomSource RANDOM = RandomSource.create(42L);
 
     /** How wide the blade is along its length: the middle and the half sizes of its outline in slices. */
@@ -82,6 +85,9 @@ public final class HiramekareiChakraRenderer {
         }
 
         Matrix4f matrix = poseStack.last().pose();
+        // Where the camera is, in the model's own space: the aura is brightest where it is seen edge on, like light
+        // round the rim of glass, and clear where it is seen face on
+        Vector3f camera = new Matrix4f(matrix).invert().transformPosition(new Vector3f());
 
         // From the outside in. The outer layers are thin mist, so the sword can be seen through them. The two next
         // to the blade are a near white glow: bright at the blade and fading blue outwards. Each layer has its own
@@ -89,11 +95,13 @@ public final class HiramekareiChakraRenderer {
         // A buffer source ends the buffer before as soon as the next render type is asked for, so each one is fetched
         // just before it is drawn to and never held while another is asked for.
         VertexConsumer mist = buffer.getBuffer(RenderType.entityTranslucentEmissive(TEXTURE));
-        sleeve(mist, matrix, outline, time, 1.06F, 0.028F, 0.10F, 0.90F, 1, 0.30F);
-        sleeve(mist, matrix, outline, time, 1.035F, 0.020F, 0.14F, 1.20F, 2, 1.70F);
+        sleeve(mist, matrix, outline, time, 1.05F, 0.026F, 0.16F, 0.90F, 1, 0.30F, camera, 0.45F, 1.00F);
         VertexConsumer glow = buffer.getBuffer(RenderType.entityTranslucentEmissive(GLOW));
-        sleeve(glow, matrix, outline, time, 1.015F, 0.014F, 0.22F, 1.50F, 1, 3.10F);
-        sleeve(glow, matrix, outline, time, 1.000F, 0.008F, 0.32F, 1.80F, 2, 4.20F);
+        sleeve(glow, matrix, outline, time, 1.02F, 0.016F, 0.24F, 1.50F, 1, 3.10F, camera, 0.15F, 2.20F);
+        sleeve(glow, matrix, outline, time, 1.00F, 0.008F, 0.32F, 1.80F, 2, 4.20F, camera, 0.25F, 2.60F);
+        // Bright lines of energy racing along the blade
+        VertexConsumer lines = buffer.getBuffer(RenderType.entityTranslucentEmissive(LINES));
+        sleeve(lines, matrix, outline, time, 1.03F, 0.020F, 0.60F, 2.60F, 3, 6.00F, camera, 0.70F, 0.60F);
 
         poseStack.popPose();
     }
@@ -299,10 +307,14 @@ public final class HiramekareiChakraRenderer {
      * tapering to nothing past the tip. It is drawn from both sides.
      */
     private static void sleeve(VertexConsumer consumer, Matrix4f matrix, Outline o, float time, float grow,
-                               float margin, float strength, float speed, int turns, float phase) {
+                               float margin, float strength, float speed, int turns, float phase, Vector3f camera,
+                               float rimBase, float rimGain) {
+        // The aura breathes: a slow pulse in how bright it is, and a flicker in how far it reaches
+        strength *= 0.88F + 0.12F * Mth.sin(time * 3.2F + phase);
+        grow *= 1.0F + 0.015F * Mth.sin(time * 5.0F + phase * 2.0F);
         float length = o.yMax - o.yMin;
         float total = length * (1.0F + TIP_EXTENSION);
-        float[][][] ring = new float[ROWS + 1][COLUMNS + 1][5]; // x, y, z, u, v
+        float[][][] ring = new float[ROWS + 1][COLUMNS + 1][6]; // x, y, z, u, v, rim
         float[] fade = new float[ROWS + 1];
 
         for (int r = 0; r <= ROWS; r++) {
@@ -328,6 +340,14 @@ public final class HiramekareiChakraRenderer {
                 // The flame texture: round the blade, and along it so that the flames point at the tip and flow
                 p[3] = (float) c / COLUMNS * turns + phase * 0.1F + time * speed * 0.07F;
                 p[4] = (o.yMax + length * TIP_EXTENSION - y) * 0.55F + time * speed * 0.9F;
+                // How much the surface is seen edge on from the camera: 0 face on, 1 along the edge
+                float vx = camera.x - p[0];
+                float vy = camera.y - p[1];
+                float vz = camera.z - p[2];
+                float len = Mth.sqrt(vx * vx + vy * vy + vz * vz);
+                float facing = len < 1.0e-6F ? 1.0F
+                        : Math.abs((Mth.cos(angle) * vx + Mth.sin(angle) * vz) / len);
+                p[5] = (float) Math.pow(1.0F - Mth.clamp(facing, 0.0F, 1.0F), 1.5D);
             }
         }
 
@@ -339,22 +359,28 @@ public final class HiramekareiChakraRenderer {
                 float[] p3 = ring[r + 1][c];
                 float a0 = fade[r];
                 float a1 = fade[r + 1];
-                vertex(consumer, matrix, p0, strength * a0);
-                vertex(consumer, matrix, p1, strength * a0);
-                vertex(consumer, matrix, p2, strength * a1);
-                vertex(consumer, matrix, p3, strength * a1);
+                float k0 = strength * a0;
+                float k1 = strength * a1;
+                vertex(consumer, matrix, p0, k0, rimBase, rimGain);
+                vertex(consumer, matrix, p1, k0, rimBase, rimGain);
+                vertex(consumer, matrix, p2, k1, rimBase, rimGain);
+                vertex(consumer, matrix, p3, k1, rimBase, rimGain);
                 // The other side
-                vertex(consumer, matrix, p3, strength * a1);
-                vertex(consumer, matrix, p2, strength * a1);
-                vertex(consumer, matrix, p1, strength * a0);
-                vertex(consumer, matrix, p0, strength * a0);
+                vertex(consumer, matrix, p3, k1, rimBase, rimGain);
+                vertex(consumer, matrix, p2, k1, rimBase, rimGain);
+                vertex(consumer, matrix, p1, k0, rimBase, rimGain);
+                vertex(consumer, matrix, p0, k0, rimBase, rimGain);
             }
         }
     }
 
-    private static void vertex(VertexConsumer consumer, Matrix4f matrix, float[] p, float alpha) {
+    private static void vertex(VertexConsumer consumer, Matrix4f matrix, float[] p, float strength, float rimBase,
+                               float rimGain) {
+        float rim = p[5];
+        float alpha = strength * (rimBase + rimGain * rim);
+        int shade = Mth.clamp((int) (200.0F + 55.0F * rim), 0, 255);
         consumer.addVertex(matrix, p[0], p[1], p[2])
-                .setColor(255, 255, 255, Mth.clamp((int) (alpha * 255.0F), 0, 255))
+                .setColor(shade, shade, 255, Mth.clamp((int) (alpha * 255.0F), 0, 255))
                 .setUv(p[3], p[4])
                 .setOverlay(OverlayTexture.NO_OVERLAY)
                 .setLight(LightTexture.FULL_BRIGHT)
