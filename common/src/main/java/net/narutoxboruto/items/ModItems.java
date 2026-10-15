@@ -56,6 +56,8 @@ public class ModItems {
 
     //Jutsu Items
     public static final String FIRE_BALL_JUTSU = "fire_ball_jutsu";
+    public static final String FIRE_STREAM_JUTSU = "fire_stream_jutsu";
+    public static final String ASH_PILE_BURNING_JUTSU = "ash_pile_burning_jutsu";
     public static final String WATER_DRAGON_JUTSU = "water_dragon_jutsu";
     public static final String SHARK_BOMB_JUTSU = "shark_bomb_jutsu";
     public static final String WATER_PRISON_JUTSU = "water_prison_jutsu";

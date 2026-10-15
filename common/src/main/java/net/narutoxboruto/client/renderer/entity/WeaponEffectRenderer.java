@@ -52,6 +52,8 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
                        MultiBufferSource bufferSource, int packedLight) {
         float age = entity.tickCount + partialTick;
         int kind = entity.getKind();
+        // The fire jutsu are only particles, which the server sends
+        if (kind >= WeaponEffectEntity.FLAME_STREAM) return;
 
         poseStack.pushPose();
         if (kind == WeaponEffectEntity.THREAD) {

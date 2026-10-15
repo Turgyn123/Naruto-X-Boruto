@@ -98,6 +98,8 @@ public class NeoForgeTab {
             .icon(() -> FIRE_BALL_JUTSU.get().getDefaultInstance())
             .displayItems((parameters, output) -> {
                 output.accept(FIRE_BALL_JUTSU.get());
+                output.accept(FIRE_STREAM_JUTSU.get());
+                output.accept(ASH_PILE_BURNING_JUTSU.get());
                 output.accept(SHARK_BOMB_JUTSU.get());
                 output.accept(WATER_DRAGON_JUTSU.get());
                 output.accept(EARTH_WALL_JUTSU.get());
