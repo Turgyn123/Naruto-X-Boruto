@@ -5,8 +5,6 @@ import net.narutoxboruto.main.platform.Services;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.player.Player;
@@ -150,12 +148,10 @@ public abstract class AbstractJutsuItem extends Item {
     }
     
     /**
-     * Play a sound when the jutsu is successfully cast.
-     * Override and leave empty to silence for specific jutsus.
+     * A sound played when the jutsu is successfully cast. It is silent: every jutsu plays its own sounds.
+     * Override it to add one.
      */
     protected void playCastSound(Level level, Player player) {
-        level.playSound(null, player.getX(), player.getY(), player.getZ(),
-            SoundEvents.ENCHANTMENT_TABLE_USE, SoundSource.PLAYERS, 0.5F, 1.0F);
     }
     
     private String capitalize(String s) {
