@@ -44,7 +44,6 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
     private static final ResourceLocation THREAD_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/thread.png");
     private static final ResourceLocation WHITE_TEXTURE = ResourceLocation.withDefaultNamespace("textures/misc/white.png");
     private static final ResourceLocation FLAME_BLOB_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/flame_blob.png");
-    private static final ResourceLocation EMBER_GROUND_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/ember_ground.png");
     private static final ResourceLocation FIRE_PUFF_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/fire_puff.png");
     private static final ResourceLocation ASH_PUFF_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/ash_puff.png");
     private static final int FULL_BRIGHT = 0xF000F0;
@@ -91,7 +90,6 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
      * Fire Release: Great Fire Annihilation: a dense cloud of chunky pixel flames pours out of the caster and fills a
      * fan in front of the caster that widens like a trumpet.
      * <ul>
-     *   <li>The ground of the fan is a carpet of embers whose texture runs outwards from the caster.</li>
      *   <li>Hundreds of flames start at the caster, fly outwards while they grow, turn from yellow to orange to red
      *       and burn out, while new ones take their place, so the fire never stops moving.</li>
      *   <li>Black specks of soot and smoke hang in it and rise off the top.</li>
@@ -111,32 +109,6 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
         double front = reach - (reach >= WeaponEffectEntity.WAVE_RANGE - 0.5D ? 1.2D * (0.5D + 0.5D * Math.sin(age * 0.22D)) : 0.0D);
 
         float fade = Mth.clamp((entity.getMaxLife() - age) / 14.0F, 0.0F, 1.0F);
-        Matrix4f matrix = poseStack.last().pose();
-
-        // ---- the burning ground: one texture, 4 blocks to a tile, running outwards
-        VertexConsumer ground = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(EMBER_GROUND_TEXTURE));
-        double rowStep = 2.5D;
-        int groundColumns = 22;
-        float run = age * 0.04F;
-        for (double radius = 1.6D; radius < front; radius += rowStep) {
-            double next = Math.min(front, radius + rowStep);
-            double halfA = WeaponEffectEntity.waveHalfAngle(radius);
-            double halfB = WeaponEffectEntity.waveHalfAngle(next);
-            float vA = (float) (radius / 4.0D) - run;
-            float vB = (float) (next / 4.0D) - run;
-            // The ground fades in near the caster
-            float edge = (float) Mth.clamp((radius - 1.6D) / 3.0D, 0.0D, 1.0D) * fade * 0.9F;
-            for (int i = 0; i < groundColumns; i++) {
-                Vec3 p0 = groundPoint(level, origin, forward, right, radius, -halfA + 2.0D * halfA * i / groundColumns, 0.05D);
-                Vec3 p1 = groundPoint(level, origin, forward, right, radius, -halfA + 2.0D * halfA * (i + 1) / groundColumns, 0.05D);
-                Vec3 p2 = groundPoint(level, origin, forward, right, next, -halfB + 2.0D * halfB * (i + 1) / groundColumns, 0.05D);
-                Vec3 p3 = groundPoint(level, origin, forward, right, next, -halfB + 2.0D * halfB * i / groundColumns, 0.05D);
-                float uA = (float) (i * radius * 2.0D * halfA / groundColumns / 4.0D);
-                float uB = (float) ((i + 1) * radius * 2.0D * halfA / groundColumns / 4.0D);
-                quad(ground, matrix, p0, uA, vA, edge, p1, uB, vA, edge, p2, uB, vB, edge, p3, uA, vB, edge, 1.0F, 1.0F, 1.0F);
-            }
-        }
-
         // ---- the fire itself: a dense cloud of chunky pixel flames pouring out of the caster. Every flame starts at
         // the caster, flies outwards while it grows, goes from yellow to orange to red and burns out, and a new one
         // takes its place. Together they fill the whole fan, like the fire of a flamethrower.
@@ -185,12 +157,6 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
         }
 
         renderWaveSmoke(entity, age, partialTick, poseStack, bufferSource, front, forward, right, fade);
-    }
-
-    /** A point on the ground of the fan, a little above it. */
-    private static Vec3 groundPoint(Level level, Vec3 origin, Vec3 forward, Vec3 right, double radius, double angle, double lift) {
-        Vec3 spot = forward.scale(Math.cos(angle) * radius).add(right.scale(Math.sin(angle) * radius));
-        return new Vec3(spot.x, groundAt(level, origin.x + spot.x, origin.z + spot.z, origin.y) - origin.y + lift, spot.z);
     }
 
     /** A pseudo random number from 0 to 1 for a whole number, always the same for the same number. */
