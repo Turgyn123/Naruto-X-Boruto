@@ -24,10 +24,10 @@ import java.util.List;
 /**
  * The chakra coat of the Hiramekarei: the blades are wrapped in flowing, glowing chakra.
  *
- * The blade's own model is drawn again, a little larger, with a wisp texture that flows along the blade. It uses the
- * additive, fully bright "eyes" render type, so it glows in the dark and blends into the blade instead of covering it.
- * Six layers, from a bright one lying on the blade to a very faint wide haze, so the whole blade is covered in an aura that fades softly. The loaders' item renderer mixins
- * just call {@link #render} after the item itself has been drawn.
+ * The blade's own model is drawn again, a little larger, with a soft blue wisp texture that flows along the blade. It
+ * uses the translucent, fully bright "emissive" render type, so it glows in the dark and blends over the blade instead
+ * of covering it. One layer lies on the blade and tints it, two soft shells around it make the aura. The loaders' item
+ * renderer mixins just call {@link #render} after the item itself has been drawn.
  */
 public final class HiramekareiChakraRenderer {
 
@@ -57,16 +57,17 @@ public final class HiramekareiChakraRenderer {
         }
 
         Matrix4f matrix = poseStack.last().pose();
-        VertexConsumer consumer = buffer.getBuffer(RenderType.eyes(TEXTURE));
+        VertexConsumer consumer = buffer.getBuffer(RenderType.entityTranslucentEmissive(TEXTURE));
 
-        // From the outside in: a haze that fades off softly into the air, the glow, and the chakra lying on the
-        // blade itself. They add up, so the blade turns luminous blue and the light thins out around it.
-        layer(consumer, matrix, model, 0.130F, 0.050F, time * 0.40F, 0.55F);
-        layer(consumer, matrix, model, 0.090F, 0.080F, time * 0.50F, 0.65F);
-        layer(consumer, matrix, model, 0.055F, 0.140F, time * 0.60F, 0.75F);
-        layer(consumer, matrix, model, 0.028F, 0.240F, time * 0.75F, 0.90F);
-        layer(consumer, matrix, model, 0.012F, 0.380F, time * 0.90F, 1.00F);
-        layer(consumer, matrix, model, 0.004F, 0.520F, time, 1.10F);
+        // The chakra lying on the blade tints it a luminous blue. It is ordinary see-through blending, so the layers
+        // can never add up to a white blob
+        layer(consumer, matrix, model, 0.004F, 0.50F, time, 1.00F);
+        // The aura around it: two soft shells that fade off into the air. Not in the inventory, where they would
+        // spill over the icon
+        if (context != ItemDisplayContext.GUI) {
+            layer(consumer, matrix, model, 0.030F, 0.28F, time * 0.7F, 0.85F);
+            layer(consumer, matrix, model, 0.075F, 0.12F, time * 0.5F, 0.65F);
+        }
 
         poseStack.popPose();
     }
