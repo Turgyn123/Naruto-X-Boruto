@@ -43,7 +43,7 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
     private static final float RED_FLASH_TICKS = 14.0F;
     private static final ResourceLocation THREAD_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/thread.png");
     private static final ResourceLocation WHITE_TEXTURE = ResourceLocation.withDefaultNamespace("textures/misc/white.png");
-    private static final ResourceLocation FLAME_WALL_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/flame_wall.png");
+    private static final ResourceLocation FLAME_BLOB_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/flame_blob.png");
     private static final ResourceLocation EMBER_GROUND_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/ember_ground.png");
     private static final ResourceLocation FIRE_PUFF_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/fire_puff.png");
     private static final ResourceLocation ASH_PUFF_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/ash_puff.png");
@@ -88,18 +88,13 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
     // ---------------------------------------------------------------- fire jutsu
 
     /**
-     * Fire Release: Great Fire Annihilation: the fire pours out of the caster and spreads sideways along curved edges,
-     * widening like a trumpet, until the whole fan in front of the caster is a sea of flames.
-     * <p>
-     * The fire is made of surfaces with one seamless texture that never stops moving, and not of pictures that change
-     * from one to the next:
+     * Fire Release: Great Fire Annihilation: a dense cloud of chunky pixel flames pours out of the caster and fills a
+     * fan in front of the caster that widens like a trumpet.
      * <ul>
-     *   <li>The ground of the fan is a carpet of embers whose texture runs outwards from the caster all the time.</li>
-     *   <li>Curved curtains of fire stand on it, one behind the other. Their flame texture runs upwards all the time,
-     *       so the flames rise without end, and the top of every curtain fades into the air. The curtains themselves
-     *       drift outwards from the caster to the front, growing as they go, while new ones start at the caster.</li>
-     *   <li>The curtain at the front is the tallest and brightest and surges, with a glow of light over it.</li>
-     *   <li>Smoke rises off the top.</li>
+     *   <li>The ground of the fan is a carpet of embers whose texture runs outwards from the caster.</li>
+     *   <li>Hundreds of flames start at the caster, fly outwards while they grow, turn from yellow to orange to red
+     *       and burn out, while new ones take their place, so the fire never stops moving.</li>
+     *   <li>Black specks of soot and smoke hang in it and rise off the top.</li>
      * </ul>
      * Everything is pixel art in the style of Minecraft. The server burns everything in the same fan, using the same
      * numbers (see {@link WeaponEffectEntity#waveHalfAngle}).
@@ -142,25 +137,51 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
             }
         }
 
-        // ---- the curtains of fire. Every curtain has a number of its own and drifts outwards from the caster, so
-        // none of them jumps. The ones further out are drawn first, so the nearer ones are drawn over them.
-        VertexConsumer wall = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(FLAME_WALL_TEXTURE));
-        double spacing = 6.0D;
-        double drifted = age * 0.4D;
-        int first = (int) Math.ceil((1.8D - drifted) / spacing);
-        int last = (int) Math.floor((front - 0.3D - drifted) / spacing);
-        for (int m = last; m >= first; m--) {
-            drawCurtain(wall, matrix, level, origin, forward, right, m * spacing + drifted, front, age, fade, m, 1.0D, false);
+        // ---- the fire itself: a dense cloud of chunky pixel flames pouring out of the caster. Every flame starts at
+        // the caster, flies outwards while it grows, goes from yellow to orange to red and burns out, and a new one
+        // takes its place. Together they fill the whole fan, like the fire of a flamethrower.
+        int flames = 520;
+        float lifeTicks = 34.0F;
+        float[] lifeOf = new float[flames];
+        Integer[] sorted = new Integer[flames];
+        for (int i = 0; i < flames; i++) {
+            lifeOf[i] = ((age + hash(i * 7 + 1) * lifeTicks) % lifeTicks) / lifeTicks;
+            sorted[i] = i;
         }
-        // The front of the wave: tall, bright and uneven
-        drawCurtain(wall, matrix, level, origin, forward, right, front, front, age, fade, 99, 1.3D, true);
-
-        // A glow of light over the curtains at the front
-        VertexConsumer glow = bufferSource.getBuffer(RenderType.eyes(FLAME_WALL_TEXTURE));
-        for (int k = 0; k < 2; k++) {
-            double r = front - k * spacing;
-            if (r < 2.0D) break;
-            drawCurtain(glow, matrix, level, origin, forward, right, r, front, age + 5.0F, fade * 0.3F, 120 + k, 1.0D, k == 0);
+        // The ones furthest out first, so the nearer flames are drawn over them
+        java.util.Arrays.sort(sorted, (x, y) -> Float.compare(lifeOf[y], lifeOf[x]));
+        org.joml.Quaternionf camera = this.entityRenderDispatcher.cameraOrientation();
+        VertexConsumer blobs = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(FLAME_BLOB_TEXTURE));
+        for (int n = 0; n < flames; n++) {
+            int i = sorted[n];
+            float life = lifeOf[i];
+            // A new flame starts at the caster: the cycle count makes each pass look different
+            int cycle = (int) Math.floor((age + hash(i * 7 + 1) * lifeTicks) / lifeTicks);
+            int seed = i * 31 + cycle * 977;
+            double radius = 0.8D + life * (front - 0.8D);
+            if (radius < 1.0D) continue;
+            double angle = (hash(seed + 3) * 2.0D - 1.0D) * WeaponEffectEntity.waveHalfAngle(radius) * 0.95D;
+            Vec3 spot = forward.scale(Math.cos(angle) * radius).add(right.scale(Math.sin(angle) * radius));
+            double groundY = groundAt(level, origin.x + spot.x, origin.z + spot.z, origin.y) - origin.y;
+            double size = (1.6D + 4.4D * Math.sqrt(life)) * (0.75D + 0.5D * hash(seed + 5));
+            // Higher up the further out, and the flames rise as they burn
+            double spread = 0.5D + 4.5D * radius / WeaponEffectEntity.WAVE_RANGE;
+            double y = groundY + size * 0.35D + hash(seed + 9) * spread + life * 1.6D;
+            // Yellow at the start, orange in the middle, red at the end, and then they fade
+            float red = 1.0F;
+            float green = Mth.clamp(1.05F - life * 0.75F, 0.35F, 1.0F);
+            float blue = Mth.clamp(0.95F - life * 1.3F, 0.3F, 1.0F);
+            float alpha = fade * Mth.clamp(life * 6.0F, 0.0F, 1.0F) * Mth.clamp((1.0F - life) * 3.5F, 0.0F, 1.0F) * 0.95F;
+            if (alpha < 0.02F) continue;
+            // Four different flames on the sheet, and they flicker between them
+            int frame = (int) ((hash(seed + 11) * 4.0F + age * 0.25F)) & 3;
+            poseStack.pushPose();
+            poseStack.translate(spot.x, y, spot.z);
+            poseStack.mulPose(camera);
+            // Only quarter turns, so the pixels stay square
+            poseStack.mulPose(Axis.ZP.rotationDegrees(90.0F * ((int) (hash(seed + 13) * 4.0F))));
+            billboardFrame(blobs, poseStack.last().pose(), (float) size, alpha, FULL_BRIGHT, red, green, blue, frame);
+            poseStack.popPose();
         }
 
         renderWaveSmoke(entity, age, partialTick, poseStack, bufferSource, front, forward, right, fade);
@@ -177,58 +198,6 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
         int h = n * 374761393 + 668265263;
         h = (h ^ (h >>> 13)) * 1274126177;
         return ((h ^ (h >>> 16)) & 0xFFFF) / 65535.0F;
-    }
-
-    /**
-     * One curved curtain of fire at a distance from the caster. It is low close to the caster and higher far away, and
-     * its top is wavy and uneven. Its texture is scrolled upwards all the time, so the flames rise without end, and
-     * the top of it fades into the air.
-     */
-    private static void drawCurtain(VertexConsumer vc, Matrix4f matrix, Level level, Vec3 origin, Vec3 forward, Vec3 right,
-                                    double radius, double front, float age, float fade, int id, double size, boolean surge) {
-        int columns = 40;
-        double half = WeaponEffectEntity.waveHalfAngle(radius);
-        double baseHeight = (1.4D + 5.5D * radius / WeaponEffectEntity.WAVE_RANGE) * Math.min(1.0D, (radius - 1.0D) / 3.0D) * size;
-        // New curtains fade in at the caster, and they fade out before the front
-        float edge = (float) Mth.clamp((radius - 1.8D) / 3.0D, 0.0D, 1.0D) * (surge ? 1.0F : (float) Mth.clamp((front - radius) / 4.0D, 0.0D, 1.0D));
-        float alpha = fade * (surge ? 1.0F : 0.92F) * edge;
-        if (alpha < 0.02F) return;
-        // The texture is 4 blocks wide and 8 blocks high. It runs upwards: one tile in a second.
-        float scroll = age * 0.05F + id * 0.37F;
-        Vec3 previousBottom = null;
-        Vec3 previousMid = null;
-        Vec3 previousTop = null;
-        float previousU = 0.0F;
-        float previousScroll = 0.0F;
-        for (int i = 0; i <= columns; i++) {
-            double angle = -half + 2.0D * half * i / columns;
-            Vec3 spot = forward.scale(Math.cos(angle) * radius).add(right.scale(Math.sin(angle) * radius));
-            double groundY = groundAt(level, origin.x + spot.x, origin.z + spot.z, origin.y) - origin.y;
-            // The top is wavy and uneven, and it changes slowly: some flames leap up, some dip
-            double wave = 0.85D + 0.25D * Math.sin(i * 0.55D + age * 0.08D + id * 1.3D) + 0.12D * Math.sin(i * 1.7D - age * 0.15D + id);
-            double height = baseHeight * wave * (hash(i * 17 + id * 3 + 5) > 0.88F ? 1.3D : 1.0D);
-            if (surge) height *= 0.88D + 0.25D * Mth.sin(age * 0.3F + i * 0.7F);
-            double lick = Math.sin(age * 0.3D + i * 0.8D + id) * 0.1D * height;
-            Vec3 bottom = new Vec3(spot.x, groundY, spot.z);
-            Vec3 mid = new Vec3(spot.x + right.x * lick * 0.4D, groundY + height * 0.55D, spot.z + right.z * lick * 0.4D);
-            Vec3 top = new Vec3(spot.x + right.x * lick, groundY + height, spot.z + right.z * lick);
-            float u = (float) (i * radius * 2.0D * half / columns / 4.0D) + id * 0.31F;
-            float vBottom = scroll;
-            float vMid = scroll - (float) (height * 0.55D / 8.0D);
-            float vTop = scroll - (float) (height / 8.0D);
-            if (previousBottom != null) {
-                // The lower part at full strength, the upper part fades into the air
-                quad(vc, matrix, previousBottom, previousU, previousScroll, alpha, bottom, u, vBottom, alpha,
-                        mid, u, vMid, alpha, previousMid, previousU, previousScroll - (float) (height * 0.55D / 8.0D), alpha, 1.0F, 1.0F, 1.0F);
-                quad(vc, matrix, previousMid, previousU, previousScroll - (float) (height * 0.55D / 8.0D), alpha, mid, u, vMid, alpha,
-                        top, u, vTop, 0.0F, previousTop, previousU, previousScroll - (float) (height / 8.0D), 0.0F, 1.0F, 1.0F, 1.0F);
-            }
-            previousBottom = bottom;
-            previousMid = mid;
-            previousTop = top;
-            previousU = u;
-            previousScroll = scroll;
-        }
     }
 
     /** Dark smoke that rises off the top of the wave of fire and drifts up. */
@@ -254,6 +223,20 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
             poseStack.translate(spot.x, groundY + wallHeight * 0.9D + rise, spot.z);
             poseStack.mulPose(camera);
             billboard(smoke, poseStack.last().pose(), (float) (3.0D + random.nextDouble() * 2.5D + rise * 0.4D), alpha, light, 0.8F, 0.8F, 0.8F);
+            poseStack.popPose();
+        }
+        // Black specks of soot flying about in the fire
+        for (int i = 0; i < 90; i++) {
+            float life = ((age + hash(i * 13 + 2) * 30.0F) % 30.0F) / 30.0F;
+            double radius = 1.5D + life * (front - 1.5D);
+            double angle = (hash(i * 13 + 4) * 2.0D - 1.0D) * WeaponEffectEntity.waveHalfAngle(radius);
+            Vec3 spot = forward.scale(Math.cos(angle) * radius).add(right.scale(Math.sin(angle) * radius));
+            double groundY = groundAt(level, origin.x + spot.x, origin.z + spot.z, origin.y) - origin.y;
+            double y = groundY + 0.5D + hash(i * 13 + 6) * (2.0D + 5.0D * radius / WeaponEffectEntity.WAVE_RANGE) + life * 2.5D;
+            poseStack.pushPose();
+            poseStack.translate(spot.x, y, spot.z);
+            poseStack.mulPose(camera);
+            billboard(smoke, poseStack.last().pose(), 0.28F + 0.2F * hash(i * 13 + 8), 0.9F * fade * Mth.clamp((1.0F - life) * 3.0F, 0.0F, 1.0F), light, 0.05F, 0.05F, 0.05F);
             poseStack.popPose();
         }
     }
@@ -353,6 +336,17 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
         billboardVertex(vc, matrix, h, -h, 1.0F, 1.0F, r, g, b, alpha, light);
         billboardVertex(vc, matrix, h, h, 1.0F, 0.0F, r, g, b, alpha, light);
         billboardVertex(vc, matrix, -h, h, 0.0F, 0.0F, r, g, b, alpha, light);
+    }
+
+    /** Like {@link #billboard}, but with one quarter of a 2 x 2 sheet of textures on it. */
+    private static void billboardFrame(VertexConsumer vc, Matrix4f matrix, float size, float alpha, int light, float r, float g, float b, int frame) {
+        float h = size * 0.5F;
+        float u0 = (frame & 1) * 0.5F;
+        float v0 = (frame >> 1) * 0.5F;
+        billboardVertex(vc, matrix, -h, -h, u0, v0 + 0.5F, r, g, b, alpha, light);
+        billboardVertex(vc, matrix, h, -h, u0 + 0.5F, v0 + 0.5F, r, g, b, alpha, light);
+        billboardVertex(vc, matrix, h, h, u0 + 0.5F, v0, r, g, b, alpha, light);
+        billboardVertex(vc, matrix, -h, h, u0, v0, r, g, b, alpha, light);
     }
 
     private static void billboardVertex(VertexConsumer vc, Matrix4f matrix, float x, float y, float u, float v,
