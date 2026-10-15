@@ -1,6 +1,5 @@
 package net.narutoxboruto.entities.effects;
 
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -65,8 +64,11 @@ public class WeaponEffectEntity extends Entity {
     private Item cooldownItem;
     private Vec3 anchor = Vec3.ZERO;
     private int lastOwnerHurt;
-    /** The ash cloud: ticks until it burns after it is set alight, or -1 while it is not. */
-    private int igniteDelay = -1;
+    /**
+     * The ash cloud: ticks since it was set alight, or -1 while it has not been. It is also sent to the clients (in
+     * TARGET) to draw the cloud catching fire.
+     */
+    private int igniteTicks = -1;
     /** How many more ticks the thread is reeling the target in. */
     private int reel;
 
@@ -170,7 +172,11 @@ public class WeaponEffectEntity extends Entity {
     private static final double CLOUD_RADIUS = 9.0D;
     public static final int CLOUD_TICKS = 20 * 20;
     private static final float ASH_DAMAGE = 22.0F;
+    /** From the spark to the explosion, and how long the fire of the explosion is seen after it. */
     private static final int ASH_FUSE_TICKS = 6;
+    public static final int ASH_FUSE = ASH_FUSE_TICKS;
+    public static final int ASH_BURN = 14;
+    public static final double ASH_RADIUS = CLOUD_RADIUS;
 
     /** A stream of flames blown out of the mouth of {@code caster}, in the way they look, for 2.5 seconds. */
     public static void spawnFlameStream(ServerLevel level, ServerPlayer caster) {
@@ -190,7 +196,7 @@ public class WeaponEffectEntity extends Entity {
     public static WeaponEffectEntity findAshCloud(ServerLevel level, ServerPlayer caster) {
         for (WeaponEffectEntity effect : level.getEntitiesOfClass(WeaponEffectEntity.class,
                 new AABB(caster.blockPosition()).inflate(150.0D),
-                e -> e.getKind() == ASH_CLOUD && caster.getUUID().equals(e.owner) && e.igniteDelay < 0)) {
+                e -> e.getKind() == ASH_CLOUD && caster.getUUID().equals(e.owner) && e.igniteTicks < 0)) {
             return effect;
         }
         return null;
@@ -198,8 +204,9 @@ public class WeaponEffectEntity extends Entity {
 
     /** Sets the cloud alight. It burns a moment later. */
     public boolean ignite() {
-        if (getKind() != ASH_CLOUD || igniteDelay >= 0) return false;
-        igniteDelay = ASH_FUSE_TICKS;
+        if (getKind() != ASH_CLOUD || igniteTicks >= 0) return false;
+        igniteTicks = 0;
+        this.entityData.set(TARGET, 0);
         level().playSound(null, getX(), getY() + 2.0D, getZ(), SoundEvents.FLINTANDSTEEL_USE, SoundSource.PLAYERS, 1.2F, 1.0F);
         return true;
     }
@@ -210,7 +217,8 @@ public class WeaponEffectEntity extends Entity {
 
     /**
      * The Fire Release Stream: for as long as it lasts, flames are blown from the mouth of the caster in the way
-     * they look, as far as 70 meters or the first block. Everything in the stream is burnt.
+     * they look, as far as 70 meters or the first block. Everything in the stream is burnt. The flames themselves are
+     * drawn by the renderer with its own textures.
      */
     private void tickFlameStream() {
         if (!(level() instanceof ServerLevel serverLevel)) return;
@@ -227,23 +235,11 @@ public class WeaponEffectEntity extends Entity {
                 ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, caster));
         double length = block.getType() == HitResult.Type.MISS ? STREAM_RANGE : mouth.distanceTo(block.getLocation());
 
-        // Flames shot out of the mouth, and flames along the whole stream, wider the further out they are
-        for (int i = 0; i < 6; i++) {
-            serverLevel.sendParticles(ParticleTypes.FLAME, mouth.x, mouth.y, mouth.z, 0, look.x, look.y, look.z, 1.2D);
-        }
-        for (double d = 2.0D; d <= length; d += 3.5D) {
-            double spread = 0.25D + d * 0.035D;
-            Vec3 at = mouth.add(look.scale(d));
-            if (d <= 28.0D) {
-                serverLevel.sendParticles(ParticleTypes.FLAME, at.x, at.y, at.z, 3, spread, spread, spread, 0.01D);
-                if (((int) (d / 3.5D) + tickCount) % 3 == 0) {
-                    serverLevel.sendParticles(ParticleTypes.SMOKE, at.x, at.y, at.z, 1, spread, spread, spread, 0.01D);
-                }
-            } else {
-                // Particles are only sent as far as 32 blocks. The caster sees the whole stream.
-                serverLevel.sendParticles(caster, ParticleTypes.FLAME, true, at.x, at.y, at.z, 3, spread, spread, spread, 0.01D);
-            }
-        }
+        // The stream is drawn by the renderer, which needs to know which way it points
+        setYRot(caster.getYRot());
+        setXRot(caster.getXRot());
+        yRotO = caster.getYRot();
+        xRotO = caster.getXRot();
         if (tickCount % 6 == 0) {
             serverLevel.playSound(null, mouth.x, mouth.y, mouth.z, SoundEvents.BLAZE_SHOOT, SoundSource.PLAYERS, 0.7F, 0.6F);
         }
@@ -272,12 +268,15 @@ public class WeaponEffectEntity extends Entity {
         if (!(level() instanceof ServerLevel serverLevel)) return;
         Entity ownerEntity = owner == null ? null : serverLevel.getEntity(owner);
 
-        if (igniteDelay >= 0) {
-            // The spark is struck: a moment of fire running through the cloud, and then it all burns
-            serverLevel.sendParticles(ParticleTypes.FLAME, getX(), getY() + 2.0D, getZ(), 40,
-                    CLOUD_RADIUS * 0.45D, 1.8D, CLOUD_RADIUS * 0.45D, 0.02D);
-            if (igniteDelay-- == 0) {
+        if (igniteTicks >= 0) {
+            // The spark is struck: a moment of fire running through the cloud, then it burns, and the fire is seen
+            // for a little while longer. The renderer draws all of it from the ticks since the spark.
+            igniteTicks++;
+            this.entityData.set(TARGET, igniteTicks);
+            if (igniteTicks == ASH_FUSE_TICKS) {
                 explodeAsh(serverLevel, ownerEntity);
+            }
+            if (igniteTicks >= ASH_FUSE_TICKS + ASH_BURN) {
                 discard();
             }
             return;
@@ -287,13 +286,7 @@ public class WeaponEffectEntity extends Entity {
             return;
         }
 
-        if (tickCount % 2 == 0) {
-            serverLevel.sendParticles(ParticleTypes.LARGE_SMOKE, getX(), getY() + 2.0D, getZ(), 16,
-                    CLOUD_RADIUS * 0.42D, 2.0D, CLOUD_RADIUS * 0.42D, 0.005D);
-            serverLevel.sendParticles(ParticleTypes.ASH, getX(), getY() + 2.0D, getZ(), 10,
-                    CLOUD_RADIUS * 0.45D, 2.2D, CLOUD_RADIUS * 0.45D, 0.01D);
-        }
-        // Like a smokescreen: whoever is in the cloud can hardly see
+        // Like a smokescreen: whoever is in the cloud can hardly see. The cloud itself is drawn by the renderer.
         if (tickCount % 10 == 0) {
             for (LivingEntity inside : serverLevel.getEntitiesOfClass(LivingEntity.class,
                     new AABB(position(), position()).inflate(CLOUD_RADIUS, 4.0D, CLOUD_RADIUS), e -> e != ownerEntity && e.isAlive())) {
@@ -317,12 +310,6 @@ public class WeaponEffectEntity extends Entity {
             inside.hurt(fireSource(caster), ASH_DAMAGE);
             inside.setRemainingFireTicks(160);
         }
-        serverLevel.sendParticles(ParticleTypes.EXPLOSION_EMITTER, getX(), getY() + 2.0D, getZ(), 5,
-                CLOUD_RADIUS * 0.4D, 1.5D, CLOUD_RADIUS * 0.4D, 0.0D);
-        serverLevel.sendParticles(ParticleTypes.FLAME, getX(), getY() + 2.0D, getZ(), 300,
-                CLOUD_RADIUS * 0.5D, 2.2D, CLOUD_RADIUS * 0.5D, 0.06D);
-        serverLevel.sendParticles(ParticleTypes.LARGE_SMOKE, getX(), getY() + 2.0D, getZ(), 80,
-                CLOUD_RADIUS * 0.5D, 2.2D, CLOUD_RADIUS * 0.5D, 0.04D);
         serverLevel.playSound(null, getX(), getY() + 2.0D, getZ(), SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 4.0F, 0.8F);
     }
 

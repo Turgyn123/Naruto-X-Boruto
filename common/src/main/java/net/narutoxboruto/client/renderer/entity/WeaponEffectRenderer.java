@@ -15,6 +15,8 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.narutoxboruto.entities.effects.WeaponEffectEntity;
 import net.narutoxboruto.items.ModItems;
@@ -41,6 +43,10 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
     private static final float RED_FLASH_TICKS = 14.0F;
     private static final ResourceLocation THREAD_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/thread.png");
     private static final ResourceLocation WHITE_TEXTURE = ResourceLocation.withDefaultNamespace("textures/misc/white.png");
+    private static final ResourceLocation FLAME_STREAM_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/flame_stream.png");
+    private static final ResourceLocation FIRE_PUFF_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/fire_puff.png");
+    private static final ResourceLocation ASH_PUFF_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/ash_puff.png");
+    private static final double STREAM_RANGE = 70.0D;
     private static final int FULL_BRIGHT = 0xF000F0;
 
     public WeaponEffectRenderer(EntityRendererProvider.Context context) {
@@ -52,8 +58,18 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
                        MultiBufferSource bufferSource, int packedLight) {
         float age = entity.tickCount + partialTick;
         int kind = entity.getKind();
-        // The fire jutsu are only particles, which the server sends
-        if (kind >= WeaponEffectEntity.FLAME_STREAM) return;
+        if (kind == WeaponEffectEntity.FLAME_STREAM) {
+            poseStack.pushPose();
+            renderFlameStream(entity, age, partialTick, poseStack, bufferSource);
+            poseStack.popPose();
+            return;
+        }
+        if (kind == WeaponEffectEntity.ASH_CLOUD) {
+            poseStack.pushPose();
+            renderAshCloud(entity, age, partialTick, poseStack, bufferSource, packedLight);
+            poseStack.popPose();
+            return;
+        }
 
         poseStack.pushPose();
         if (kind == WeaponEffectEntity.THREAD) {
@@ -67,6 +83,157 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
             else renderCrescent(entity, age, fade, poseStack, bufferSource);
         }
         poseStack.popPose();
+    }
+
+    // ---------------------------------------------------------------- fire jutsu
+
+    /**
+     * Fire Release Stream: a long stream of flames from the mouth along the way the caster looks, as far as 70 meters
+     * or the first block. Three layers of crossed ribbons that twist round the stream and scroll a flame texture away
+     * from the mouth: a faint wide glow, the body of the fire and a narrow hot core. It widens with the distance, as
+     * the real stream does, and thins out at the far end. It is drawn bright and adds its light to what is behind it.
+     */
+    private void renderFlameStream(WeaponEffectEntity entity, float age, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource) {
+        Vec3 start = entity.getPosition(partialTick);
+        Vec3 dir = Vec3.directionFromRotation(Mth.lerp(partialTick, entity.xRotO, entity.getXRot()),
+                Mth.lerp(partialTick, entity.yRotO, entity.getYRot())).normalize();
+        var hit = entity.level().clip(new ClipContext(start, start.add(dir.scale(STREAM_RANGE)),
+                ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, entity));
+        double length = hit.getType() == HitResult.Type.MISS ? STREAM_RANGE : start.distanceTo(hit.getLocation());
+        if (length < 0.5D) return;
+
+        float fade = Math.min(Mth.clamp(age / 3.0F, 0.0F, 1.0F), Mth.clamp((entity.getMaxLife() - age) / 6.0F, 0.0F, 1.0F));
+        Vec3 reference = Math.abs(dir.y) > 0.9D ? new Vec3(1.0D, 0.0D, 0.0D) : new Vec3(0.0D, 1.0D, 0.0D);
+        Vec3 sideA = dir.cross(reference).normalize();
+        Vec3 sideB = dir.cross(sideA).normalize();
+
+        VertexConsumer vc = bufferSource.getBuffer(RenderType.eyes(FLAME_STREAM_TEXTURE));
+        Matrix4f matrix = poseStack.last().pose();
+        int segments = (int) Math.min(48.0D, Math.max(8.0D, length / 1.5D));
+        // Width, brightness, red, green, blue of each layer
+        float[][] layers = {{1.00F, 0.50F, 1.0F, 0.55F, 0.30F}, {0.62F, 0.85F, 1.0F, 1.0F, 1.0F}, {0.28F, 1.00F, 1.0F, 1.0F, 0.95F}};
+        for (int layer = 0; layer < layers.length; layer++) {
+            float[] l = layers[layer];
+            for (int ribbon = 0; ribbon < 4; ribbon++) {
+                double angle = ribbon * Math.PI / 4.0D + layer * 0.5D + age * (0.10D + 0.04D * layer);
+                Vec3 across = sideA.scale(Math.cos(angle)).add(sideB.scale(Math.sin(angle)));
+                for (int segment = 0; segment < segments; segment++) {
+                    double d0 = length * segment / segments;
+                    double d1 = length * (segment + 1) / segments;
+                    double w0 = (0.16D + d0 * 0.05D) * l[0];
+                    double w1 = (0.16D + d1 * 0.05D) * l[0];
+                    // The flames thin out towards the far end
+                    float a0 = l[1] * fade * (float) (1.0D - 0.8D * d0 / length);
+                    float a1 = l[1] * fade * (float) (1.0D - 0.8D * d1 / length);
+                    float v0 = (float) (d0 * 0.11D - age * 0.5D);
+                    float v1 = (float) (d1 * 0.11D - age * 0.5D);
+                    Vec3 b0 = dir.scale(d0);
+                    Vec3 b1 = dir.scale(d1);
+                    quad(vc, matrix, b0.subtract(across.scale(w0)), 0.0F, v0, a0, b0.add(across.scale(w0)), 1.0F, v0, a0,
+                            b1.add(across.scale(w1)), 1.0F, v1, a1, b1.subtract(across.scale(w1)), 0.0F, v1, a1, l[2], l[3], l[4]);
+                }
+            }
+        }
+    }
+
+    /** A quad drawn from both sides: its four corners with their uv and alpha, and a colour. */
+    private static void quad(VertexConsumer vc, Matrix4f matrix, Vec3 p0, float u0, float v0, float a0, Vec3 p1, float u1, float v1, float a1,
+                             Vec3 p2, float u2, float v2, float a2, Vec3 p3, float u3, float v3, float a3, float r, float g, float b) {
+        vertex(vc, matrix, (float) p0.x, (float) p0.y, (float) p0.z, u0, v0, r, g, b, a0);
+        vertex(vc, matrix, (float) p1.x, (float) p1.y, (float) p1.z, u1, v1, r, g, b, a1);
+        vertex(vc, matrix, (float) p2.x, (float) p2.y, (float) p2.z, u2, v2, r, g, b, a2);
+        vertex(vc, matrix, (float) p3.x, (float) p3.y, (float) p3.z, u3, v3, r, g, b, a3);
+        vertex(vc, matrix, (float) p3.x, (float) p3.y, (float) p3.z, u3, v3, r, g, b, a3);
+        vertex(vc, matrix, (float) p2.x, (float) p2.y, (float) p2.z, u2, v2, r, g, b, a2);
+        vertex(vc, matrix, (float) p1.x, (float) p1.y, (float) p1.z, u1, v1, r, g, b, a1);
+        vertex(vc, matrix, (float) p0.x, (float) p0.y, (float) p0.z, u0, v0, r, g, b, a0);
+    }
+
+    /**
+     * Fire Release: Ash Pile Burning. The cloud is made of puffs of ash that hang in the air round the cast point,
+     * drift slowly round it and bob a little. Once it is set alight fire runs through the puffs, and when it burns
+     * the puffs become balls of fire that swell and fade while the ash is consumed.
+     */
+    private void renderAshCloud(WeaponEffectEntity entity, float age, float partialTick, PoseStack poseStack,
+                                MultiBufferSource bufferSource, int packedLight) {
+        int ignition = entity.getTargetId();
+        float ignitionAge = ignition < 0 ? -1.0F : ignition + partialTick;
+        float fuse = WeaponEffectEntity.ASH_FUSE;
+        float burn = WeaponEffectEntity.ASH_BURN;
+
+        float ashAlpha = Mth.clamp(age / 12.0F, 0.0F, 1.0F) * Mth.clamp((entity.getMaxLife() - age) / 30.0F, 0.0F, 1.0F);
+        // The ash is consumed by the fire after the explosion
+        if (ignitionAge > fuse) ashAlpha *= Mth.clamp(1.0F - (ignitionAge - fuse) / 5.0F, 0.0F, 1.0F);
+
+        int puffs = 34;
+        double radius = WeaponEffectEntity.ASH_RADIUS;
+        float[][] puff = new float[puffs][5]; // x, y, z, size, roll
+        java.util.Random random = new java.util.Random(entity.getId() * 7919L + 13L);
+        for (int i = 0; i < puffs; i++) {
+            double r = radius * 0.95D * Math.sqrt(random.nextDouble());
+            double theta = random.nextDouble() * Math.PI * 2.0D + age * 0.004D * (0.5D + random.nextDouble());
+            double phase = random.nextDouble() * Math.PI * 2.0D;
+            puff[i][0] = (float) (Math.cos(theta) * r);
+            puff[i][1] = (float) (0.4D + random.nextDouble() * 4.2D + Math.sin(age * 0.05D + phase) * 0.35D);
+            puff[i][2] = (float) (Math.sin(theta) * r);
+            puff[i][3] = 3.2F + random.nextFloat() * 3.0F;
+            puff[i][4] = (float) (random.nextDouble() * Math.PI * 2.0D + age * 0.003D);
+        }
+
+        org.joml.Quaternionf camera = this.entityRenderDispatcher.cameraOrientation();
+        if (ashAlpha > 0.01F) {
+            VertexConsumer ash = bufferSource.getBuffer(RenderType.entityTranslucent(ASH_PUFF_TEXTURE));
+            for (float[] p : puff) {
+                poseStack.pushPose();
+                poseStack.translate(p[0], p[1], p[2]);
+                poseStack.mulPose(camera);
+                poseStack.mulPose(Axis.ZP.rotation(p[4]));
+                billboard(ash, poseStack.last().pose(), p[3], 0.7F * ashAlpha, packedLight, 1.0F, 1.0F, 1.0F);
+                poseStack.popPose();
+            }
+        }
+
+        if (ignitionAge >= 0.0F) {
+            float fireAlpha;
+            float swell;
+            if (ignitionAge < fuse) {
+                // Fire runs through the cloud
+                fireAlpha = 0.55F * Mth.clamp(ignitionAge / fuse, 0.0F, 1.0F);
+                swell = 0.8F;
+            } else {
+                float t = Mth.clamp((ignitionAge - fuse) / burn, 0.0F, 1.0F);
+                fireAlpha = 1.0F - t * t;
+                swell = 1.0F + t * 0.9F;
+            }
+            VertexConsumer fire = bufferSource.getBuffer(RenderType.eyes(FIRE_PUFF_TEXTURE));
+            for (float[] p : puff) {
+                poseStack.pushPose();
+                poseStack.translate(p[0], p[1], p[2]);
+                poseStack.mulPose(camera);
+                poseStack.mulPose(Axis.ZP.rotation(-p[4] * 2.0F));
+                billboard(fire, poseStack.last().pose(), p[3] * 1.2F * swell, fireAlpha, FULL_BRIGHT, 1.0F, 1.0F, 1.0F);
+                poseStack.popPose();
+            }
+        }
+    }
+
+    /** A square facing the camera (the pose is already turned to it), with the whole texture on it. */
+    private static void billboard(VertexConsumer vc, Matrix4f matrix, float size, float alpha, int light, float r, float g, float b) {
+        float h = size * 0.5F;
+        billboardVertex(vc, matrix, -h, -h, 0.0F, 1.0F, r, g, b, alpha, light);
+        billboardVertex(vc, matrix, h, -h, 1.0F, 1.0F, r, g, b, alpha, light);
+        billboardVertex(vc, matrix, h, h, 1.0F, 0.0F, r, g, b, alpha, light);
+        billboardVertex(vc, matrix, -h, h, 0.0F, 0.0F, r, g, b, alpha, light);
+    }
+
+    private static void billboardVertex(VertexConsumer vc, Matrix4f matrix, float x, float y, float u, float v,
+                                        float red, float green, float blue, float alpha, int light) {
+        vc.addVertex(matrix, x, y, 0.0F)
+                .setColor(red, green, blue, alpha)
+                .setUv(u, v)
+                .setOverlay(OverlayTexture.NO_OVERLAY)
+                .setLight(light)
+                .setNormal(0.0F, 1.0F, 0.0F);
     }
 
     // ---------------------------------------------------------------- wind
