@@ -27,9 +27,10 @@ import java.util.WeakHashMap;
  * aura of chakra around it, soft pale-blue mist with white highlights, flowing along the blade and licking off past
  * its tip.
  *
- * The aura is built around the blade: the model is measured once (how wide it is along its length) and three
- * sleeves of flames are wrapped around that outline, one close to the blade and two wider. Each sleeve scrolls a flame
- * texture along the blade and wavers, so the flames stream towards the tip. It is drawn fully bright and see-through.
+ * The aura is built around the blade: the model is measured once (how wide it is along its length) and four
+ * sleeves are wrapped around that outline, two of thin mist and two of near white glow next to the blade. Each sleeve
+ * scrolls its texture along the blade and wavers, so the chakra streams towards the tip. It is drawn fully bright and
+ * see-through.
  * The loaders' item renderer mixins just call {@link #render} after the item itself has been drawn.
  */
 public final class HiramekareiChakraRenderer {
@@ -41,29 +42,6 @@ public final class HiramekareiChakraRenderer {
 
     private static final ResourceLocation GLOW = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID,
             "textures/effect/hiramekarei_glow.png");
-    private static final ResourceLocation WISP = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID,
-            "textures/effect/hiramekarei_wisp.png");
-
-    /** The wisps that lift off the edge of the blade: where, which way, how fast and how far. */
-    private static final int WISPS = 14;
-    private static final int WISP_SEGMENTS = 8;
-    private static final float[] WISP_HEIGHT = new float[WISPS];
-    private static final float[] WISP_ANGLE = new float[WISPS];
-    private static final float[] WISP_PHASE = new float[WISPS];
-    private static final float[] WISP_SPEED = new float[WISPS];
-    private static final float[] WISP_REACH = new float[WISPS];
-
-    static {
-        RandomSource random = RandomSource.create(7L);
-        for (int i = 0; i < WISPS; i++) {
-            WISP_HEIGHT[i] = 0.08F + 0.87F * random.nextFloat();
-            WISP_ANGLE[i] = random.nextFloat() * Mth.TWO_PI;
-            WISP_PHASE[i] = random.nextFloat();
-            WISP_SPEED[i] = 0.55F + 0.5F * random.nextFloat();
-            WISP_REACH[i] = 0.8F + 0.6F * random.nextFloat();
-        }
-    }
-
     private static final RandomSource RANDOM = RandomSource.create(42L);
 
     /** How wide the blade is along its length: the middle and the half sizes of its outline in slices. */
@@ -113,9 +91,6 @@ public final class HiramekareiChakraRenderer {
         VertexConsumer glow = buffer.getBuffer(RenderType.entityTranslucentEmissive(GLOW));
         sleeve(glow, matrix, outline, time, 1.07F, 0.020F, 0.22F, 0.75F, 1, 3.10F);
         sleeve(glow, matrix, outline, time, 1.02F, 0.008F, 0.32F, 0.90F, 2, 4.20F);
-        // Thin wisps of chakra lift off the edge and drift away along the blade
-        VertexConsumer wispBuffer = buffer.getBuffer(RenderType.entityTranslucentEmissive(WISP));
-        wisps(wispBuffer, matrix, outline, time);
 
         poseStack.popPose();
     }
@@ -270,76 +245,6 @@ public final class HiramekareiChakraRenderer {
                 vertex(consumer, matrix, p0, strength * a0);
             }
         }
-    }
-
-    /**
-     * Thin ribbons of chakra that lift off the edge of the blade, curl a little and drift away towards the tip.
-     * Each one is a streak that travels along its path and fades in and out. They are two crossed ribbons, so they
-     * can be seen from every side, and soft at the edges because the vertex alpha is zero there.
-     */
-    private static void wisps(VertexConsumer consumer, Matrix4f matrix, Outline o, float time) {
-        float length = o.yMax - o.yMin;
-        for (int i = 0; i < WISPS; i++) {
-            float t = WISP_HEIGHT[i];
-            float angle = WISP_ANGLE[i];
-            float rx = Mth.cos(angle);
-            float rz = Mth.sin(angle);
-            float tx = -rz;
-            float tz = rx;
-            float y0 = o.yMin + length * t;
-            float sx = at(o.cx, t) + at(o.hx, t) * rx;
-            float sz = at(o.cz, t) + at(o.hz, t) * rz;
-            float life = (time * WISP_SPEED[i] + WISP_PHASE[i]) % 1.0F;
-
-            float[][] centre = new float[WISP_SEGMENTS + 1][3];
-            float[] alpha = new float[WISP_SEGMENTS + 1];
-            float[] width = new float[WISP_SEGMENTS + 1];
-            for (int j = 0; j <= WISP_SEGMENTS; j++) {
-                float s = (float) j / WISP_SEGMENTS;
-                float out = 0.012F + 0.30F * WISP_REACH[i] * (float) Math.pow(s, 0.8D);
-                float curl = 0.045F * Mth.sin(s * 5.0F + time * 2.5F * WISP_SPEED[i] + i);
-                centre[j][0] = sx + rx * out + tx * curl;
-                centre[j][1] = y0 + length * 0.14F * s;
-                centre[j][2] = sz + rz * out + tz * curl;
-                float d = (s - life) / 0.2F;
-                float streak = (float) Math.exp(-d * d);
-                float edges = Mth.clamp(s / 0.12F, 0.0F, 1.0F) * Mth.clamp((1.0F - s) / 0.15F, 0.0F, 1.0F);
-                alpha[j] = 0.85F * streak * edges;
-                width[j] = 0.024F * (1.0F - 0.55F * s);
-            }
-
-            ribbon(consumer, matrix, centre, alpha, width, tx, 0.0F, tz);
-            ribbon(consumer, matrix, centre, alpha, width, rx, 0.0F, rz);
-        }
-    }
-
-    /** One ribbon along a path: three rows of vertices, clear at both edges and opaque in the middle. */
-    private static void ribbon(VertexConsumer consumer, Matrix4f matrix, float[][] c, float[] alpha, float[] width,
-                               float wx, float wy, float wz) {
-        for (int j = 0; j < c.length - 1; j++) {
-            for (int side = -1; side <= 1; side += 2) {
-                float[] a = c[j];
-                float[] b = c[j + 1];
-                float wa = width[j] * side;
-                float wb = width[j + 1] * side;
-                float[][] quad = {
-                        {a[0], a[1], a[2], alpha[j]},
-                        {a[0] + wx * wa, a[1] + wy * wa, a[2] + wz * wa, 0.0F},
-                        {b[0] + wx * wb, b[1] + wy * wb, b[2] + wz * wb, 0.0F},
-                        {b[0], b[1], b[2], alpha[j + 1]}};
-                for (int v = 0; v < 4; v++) wispVertex(consumer, matrix, quad[v]);
-                for (int v = 3; v >= 0; v--) wispVertex(consumer, matrix, quad[v]);
-            }
-        }
-    }
-
-    private static void wispVertex(VertexConsumer consumer, Matrix4f matrix, float[] p) {
-        consumer.addVertex(matrix, p[0], p[1], p[2])
-                .setColor(255, 255, 255, Mth.clamp((int) (p[3] * 255.0F), 0, 255))
-                .setUv(0.5F, 0.5F)
-                .setOverlay(OverlayTexture.NO_OVERLAY)
-                .setLight(LightTexture.FULL_BRIGHT)
-                .setNormal(0.0F, 1.0F, 0.0F);
     }
 
     private static void vertex(VertexConsumer consumer, Matrix4f matrix, float[] p, float alpha) {
