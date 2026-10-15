@@ -24,8 +24,8 @@ import java.util.List;
  * Great Fire Annihilation. Rank A, range 50 meters. The caster expels a massive wave of fire that
  * spreads out in front of them like a wall of flame, covering a wide area and burning everything in it. It costs 70
  * chakra to start, and as long as the right mouse button is held it keeps going, for 10 chakra a second, turning with
- * the caster. When it is let go of, or the chakra runs out, the fire dies down and the jutsu rests for 15 seconds. It
- * deals 1 damage a second, and sets everything in it on fire for 30 seconds. It is drawn with pixel textures of the mod, there are no particles. Requires Fire release affinity.
+ * the caster. When it is let go of, or the chakra runs out, the fire dies down and the jutsu rests for 30 seconds. It
+ * deals 3 damage a second, and sets everything in it on fire for 30 seconds on top of that. It is drawn with pixel textures of the mod, there are no particles. Requires Fire release affinity.
  */
 public class GreatFireAnnihilation extends AbstractJutsuItem {
 
@@ -56,7 +56,7 @@ public class GreatFireAnnihilation extends AbstractJutsuItem {
 
     /** How much chakra it takes every second to keep it going, and how long it rests after it stops. */
     private static final int SUSTAIN_COST_PER_SECOND = 10;
-    private static final int REST_TICKS = 300;
+    private static final int REST_TICKS = 600;
 
     /** Starts the jutsu, and keeps it going for as long as the button is held. */
     @Override

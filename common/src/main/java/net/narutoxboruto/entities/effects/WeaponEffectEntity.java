@@ -177,7 +177,7 @@ public class WeaponEffectEntity extends Entity {
     public static double waveHalfAngle(double radius) {
         return Math.toRadians(30.0D + (WAVE_HALF_ANGLE - 30.0D) * (1.0D - Math.exp(-radius / 18.0D)));
     }
-    private static final float WAVE_DAMAGE = 1.0F;
+    private static final float WAVE_DAMAGE = 3.0F;
     /** The fire from the jutsu burns for 30 seconds, and keeps being lit again for as long as the target stays in it. */
     private static final int WAVE_BURN_TICKS = 600;
     /** How long the fire takes to die down once the caster lets go. */
@@ -282,7 +282,7 @@ public class WeaponEffectEntity extends Entity {
             if (distance > 1.5D && to.dot(forward) / distance < Math.cos(waveHalfAngle(distance))) continue;
             if (target.getY() < getY() - 3.0D || target.getY() > getY() + 8.0D) continue;
             if (caster != null && !caster.hasLineOfSight(target)) continue;
-            // 1 damage every second, and the fire it sets is what makes it deadly
+            // 3 damage every second, and on top of that the fire it sets
             if (strike) {
                 target.invulnerableTime = 0;
                 target.hurt(fireSource(ownerEntity), WAVE_DAMAGE);
