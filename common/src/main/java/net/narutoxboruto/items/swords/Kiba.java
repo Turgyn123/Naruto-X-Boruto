@@ -6,6 +6,8 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -24,7 +26,10 @@ import net.narutoxboruto.capabilities.info.ReleaseList;
 import net.narutoxboruto.capabilities.info.KibaActive;
 import net.narutoxboruto.entities.effects.LightningArcEntity;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Kiba - The Lightning Blades (雷刀・牙)
@@ -33,7 +38,7 @@ import java.util.List;
  * Ability: When activated, the sword is imbued with lightning.
  * - Requires Lightning Release affinity to use
  * - Drains 5 chakra per second while active
- * - Stuns enemies hit while ability is active
+ * - Each hit stuns the target for one second (it cannot move or hurt anyone) while the ability is active
  * - Right-click to toggle on/off
  *
  * Kiba is a pair of blades: while you hold it in your main hand a second Kiba is in your off hand. That copy is
@@ -42,8 +47,15 @@ import java.util.List;
  */
 public class Kiba extends SwordItem implements Vanishable {
     private static final int CHAKRA_DRAIN_PER_SECOND = 5;
-    private static final int STUN_DURATION_TICKS = 40; // 2 seconds
-    private static final int STUN_AMPLIFIER = 4; // Slowness V (almost frozen)
+    /** A hit with the lightning on stuns the target for one second: it cannot move and cannot hurt anyone. */
+    private static final int STUN_DURATION_TICKS = 20;
+    /** After a stun the target cannot be stunned again for this long, so a fast Kiba cannot keep it frozen. */
+    private static final int STUN_COOLDOWN_TICKS = 40;
+    /** Slowness this high stops all walking, and weakness this high takes away all of the target's damage. */
+    private static final int STUN_SLOWNESS = 9;
+    private static final int STUN_WEAKNESS = 9;
+    /** When each target was last stunned, by the game time of its level. */
+    private static final Map<UUID, Long> LAST_STUN = new HashMap<>();
 
     /** Marks the locked copy of the Kiba in the off hand. */
     private static final String OFFHAND_KEY = "kiba_offhand";
@@ -237,26 +249,11 @@ public class Kiba extends SwordItem implements Vanishable {
             KibaActive kibaActive = Services.PLATFORM.getKibaActive(serverPlayer);
             
             if (kibaActive.isActive()) {
-                // Apply stun effect (heavy slowness + weakness + brief blindness)
-                pTarget.addEffect(new MobEffectInstance(
-                        MobEffects.MOVEMENT_SLOWDOWN, 
-                        STUN_DURATION_TICKS, 
-                        STUN_AMPLIFIER, 
-                        false, true));
-                
-                pTarget.addEffect(new MobEffectInstance(
-                        MobEffects.WEAKNESS, 
-                        STUN_DURATION_TICKS, 
-                        2, // Weakness III
-                        false, true));
-                
-                // Brief shock/stun effect
-                pTarget.addEffect(new MobEffectInstance(
-                        MobEffects.BLINDNESS, 
-                        10, // 0.5 seconds
-                        0, 
-                        false, false));
-                
+                // A short stun: for one second the target is frozen on the spot and cannot hurt anyone
+                if (pTarget.level() instanceof ServerLevel stunLevel) {
+                    stun(stunLevel, pTarget);
+                }
+
                 // Spawn lightning particles around the stunned target - electric shock effect
                 if (serverPlayer.level() instanceof ServerLevel serverLevel) {
                     spawnElectricShockParticles(serverLevel, pTarget);
@@ -265,6 +262,29 @@ public class Kiba extends SwordItem implements Vanishable {
         }
         
         return true;
+    }
+
+    /** Stuns a target for a second, unless it was stunned a moment ago. */
+    private static void stun(ServerLevel level, LivingEntity target) {
+        long now = level.getGameTime();
+        if (LAST_STUN.size() > 256) {
+            LAST_STUN.values().removeIf(t -> now - t > STUN_DURATION_TICKS + STUN_COOLDOWN_TICKS);
+        }
+        Long last = LAST_STUN.get(target.getUUID());
+        if (last != null && now >= last && now - last < STUN_DURATION_TICKS + STUN_COOLDOWN_TICKS) {
+            return;
+        }
+        LAST_STUN.put(target.getUUID(), now);
+
+        target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, STUN_DURATION_TICKS, STUN_SLOWNESS, false, true));
+        target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, STUN_DURATION_TICKS, STUN_WEAKNESS, false, false));
+        // Stop it where it stands
+        target.setDeltaMovement(0.0D, Math.min(0.0D, target.getDeltaMovement().y), 0.0D);
+        target.hurtMarked = true;
+        if (target instanceof net.minecraft.world.entity.Mob mob) {
+            mob.getNavigation().stop();
+        }
+        level.playSound(null, target.blockPosition(), SoundEvents.LIGHTNING_BOLT_IMPACT, SoundSource.PLAYERS, 0.4F, 1.8F);
     }
 
     /**
