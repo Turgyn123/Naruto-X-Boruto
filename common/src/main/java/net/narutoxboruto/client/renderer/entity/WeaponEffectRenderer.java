@@ -3,6 +3,8 @@ package net.narutoxboruto.client.renderer.entity;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderer;
@@ -11,10 +13,15 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 import net.narutoxboruto.entities.effects.WeaponEffectEntity;
+import net.narutoxboruto.items.ModItems;
 import net.narutoxboruto.main.Main;
 import org.joml.Matrix4f;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
 /**
  * Draws the weapon effects as real shapes with textures, so that they look like wind, energy and thread and not
@@ -22,16 +29,15 @@ import org.joml.Matrix4f;
  * <ul>
  *   <li>wind: three ribbons of air that spiral around the way it flies, widening and scrolling forward;</li>
  *   <li>crescent: a flat crescent blade that grows a little as it flies and fades out;</li>
- *   <li>Nuibari: a needle that flies to the target and lands at its feet, with thin threads and a red flash.</li>
+ *   <li>Nuibari: the needle (the model of the sword) that flies to the target and sticks in the ground, with thin threads and a red flash.</li>
  * </ul>
  */
 public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
 
     private static final ResourceLocation WIND_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/wind_streak.png");
     private static final ResourceLocation CRESCENT_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/crescent.png");
-    private static final ResourceLocation NEEDLE_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/needle.png");
     private static final float NEEDLE_FLIGHT_TICKS = 5.0F;
-    private static final double NEEDLE_LENGTH = 2.0D;
+    private static final double NEEDLE_LENGTH = 1.62D;
     private static final float RED_FLASH_TICKS = 14.0F;
     private static final ResourceLocation THREAD_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/thread.png");
     private static final ResourceLocation WHITE_TEXTURE = ResourceLocation.withDefaultNamespace("textures/misc/white.png");
@@ -172,9 +178,21 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
         Vec3 tip = hand.add(landTip.subtract(hand).scale(flight));
         Vec3 tail = tip.subtract(direction.scale(NEEDLE_LENGTH));
 
+        // The needle is the model of the Nuibari itself. Its point is at the top of the model, which is half a block
+        // from the middle, so it is turned to point along the flight and the middle goes half a block behind the tip.
+        if (ModItems.NUIBARI_ITEM != null) {
+            Vec3 middle = tip.subtract(direction.scale(0.5D)).subtract(hand);
+            poseStack.pushPose();
+            poseStack.translate(middle.x, middle.y, middle.z);
+            poseStack.mulPose(new Quaternionf().rotationTo(new Vector3f(0.0F, 1.0F, 0.0F),
+                    new Vector3f((float) direction.x, (float) direction.y, (float) direction.z)));
+            ItemStack needle = ModItems.NUIBARI_ITEM.getDefaultInstance();
+            Minecraft.getInstance().getItemRenderer().renderStatic(needle, ItemDisplayContext.NONE, LightTexture.FULL_BRIGHT,
+                    OverlayTexture.NO_OVERLAY, poseStack, bufferSource, entity.level(), entity.getId());
+            poseStack.popPose();
+        }
+
         Matrix4f matrix = poseStack.last().pose();
-        VertexConsumer needle = bufferSource.getBuffer(RenderType.entityTranslucent(NEEDLE_TEXTURE));
-        strip(needle, matrix, tail.subtract(hand), tip.subtract(hand), 0.035D, (float) NEEDLE_LENGTH, false);
 
         if (flight >= 1.0F) {
             VertexConsumer thread = bufferSource.getBuffer(RenderType.entityTranslucent(THREAD_TEXTURE));
@@ -200,21 +218,35 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
         }
     }
 
-    /** Bands of thread across the body: two over the chest and shoulders, two round the legs. They do not move. */
+    /**
+     * Bands of thread across the body: over the shoulders, the chest, the hips and the knees. They follow the body, so
+     * they are wider across the shoulders than front to back and turn with it, and they do not move.
+     */
     private static void stitches(VertexConsumer vc, Matrix4f matrix, Entity target, Vec3 feetFromHand, float grow) {
         double height = target.getBbHeight();
-        double radius = target.getBbWidth() * 0.58D + 0.06D;
-        // Height as a part of the body, how much the band slants, and which way round it starts
-        double[][] bands = {{0.80D, 0.10D, 0.0D}, {0.60D, -0.09D, 1.5D}, {0.36D, 0.05D, 0.7D}, {0.14D, -0.05D, 2.4D}};
-        int segments = 18;
-        // The bands start wide and pull tight over the first moments
-        double r = radius * (1.0D + (1.0D - grow));
+        // The sizes are for a body as tall as a person, and scale with the target
+        double k = height / 1.8D;
+        double yaw = Math.toRadians(target.yBodyRot);
+        Vec3 side = new Vec3(Math.cos(yaw), 0.0D, Math.sin(yaw));
+        Vec3 front = new Vec3(-Math.sin(yaw), 0.0D, Math.cos(yaw));
+        // Height as a part of the body, how much the band slants, which way round it starts, half width, half depth
+        double[][] bands = {
+                {0.80D, 0.08D, 0.0D, 0.50D, 0.24D},
+                {0.60D, -0.07D, 1.5D, 0.46D, 0.22D},
+                {0.40D, 0.05D, 0.7D, 0.29D, 0.21D},
+                {0.17D, -0.04D, 2.4D, 0.27D, 0.19D}};
+        int segments = 20;
+        // The bands start a little wide and pull tight over the first moments
+        double pull = 1.0D + 0.5D * (1.0D - grow);
         for (double[] band : bands) {
             Vec3 previous = null;
             for (int i = 0; i <= segments; i++) {
                 double angle = (double) i / segments * Math.PI * 2.0D;
                 double y = (band[0] + band[1] * Math.sin(angle + band[2])) * height;
-                Vec3 point = feetFromHand.add(Math.cos(angle) * r, y, Math.sin(angle) * r);
+                Vec3 point = feetFromHand
+                        .add(side.scale(Math.cos(angle) * (band[3] + 0.03D) * k * pull))
+                        .add(front.scale(Math.sin(angle) * (band[4] + 0.03D) * k * pull))
+                        .add(0.0D, y, 0.0D);
                 if (previous != null) strip(vc, matrix, previous, point, 0.006D, 1.0F, true);
                 previous = point;
             }
