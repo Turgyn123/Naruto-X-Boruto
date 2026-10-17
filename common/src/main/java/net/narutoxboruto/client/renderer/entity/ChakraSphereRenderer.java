@@ -20,8 +20,8 @@ import org.joml.Matrix4f;
  * the same textures, the white streaks of wind (wind_streak) on ribbons that spiral and scroll, and the white crescent
  * blades (crescent), in the same near white colour.
  * <ul>
- *   <li>Rasengan: a white heart in a ball of wind: ribbons of wind spiral over it and a shell of crescent blades like
- *       the blades of the fan fly round it, one shell one way and a smaller one the other way.</li>
+ *   <li>Rasengan: a blue ball, white in the middle, covered with a tangle of fine bright lines as in the anime (see
+ *       {@link #rasenBall}).</li>
  *   <li>Rasenshuriken: held up above the head of the caster while it is charged. The same ball, with four big
  *       crescent blades like the blades of the fan turning round it in a pinwheel. Thrown, ribbons of wind spiral
  *       behind it like the wind of the fan. Where it hits it grows into a huge ball of ribbons with pinwheels turning
@@ -32,6 +32,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
 
     private static final ResourceLocation WIND_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/wind_streak.png");
     private static final ResourceLocation CRESCENT_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/crescent.png");
+    private static final ResourceLocation LINE_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/rasen_line.png");
     private static final ResourceLocation WHITE_TEXTURE = ResourceLocation.withDefaultNamespace("textures/misc/white.png");
     private static final int FULL_BRIGHT = 0xF000F0;
     /** The colour of the wind of the Giant Fan: white with a touch of blue. */
@@ -117,35 +118,20 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         Matrix4f matrix = poseStack.last().pose();
         float ribbonAlpha = 0.94F * alpha;
 
-        // The soft heart of the ball: a translucent ball with a white core in it
-        RenderType whiteType = RenderType.entityTranslucentEmissive(WHITE_TEXTURE);
-        VertexConsumer white = bufferSource.getBuffer(whiteType);
-        if (!blast) {
-            roundBall(white, matrix, radius * 0.97F, 0.72F, 0.88F, 1.0F, 0.3F * alpha);
-            roundBall(white, matrix, radius * 0.4F, 1.0F, 1.0F, 1.0F, 0.85F * alpha);
-        } else {
-            roundBall(white, matrix, radius, 0.72F, 0.88F, 1.0F, 0.1F * alpha);
-        }
+        // The ball, the same for both jutsus
+        rasenBall(bufferSource, matrix, radius, age, alpha, blast);
 
-        // The ribbons of wind spiralling round the ball, as in the wind of the Giant Fan
-        VertexConsumer wind = bufferSource.getBuffer(RenderType.entityTranslucent(WIND_TEXTURE));
-        int ribbons = blast ? 14 : (shuriken ? 8 : 6);
-        windBall(wind, matrix, aim, across, up, radius, age, ribbons, 1.0F, ribbonAlpha);
-        windBall(wind, matrix, aim, across, up, radius * 0.7F, age, ribbons - 2, -1.3F, ribbonAlpha * 0.9F);
         // Thrown, ribbons of wind spiral behind the Rasenshuriken like the wind of the fan
         if (shuriken && phase == ChakraSphereEntity.ACTIVE) {
+            VertexConsumer wind = bufferSource.getBuffer(RenderType.entityTranslucent(WIND_TEXTURE));
             for (int r = 0; r < 4; r++) {
                 trail(wind, matrix, aim, across, up, reach, age, r, ribbonAlpha);
             }
         }
 
-        // The crescent blades of wind flying round the ball, one shell turning one way and a smaller one the other way,
-        // and for the Rasenshuriken the four big blades
-        VertexConsumer crescent = bufferSource.getBuffer(RenderType.entityTranslucent(CRESCENT_TEXTURE));
-        crescentShell(crescent, matrix, radius, age, blast ? 18 : 11, 1.0F, radius * (blast ? 0.7F : 0.95F), alpha * 0.9F);
-        crescentShell(crescent, matrix, radius * 0.66F, age, blast ? 12 : 7, -1.3F, radius * (blast ? 0.5F : 0.62F), alpha * 0.8F);
         // The four big crescent blades of the Rasenshuriken, across the way it is aimed
         if (shuriken) {
+            VertexConsumer crescent = bufferSource.getBuffer(RenderType.entityTranslucent(CRESCENT_TEXTURE));
             int sets = blast ? 3 : 1;
             for (int k = 0; k < sets; k++) {
                 Vec3 axis = k == 0 ? aim : (k == 1 ? across : up);
@@ -161,26 +147,70 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
     }
 
     /**
-     * A shell of crescent blades of wind, like the blades of the Giant Fan, laid round a ball and flying round it
-     * along its surface, each with its curved edge in front. Together they make a ball that looks as if it is made of
-     * wind blades, turning.
+     * The ball of the Rasengan, as in the anime: a blue ball that is white in the middle and blue at the edge, covered
+     * all over with a tangle of fine bright lines, like thread wound round it. Every line is a part of a circle round
+     * the middle of the ball, in a plane of its own, and the whole tangle turns slowly. The lines have a texture of
+     * their own: bright in the middle and fading at the edges.
      */
-    private static void crescentShell(VertexConsumer vc, Matrix4f matrix, float radius, float age, int count, float turn, float size, float alpha) {
+    private static void rasenBall(MultiBufferSource bufferSource, Matrix4f matrix, float radius, float age, float alpha, boolean blast) {
+        VertexConsumer white = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(WHITE_TEXTURE));
+        if (!blast) {
+            roundBall(white, matrix, radius * 0.97F, 0.3F, 0.62F, 1.0F, 0.5F * alpha);
+            roundBall(white, matrix, radius * 0.6F, 0.7F, 0.92F, 1.0F, 0.4F * alpha);
+            roundBall(white, matrix, radius * 0.3F, 1.0F, 1.0F, 1.0F, 0.9F * alpha);
+        } else {
+            roundBall(white, matrix, radius, 0.35F, 0.7F, 1.0F, 0.1F * alpha);
+        }
+        VertexConsumer lines = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(LINE_TEXTURE));
+        int count = blast ? 90 : 60;
+        int segments = 8;
+        double turn = age * 0.05D;
+        double cos = Math.cos(turn);
+        double sin = Math.sin(turn);
         for (int i = 0; i < count; i++) {
-            double y = 1.0D - 2.0D * (i + 0.5D) / count;
-            double ring = Math.sqrt(1.0D - y * y);
-            double phi = i * 2.399963D + age * 0.13D * turn;
-            Vec3 radial = new Vec3(ring * Math.cos(phi), y, ring * Math.sin(phi));
-            // It flies the way phi grows
-            Vec3 forward = new Vec3(-Math.sin(phi), 0.0D, Math.cos(phi)).scale(Math.signum(turn));
-            Vec3 side = radial.cross(forward).normalize();
-            Vec3 centre = radial.scale(radius);
-            double hw = size * 0.5D;
-            double d = size * 0.45D;
-            texturedVertex(vc, matrix, centre.subtract(side.scale(hw)).add(forward.scale(d)), 0.0F, 0.0F, alpha);
-            texturedVertex(vc, matrix, centre.add(side.scale(hw)).add(forward.scale(d)), 1.0F, 0.0F, alpha);
-            texturedVertex(vc, matrix, centre.add(side.scale(hw)).subtract(forward.scale(d)), 1.0F, 1.0F, alpha);
-            texturedVertex(vc, matrix, centre.subtract(side.scale(hw)).subtract(forward.scale(d)), 0.0F, 1.0F, alpha);
+            double theta = hash(i * 7 + 1) * Math.PI * 2.0D;
+            double z = hash(i * 7 + 2) * 2.0D - 1.0D;
+            double ring = Math.sqrt(1.0D - z * z);
+            Vec3 normal = new Vec3(Math.cos(theta) * ring, z, Math.sin(theta) * ring);
+            Vec3 a = normal.cross(new Vec3(0.0D, 1.0D, 0.0D));
+            a = a.lengthSqr() < 1.0E-4D ? new Vec3(1.0D, 0.0D, 0.0D) : a.normalize();
+            Vec3 b = normal.cross(a).normalize();
+            double direction = hash(i * 7 + 3) < 0.5F ? -1.0D : 1.0D;
+            double start = hash(i * 7 + 4) * Math.PI * 2.0D + age * direction * (0.03D + 0.07D * hash(i * 7 + 5));
+            double span = 1.0D + 1.3D * hash(i * 7 + 6);
+            double size = radius * (0.96D + 0.04D * hash(i * 7 + 8));
+            double half = radius * 0.03D;
+            Vec3 previous = null;
+            for (int s = 0; s <= segments; s++) {
+                float t = s / (float) segments;
+                double angle = start + span * t;
+                Vec3 flat = a.scale(Math.cos(angle)).add(b.scale(Math.sin(angle)));
+                Vec3 point = flat.scale(size);
+                // Turn the tangle round the up axis
+                point = new Vec3(point.x * cos - point.z * sin, point.y, point.x * sin + point.z * cos);
+                Vec3 radial = point.normalize();
+                Vec3 across = new Vec3(normal.x * cos - normal.z * sin, normal.y, normal.x * sin + normal.z * cos).scale(half);
+                Vec3 outward = radial.scale(half);
+                if (previous != null) {
+                    float t0 = (s - 1) / (float) segments;
+                    float a0 = alpha * Math.min(1.0F, Math.min(t0 * 4.0F, (1.0F - t0) * 4.0F));
+                    float a1 = alpha * Math.min(1.0F, Math.min(t * 4.0F, (1.0F - t) * 4.0F));
+                    Vec3 previousRadial = previous.normalize();
+                    Vec3 previousOutward = previousRadial.scale(half);
+                    float u0 = t0 * 2.0F + i * 0.37F;
+                    float u1 = t * 2.0F + i * 0.37F;
+                    // Two ribbons across each other, so the line is seen from every side
+                    texturedVertex(lines, matrix, previous.add(across), u0, 0.0F, a0, 1.0F, 1.0F, 1.0F);
+                    texturedVertex(lines, matrix, previous.subtract(across), u0, 1.0F, a0, 1.0F, 1.0F, 1.0F);
+                    texturedVertex(lines, matrix, point.subtract(across), u1, 1.0F, a1, 1.0F, 1.0F, 1.0F);
+                    texturedVertex(lines, matrix, point.add(across), u1, 0.0F, a1, 1.0F, 1.0F, 1.0F);
+                    texturedVertex(lines, matrix, previous.add(previousOutward), u0, 0.0F, a0, 1.0F, 1.0F, 1.0F);
+                    texturedVertex(lines, matrix, previous.subtract(previousOutward), u0, 1.0F, a0, 1.0F, 1.0F, 1.0F);
+                    texturedVertex(lines, matrix, point.subtract(outward), u1, 1.0F, a1, 1.0F, 1.0F, 1.0F);
+                    texturedVertex(lines, matrix, point.add(outward), u1, 0.0F, a1, 1.0F, 1.0F, 1.0F);
+                }
+                previous = point;
+            }
         }
     }
 
