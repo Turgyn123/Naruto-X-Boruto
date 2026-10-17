@@ -171,20 +171,22 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         VertexConsumer vc = bufferSource.getBuffer(RenderType.lightning());
         // The balls go from the inside to the outside: this render type keeps what it has drawn in front, so the heart is
         // drawn first and the bigger balls then glow over it
+        // Soft grey blue light, like air, and not too much of it: the layers add up in the middle, and too much of them
+        // makes a white blob that hides the arms
         float[][] shells = blast
-                ? new float[][]{{0.50F, 0.83F, 0.94F, 1.00F, 0.12F}, {1.00F, 0.50F, 0.76F, 1.00F, 0.10F}}
+                ? new float[][]{{0.50F, 0.7F, 0.85F, 0.95F, 0.1F}, {1.00F, 0.5F, 0.7F, 0.9F, 0.08F}}
                 : style == 1
                 ? new float[][]{
-                        {0.20F, 0.92F, 0.97F, 1.00F, 0.60F}, {0.45F, 0.80F, 0.93F, 1.00F, 0.30F}, {0.75F, 0.59F, 0.84F, 1.00F, 0.25F},
-                        {1.00F, 0.50F, 0.76F, 1.00F, 0.30F}, {1.05F, 0.74F, 0.91F, 1.00F, 0.20F}}
+                        {0.20F, 0.9F, 0.95F, 1.0F, 0.4F}, {0.45F, 0.65F, 0.82F, 0.95F, 0.2F}, {0.75F, 0.55F, 0.75F, 0.9F, 0.18F},
+                        {1.00F, 0.5F, 0.7F, 0.88F, 0.2F}, {1.05F, 0.6F, 0.78F, 0.92F, 0.12F}}
                 : style == 2
                 ? new float[][]{
-                        {0.25F, 0.92F, 0.97F, 1.00F, 0.75F}, {0.50F, 0.80F, 0.93F, 1.00F, 0.40F}, {0.75F, 0.62F, 0.85F, 1.00F, 0.25F},
-                        {1.00F, 0.50F, 0.76F, 1.00F, 0.18F}, {1.10F, 0.47F, 0.73F, 1.00F, 0.07F}}
+                        {0.25F, 0.9F, 0.95F, 1.0F, 0.45F}, {0.50F, 0.65F, 0.82F, 0.95F, 0.25F}, {0.75F, 0.55F, 0.75F, 0.9F, 0.18F},
+                        {1.00F, 0.5F, 0.7F, 0.88F, 0.15F}, {1.10F, 0.5F, 0.7F, 0.88F, 0.06F}}
                 : new float[][]{
-                        {0.22F, 0.92F, 0.97F, 1.00F, 0.70F}, {0.40F, 0.83F, 0.94F, 1.00F, 0.40F}, {0.60F, 0.71F, 0.90F, 1.00F, 0.28F},
-                        {0.80F, 0.59F, 0.84F, 1.00F, 0.20F}, {1.00F, 0.50F, 0.76F, 1.00F, 0.16F}, {1.15F, 0.47F, 0.73F, 1.00F, 0.09F},
-                        {1.30F, 0.44F, 0.67F, 1.00F, 0.05F}};
+                        {0.22F, 0.9F, 0.95F, 1.0F, 0.45F}, {0.40F, 0.7F, 0.85F, 0.95F, 0.25F}, {0.60F, 0.6F, 0.8F, 0.92F, 0.2F},
+                        {0.80F, 0.55F, 0.75F, 0.9F, 0.15F}, {1.00F, 0.5F, 0.7F, 0.88F, 0.12F}, {1.15F, 0.5F, 0.7F, 0.88F, 0.07F},
+                        {1.30F, 0.5F, 0.7F, 0.88F, 0.04F}};
         for (float[] shell : shells) {
             smoothBall(vc, matrix, r * shell[0], shell[1], shell[2], shell[3], shell[4] * alpha);
         }
