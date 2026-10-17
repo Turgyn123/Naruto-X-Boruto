@@ -2,7 +2,6 @@ package net.narutoxboruto.client.renderer.entity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.math.Axis;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderer;
@@ -12,7 +11,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
-import net.narutoxboruto.client.model.FireBallModel;
 import net.narutoxboruto.entities.jutsus.ChakraSphereEntity;
 import net.narutoxboruto.main.Main;
 import org.joml.Matrix4f;
@@ -22,7 +20,8 @@ import org.joml.Matrix4f;
  * the same textures, the white streaks of wind (wind_streak) on ribbons that spiral and scroll, and the white crescent
  * blades (crescent), in the same near white colour.
  * <ul>
- *   <li>Rasengan: the same kind of model as the Great Fireball, in blue and white (see {@link #rasenganModel}).</li>
+ *   <li>Rasengan: a white heart in a ball of wind: ribbons of wind spiral over it and a shell of crescent blades like
+ *       the blades of the fan fly round it, one shell one way and a smaller one the other way.</li>
  *   <li>Rasenshuriken: held up above the head of the caster while it is charged. The same ball, with four big
  *       crescent blades like the blades of the fan turning round it in a pinwheel. Thrown, ribbons of wind spiral
  *       behind it like the wind of the fan. Where it hits it grows into a huge ball of ribbons with pinwheels turning
@@ -34,16 +33,12 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
     private static final ResourceLocation WIND_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/wind_streak.png");
     private static final ResourceLocation CRESCENT_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/crescent.png");
     private static final ResourceLocation WHITE_TEXTURE = ResourceLocation.withDefaultNamespace("textures/misc/white.png");
-    private static final ResourceLocation RASENGAN_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/rasengan.png");
     private static final int FULL_BRIGHT = 0xF000F0;
     /** The colour of the wind of the Giant Fan: white with a touch of blue. */
     private static final float[] WIND = {0.94F, 0.96F, 1.0F};
 
-    private final FireBallModel ball;
-
     public ChakraSphereRenderer(EntityRendererProvider.Context context) {
         super(context);
-        this.ball = new FireBallModel(context.bakeLayer(FireBallModel.LAYER_LOCATION));
     }
 
     @Override
@@ -120,11 +115,6 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         Vec3 up = aim.cross(across).normalize();
 
         Matrix4f matrix = poseStack.last().pose();
-        if (!shuriken) {
-            rasenganModel(bufferSource, poseStack, radius, age, alpha);
-            poseStack.popPose();
-            return;
-        }
         float ribbonAlpha = 0.94F * alpha;
 
         // The soft heart of the ball: a translucent ball with a white core in it
@@ -139,7 +129,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
 
         // The ribbons of wind spiralling round the ball, as in the wind of the Giant Fan
         VertexConsumer wind = bufferSource.getBuffer(RenderType.entityTranslucent(WIND_TEXTURE));
-        int ribbons = blast ? 14 : 8;
+        int ribbons = blast ? 14 : (shuriken ? 8 : 6);
         windBall(wind, matrix, aim, across, up, radius, age, ribbons, 1.0F, ribbonAlpha);
         windBall(wind, matrix, aim, across, up, radius * 0.7F, age, ribbons - 2, -1.3F, ribbonAlpha * 0.9F);
         // Thrown, ribbons of wind spiral behind the Rasenshuriken like the wind of the fan
@@ -149,9 +139,13 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
             }
         }
 
+        // The crescent blades of wind flying round the ball, one shell turning one way and a smaller one the other way,
+        // and for the Rasenshuriken the four big blades
+        VertexConsumer crescent = bufferSource.getBuffer(RenderType.entityTranslucent(CRESCENT_TEXTURE));
+        crescentShell(crescent, matrix, radius, age, blast ? 18 : 11, 1.0F, radius * (blast ? 0.7F : 0.95F), alpha * 0.9F);
+        crescentShell(crescent, matrix, radius * 0.66F, age, blast ? 12 : 7, -1.3F, radius * (blast ? 0.5F : 0.62F), alpha * 0.8F);
         // The four big crescent blades of the Rasenshuriken, across the way it is aimed
         if (shuriken) {
-            VertexConsumer crescent = bufferSource.getBuffer(RenderType.entityTranslucent(CRESCENT_TEXTURE));
             int sets = blast ? 3 : 1;
             for (int k = 0; k < sets; k++) {
                 Vec3 axis = k == 0 ? aim : (k == 1 ? across : up);
@@ -167,24 +161,27 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
     }
 
     /**
-     * The Rasengan: the same kind of model as the Great Fireball (see {@code FireBallModel}), nested cubes that spin on all
-     * axes, with a texture of the same kind in blue and white, drawn the same way: glowing and see-through. It turns
-     * like the fireball does.
+     * A shell of crescent blades of wind, like the blades of the Giant Fan, laid round a ball and flying round it
+     * along its surface, each with its curved edge in front. Together they make a ball that looks as if it is made of
+     * wind blades, turning.
      */
-    private void rasenganModel(MultiBufferSource bufferSource, PoseStack poseStack, float radius, float age, float alpha) {
-        if (alpha < 0.01F) return;
-        VertexConsumer vc = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(RASENGAN_TEXTURE));
-        // The middle cube of the model is a block wide
-        float scale = radius * 2.0F;
-        float rotation = age * 15.0F;
-        poseStack.pushPose();
-        poseStack.scale(scale, scale, scale);
-        poseStack.mulPose(Axis.YP.rotationDegrees(rotation));
-        poseStack.mulPose(Axis.XP.rotationDegrees(rotation * 0.7F));
-        poseStack.mulPose(Axis.ZP.rotationDegrees(rotation * 0.3F));
-        int color = (Math.max(0, Math.min(255, (int) (alpha * 255.0F))) << 24) | 0xFFFFFF;
-        ball.renderToBuffer(poseStack, vc, FULL_BRIGHT, OverlayTexture.NO_OVERLAY, color);
-        poseStack.popPose();
+    private static void crescentShell(VertexConsumer vc, Matrix4f matrix, float radius, float age, int count, float turn, float size, float alpha) {
+        for (int i = 0; i < count; i++) {
+            double y = 1.0D - 2.0D * (i + 0.5D) / count;
+            double ring = Math.sqrt(1.0D - y * y);
+            double phi = i * 2.399963D + age * 0.13D * turn;
+            Vec3 radial = new Vec3(ring * Math.cos(phi), y, ring * Math.sin(phi));
+            // It flies the way phi grows
+            Vec3 forward = new Vec3(-Math.sin(phi), 0.0D, Math.cos(phi)).scale(Math.signum(turn));
+            Vec3 side = radial.cross(forward).normalize();
+            Vec3 centre = radial.scale(radius);
+            double hw = size * 0.5D;
+            double d = size * 0.45D;
+            texturedVertex(vc, matrix, centre.subtract(side.scale(hw)).add(forward.scale(d)), 0.0F, 0.0F, alpha);
+            texturedVertex(vc, matrix, centre.add(side.scale(hw)).add(forward.scale(d)), 1.0F, 0.0F, alpha);
+            texturedVertex(vc, matrix, centre.add(side.scale(hw)).subtract(forward.scale(d)), 1.0F, 1.0F, alpha);
+            texturedVertex(vc, matrix, centre.subtract(side.scale(hw)).subtract(forward.scale(d)), 0.0F, 1.0F, alpha);
+        }
     }
 
     /**
