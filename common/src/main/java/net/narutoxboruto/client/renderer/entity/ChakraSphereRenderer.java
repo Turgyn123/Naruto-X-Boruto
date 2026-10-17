@@ -194,7 +194,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         float scale = r / 0.35F;
         // The arms spiral from pole to pole and turn fast: three thick ones for the plasma orb, nine thin ones, some turning
         // each way, for the tangle, and three thin ones for the gyroscope
-        int arms = style == 0 ? 6 : 9;
+        int arms = style == 0 ? 16 : 9;
         for (int arm = 0; arm < arms; arm++) {
             int points = 16;
             Vec3[] path = new Vec3[points + 1];
@@ -208,7 +208,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
                         .add(across.scale(Math.sin(polar) * Math.cos(azimuth) * bulge))
                         .add(up.scale(Math.sin(polar) * Math.sin(azimuth) * bulge));
             }
-            float width = style == 0 ? 0.04F : 0.028F;
+            float width = style == 0 ? 0.018F : 0.028F;
             bolt(vc, matrix, path, width * scale, alpha * (blast ? 0.6F : 1.0F));
         }
 
