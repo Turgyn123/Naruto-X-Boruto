@@ -155,15 +155,18 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
     private static void rasenBall(MultiBufferSource bufferSource, Matrix4f matrix, float radius, float age, float alpha, boolean blast) {
         VertexConsumer white = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(WHITE_TEXTURE));
         if (!blast) {
-            roundBall(white, matrix, radius * 0.97F, 0.2F, 0.5F, 0.95F, 0.45F * alpha);
-            roundBall(white, matrix, radius * 0.6F, 0.6F, 0.88F, 1.0F, 0.4F * alpha);
-            roundBall(white, matrix, radius * 0.3F, 1.0F, 1.0F, 1.0F, 0.9F * alpha);
+            // A pale, see-through ball, whiter towards the middle, with a soft glowing edge made of two bigger, very faint balls
+            roundBall(white, matrix, radius * 1.25F, 0.75F, 0.93F, 1.0F, 0.06F * alpha);
+            roundBall(white, matrix, radius * 1.12F, 0.75F, 0.93F, 1.0F, 0.12F * alpha);
+            roundBall(white, matrix, radius * 0.98F, 0.68F, 0.9F, 1.0F, 0.38F * alpha);
+            roundBall(white, matrix, radius * 0.65F, 0.85F, 0.96F, 1.0F, 0.4F * alpha);
+            roundBall(white, matrix, radius * 0.32F, 1.0F, 1.0F, 1.0F, 0.8F * alpha);
         } else {
             roundBall(white, matrix, radius, 0.3F, 0.65F, 1.0F, 0.1F * alpha);
         }
         VertexConsumer lines = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(LINE_TEXTURE));
-        linedSphere(lines, matrix, radius * 1.01F, age * 0.06F, 0.0F, 0.0F, alpha);
-        linedSphere(lines, matrix, radius * 0.93F, -age * 0.08F, 1.0F, 0.5F, alpha * 0.85F);
+        linedSphere(lines, matrix, radius * 1.01F, age * 0.06F, 0.0F, 0.0F, alpha * 0.6F);
+        linedSphere(lines, matrix, radius * 0.9F, -age * 0.08F, 1.0F, 0.5F, alpha * 0.45F);
     }
 
     /**
@@ -306,8 +309,8 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
 
     /** A ball of only a few flat facets, seen from outside and from inside, of one colour. */
     private static void roundBall(VertexConsumer vc, Matrix4f matrix, float radius, float r, float g, float b, float alpha) {
-        int segments = 10;
-        int rings = 7;
+        int segments = 16;
+        int rings = 10;
         Vec3[][] grid = new Vec3[rings + 1][segments + 1];
         for (int j = 0; j <= rings; j++) {
             double lat = Math.PI * (j / (double) rings - 0.5D);
