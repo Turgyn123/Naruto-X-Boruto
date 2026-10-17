@@ -10,6 +10,8 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.narutoxboruto.client.gui.JutsuStorageScreen;
 import net.narutoxboruto.client.model.FireBallModel;
+import net.narutoxboruto.client.model.RasenganModel;
+import net.narutoxboruto.client.model.RasenshurikenBladesModel;
 import net.narutoxboruto.client.renderer.shinobi.AbstractShinobiRender;
 import net.narutoxboruto.client.renderer.entity.*;
 import net.narutoxboruto.client.renderer.throwables.*;
@@ -23,6 +25,8 @@ public class ForgeClient {
     @SubscribeEvent
     static void onRegisterLayerDefinitions(EntityRenderersEvent.RegisterLayerDefinitions event) {
         event.registerLayerDefinition(FireBallModel.LAYER_LOCATION, FireBallModel::createBodyLayer);
+        event.registerLayerDefinition(RasenganModel.LAYER_LOCATION, RasenganModel::createBodyLayer);
+        event.registerLayerDefinition(RasenshurikenBladesModel.LAYER_LOCATION, RasenshurikenBladesModel::createBodyLayer);
     }
 
     @SubscribeEvent
@@ -41,6 +45,7 @@ public class ForgeClient {
             EntityRenderers.register(WATER_DRAGON.get(), WaterDragonRenderer::new);
             EntityRenderers.register(LIGHTNING_ARC.get(), LightningArcRenderer::new);
             EntityRenderers.register(WEAPON_EFFECT.get(), WeaponEffectRenderer::new);
+            EntityRenderers.register(CHAKRA_SPHERE.get(), ChakraSphereRenderer::new);
 
             EntityRenderers.register(JINPACHI_MUNASHI.get(),
                     (ctx) -> new AbstractShinobiRender(ctx, "jinpachi_munashi", true));

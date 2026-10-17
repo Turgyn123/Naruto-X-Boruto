@@ -12,13 +12,13 @@ import net.minecraft.world.item.UseAnim;
 import net.minecraft.world.level.Level;
 import net.narutoxboruto.capabilities.info.Chakra;
 import net.narutoxboruto.capabilities.info.ReleaseList;
-import net.narutoxboruto.entities.effects.WeaponEffectEntity;
+import net.narutoxboruto.entities.jutsus.ChakraSphereEntity;
 import net.narutoxboruto.main.platform.Services;
 import net.narutoxboruto.util.ModUtil;
 
 /**
  * A jutsu that is charged by holding the right mouse button, with a sphere of chakra growing in the hand of the caster
- * (see {@link WeaponEffectEntity}), and used by letting go. Let go too early and the sphere falls apart and costs
+ * (see {@link ChakraSphereEntity}), and used by letting go. Let go too early and the sphere falls apart and costs
  * nothing. The chakra is only taken when it is used, and then the jutsu rests.
  */
 public abstract class ChargedSphereJutsu extends AbstractJutsuItem {
@@ -27,11 +27,8 @@ public abstract class ChargedSphereJutsu extends AbstractJutsuItem {
         super(properties);
     }
 
-    /** The kind of {@link WeaponEffectEntity} that is the sphere. */
+    /** The kind of {@link ChakraSphereEntity} that is the sphere. */
     protected abstract int sphereKind();
-
-    /** Makes the sphere in the hand of the caster. */
-    protected abstract WeaponEffectEntity spawnSphere(ServerLevel level, ServerPlayer player);
 
     /** Never used: this jutsu is used by letting go, see {@link #releaseUsing}. */
     @Override
@@ -62,7 +59,7 @@ public abstract class ChargedSphereJutsu extends AbstractJutsuItem {
         }
 
         player.startUsingItem(hand);
-        spawnSphere(serverLevel, serverPlayer);
+        ChakraSphereEntity.spawn(serverLevel, serverPlayer, sphereKind());
         return InteractionResultHolder.consume(stack);
     }
 
@@ -80,7 +77,7 @@ public abstract class ChargedSphereJutsu extends AbstractJutsuItem {
     @Override
     public void releaseUsing(ItemStack stack, Level level, LivingEntity entity, int timeLeft) {
         if (level.isClientSide() || !(entity instanceof ServerPlayer player) || !(level instanceof ServerLevel serverLevel)) return;
-        WeaponEffectEntity sphere = WeaponEffectEntity.findHeld(serverLevel, player, sphereKind());
+        ChakraSphereEntity sphere = ChakraSphereEntity.findHeld(serverLevel, player, sphereKind());
         if (sphere == null) return;
         Chakra chakra = Services.PLATFORM.getChakra(player);
         if (!sphere.isCharged() || chakra.getValue() < getChakraCost()) {

@@ -2,11 +2,9 @@ package net.narutoxboruto.items.jutsus;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.narutoxboruto.entities.effects.WeaponEffectEntity;
+import net.narutoxboruto.entities.jutsus.ChakraSphereEntity;
 
 import java.util.List;
 
@@ -43,12 +41,7 @@ public class Rasengan extends ChargedSphereJutsu {
 
     @Override
     protected int sphereKind() {
-        return WeaponEffectEntity.RASENGAN;
-    }
-
-    @Override
-    protected WeaponEffectEntity spawnSphere(ServerLevel level, ServerPlayer player) {
-        return WeaponEffectEntity.spawnRasengan(level, player);
+        return ChakraSphereEntity.RASENGAN;
     }
 
     @Override

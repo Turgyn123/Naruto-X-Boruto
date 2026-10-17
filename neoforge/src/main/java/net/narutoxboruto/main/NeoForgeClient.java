@@ -27,6 +27,8 @@ import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsE
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import net.narutoxboruto.client.model.FireBallModel;
+import net.narutoxboruto.client.model.RasenganModel;
+import net.narutoxboruto.client.model.RasenshurikenBladesModel;
 
 import static net.narutoxboruto.entities.NeoForgeEntities.*;
 
@@ -40,6 +42,8 @@ public class NeoForgeClient {
     @SubscribeEvent
     static void onRegisterLayerDefinitions(EntityRenderersEvent.RegisterLayerDefinitions event) {
         event.registerLayerDefinition(FireBallModel.LAYER_LOCATION, FireBallModel::createBodyLayer);
+        event.registerLayerDefinition(RasenganModel.LAYER_LOCATION, RasenganModel::createBodyLayer);
+        event.registerLayerDefinition(RasenshurikenBladesModel.LAYER_LOCATION, RasenshurikenBladesModel::createBodyLayer);
     }
 
     @SubscribeEvent
@@ -82,6 +86,7 @@ public class NeoForgeClient {
             EntityRenderers.register(WATER_DRAGON.get(), WaterDragonRenderer::new);
             EntityRenderers.register(LIGHTNING_ARC.get(), LightningArcRenderer::new);
             EntityRenderers.register(WEAPON_EFFECT.get(), WeaponEffectRenderer::new);
+            EntityRenderers.register(CHAKRA_SPHERE.get(), ChakraSphereRenderer::new);
 
             EntityRenderers.register(JINPACHI_MUNASHI.get(),
                             (ctx) -> new AbstractShinobiRender(ctx, "jinpachi_munashi", true));

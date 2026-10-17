@@ -82,6 +82,7 @@ public class NeoForgeMain {
         ModEntities.WATER_DRAGON = NeoForgeEntities.WATER_DRAGON.get();
         ModEntities.LIGHTNING_ARC = NeoForgeEntities.LIGHTNING_ARC.get();
         ModEntities.WEAPON_EFFECT = NeoForgeEntities.WEAPON_EFFECT.get();
+        ModEntities.CHAKRA_SPHERE = NeoForgeEntities.CHAKRA_SPHERE.get();
         ModEntities.ZABUZA_MOMOCHI = NeoForgeEntities.ZABUZA_MOMOCHI.get();
         ModEntities.JINPACHI_MUNASHI = NeoForgeEntities.JINPACHI_MUNASHI.get();
         ModEntities.JININ_AKEBINO = NeoForgeEntities.JININ_AKEBINO.get();

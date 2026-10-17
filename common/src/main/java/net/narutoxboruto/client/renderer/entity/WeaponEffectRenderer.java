@@ -48,9 +48,6 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
     private static final ResourceLocation FLAME_BLOB_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/flame_blob.png");
     private static final ResourceLocation FIRE_PUFF_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/fire_puff.png");
     private static final ResourceLocation ASH_PUFF_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/ash_puff.png");
-    private static final ResourceLocation RASEN_SWIRL_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/rasen_swirl.png");
-    private static final ResourceLocation RASEN_GLOW_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/rasen_glow.png");
-    private static final ResourceLocation RASEN_BLADES_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/rasen_blades.png");
     private static final int FULL_BRIGHT = 0xF000F0;
 
     public WeaponEffectRenderer(EntityRendererProvider.Context context) {
@@ -75,12 +72,6 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
             return;
         }
 
-        if (kind == WeaponEffectEntity.RASENGAN || kind == WeaponEffectEntity.RASENSHURIKEN) {
-            poseStack.pushPose();
-            renderRasenSphere(entity, age, partialTick, poseStack, bufferSource);
-            poseStack.popPose();
-            return;
-        }
         if (kind == WeaponEffectEntity.FLAME_BULLET) {
             poseStack.pushPose();
             renderFlameBullet(entity, age, partialTick, poseStack, bufferSource);
@@ -100,148 +91,6 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
             else renderCrescent(entity, age, fade, poseStack, bufferSource);
         }
         poseStack.popPose();
-    }
-
-    // ---------------------------------------------------------------- Rasengan and Rasenshuriken
-
-    /**
-     * The Rasengan and the Rasenshuriken: a ball of spinning chakra made of three shells that turn on different axes,
-     * with a glow at its heart. The Rasenshuriken also has four blades of wind spinning behind it, and when it hits it
-     * grows into a huge sphere with blades flying around inside it. While it is charged the ball is drawn in the
-     * hand of the caster, so it does not lag behind them.
-     */
-    private void renderRasenSphere(WeaponEffectEntity entity, float age, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource) {
-        boolean shuriken = entity.getKind() == WeaponEffectEntity.RASENSHURIKEN;
-        int state = entity.getTargetId();
-        int phase = WeaponEffectEntity.phaseOf(state);
-        float phaseAge = WeaponEffectEntity.phaseTicksOf(state) + partialTick;
-
-        // In the hand of the caster while charging, and for the Rasengan while it is driven forward
-        if (phase == 0 || (!shuriken && phase == 1)) {
-            Entity owner = entity.level().getEntity(entity.getOwnerId());
-            if (owner != null) {
-                Vec3 hand = WeaponEffectEntity.handPosition(owner, partialTick);
-                Vec3 here = entity.getPosition(partialTick);
-                poseStack.translate(hand.x - here.x, hand.y - here.y, hand.z - here.z);
-            }
-        }
-
-        float charge = Mth.clamp(phaseAge / (shuriken ? WeaponEffectEntity.RASENSHURIKEN_CHARGE_TICKS : WeaponEffectEntity.RASENGAN_CHARGE_TICKS), 0.0F, 1.0F);
-        float radius;
-        float alpha = 1.0F;
-        if (phase == 0) {
-            radius = shuriken ? 0.12F + 0.38F * charge : 0.1F + 0.24F * charge;
-            // Once it is charged it pulses
-            if (charge >= 1.0F) radius *= 1.0F + 0.07F * Mth.sin(age * 1.3F);
-        } else if (!shuriken) {
-            if (phase == 1) {
-                radius = 0.34F;
-            } else {
-                float t = Mth.clamp(phaseAge / WeaponEffectEntity.RASENGAN_BURST_TICKS, 0.0F, 1.0F);
-                radius = 0.34F + 1.9F * t;
-                alpha = 1.0F - t;
-            }
-        } else if (phase == 1) {
-            radius = 0.5F;
-        } else {
-            float grown = Mth.clamp(phaseAge / WeaponEffectEntity.SHURIKEN_GROW_TICKS, 0.0F, 1.0F);
-            grown = grown * grown * (3.0F - 2.0F * grown);
-            radius = Mth.lerp(grown, 0.5F, (float) WeaponEffectEntity.SHURIKEN_RADIUS);
-            alpha = Mth.clamp((WeaponEffectEntity.SHURIKEN_BLAST_TICKS - phaseAge) / 6.0F, 0.0F, 1.0F);
-        }
-        if (alpha < 0.01F) return;
-        boolean blast = shuriken && phase == 2;
-        org.joml.Quaternionf camera = this.entityRenderDispatcher.cameraOrientation();
-
-        // The blades of the Rasenshuriken, behind everything
-        if (shuriken) {
-            RenderType bladeType = RenderType.entityTranslucentEmissive(RASEN_BLADES_TEXTURE);
-            VertexConsumer blades = bufferSource.getBuffer(bladeType);
-            if (!blast) {
-                spinBillboard(blades, poseStack, camera, radius * 5.2F, age * 24.0F, 0.9F * alpha);
-                spinBillboard(blades, poseStack, camera, radius * 3.9F, -age * 31.0F, 0.75F * alpha);
-            } else {
-                spinBillboard(blades, poseStack, camera, radius * 1.7F, age * 24.0F, 0.55F * alpha);
-                // Blades flying round inside the sphere
-                for (int k = 0; k < 18; k++) {
-                    double orbit = age * (0.12D + 0.1D * hash(k)) + k * (Math.PI * 2.0D / 18.0D);
-                    double reach = radius * (0.25D + 0.6D * hash(k + 50));
-                    poseStack.pushPose();
-                    poseStack.translate(Math.cos(orbit) * reach, Math.sin(k * 1.7D + age * 0.05D) * radius * 0.55D, Math.sin(orbit) * reach);
-                    spinBillboard(blades, poseStack, camera, radius * (0.28F + 0.3F * hash(k + 90)), age * (20.0F + k * 3.0F) * (k % 2 == 0 ? 1.0F : -1.0F), 0.8F * alpha);
-                    poseStack.popPose();
-                }
-            }
-            flush(bufferSource, bladeType);
-        }
-
-        // The three shells of spinning chakra
-        RenderType swirlType = RenderType.entityTranslucentEmissive(RASEN_SWIRL_TEXTURE);
-        VertexConsumer swirl = bufferSource.getBuffer(swirlType);
-        Matrix4f matrix = poseStack.last().pose();
-        float shell = blast ? 0.4F : 1.0F;
-        sphere(swirl, matrix, radius, age * 35.0F, 0.0F, 0.9F * alpha * shell);
-        sphere(swirl, matrix, radius * 1.13F, -age * 52.0F, 40.0F, 0.6F * alpha * shell);
-        sphere(swirl, matrix, radius * 1.26F, age * 71.0F, 80.0F, 0.35F * alpha * shell);
-        flush(bufferSource, swirlType);
-
-        // The glow at the heart
-        RenderType glowType = RenderType.entityTranslucentEmissive(RASEN_GLOW_TEXTURE);
-        VertexConsumer glow = bufferSource.getBuffer(glowType);
-        poseStack.pushPose();
-        poseStack.mulPose(camera);
-        float pulse = 1.0F + 0.08F * Mth.sin(age * 0.9F);
-        billboard(glow, poseStack.last().pose(), radius * (blast ? 1.0F : 3.0F) * pulse, (blast ? 0.5F : 0.85F) * alpha, FULL_BRIGHT, 1.0F, 1.0F, 1.0F);
-        poseStack.popPose();
-    }
-
-    /** A square with the whole texture on it, facing the camera and turned by {@code degrees}. */
-    private static void spinBillboard(VertexConsumer vc, PoseStack poseStack, org.joml.Quaternionf camera, float size, float degrees, float alpha) {
-        poseStack.pushPose();
-        poseStack.mulPose(camera);
-        poseStack.mulPose(Axis.ZP.rotationDegrees(degrees));
-        billboard(vc, poseStack.last().pose(), size, alpha, FULL_BRIGHT, 1.0F, 1.0F, 1.0F);
-        poseStack.popPose();
-    }
-
-    /** Draws what has been collected for this render type now, so the layers keep their order. */
-    private static void flush(MultiBufferSource bufferSource, RenderType type) {
-        if (bufferSource instanceof MultiBufferSource.BufferSource source) source.endBatch(type);
-    }
-
-    /**
-     * A sphere whose texture wraps round it twice. It is turned on its axis by {@code spinDegrees} and leaned over by
-     * {@code tiltDegrees}, so that the shells of the ball do not all turn the same way.
-     */
-    private static void sphere(VertexConsumer vc, Matrix4f matrix, float radius, float spinDegrees, float tiltDegrees, float alpha) {
-        int segments = 20;
-        int rings = 12;
-        double spin = Math.toRadians(spinDegrees);
-        double tilt = Math.toRadians(tiltDegrees);
-        double cs = Math.cos(tilt);
-        double sn = Math.sin(tilt);
-        Vec3[][] grid = new Vec3[rings + 1][segments + 1];
-        for (int j = 0; j <= rings; j++) {
-            double lat = Math.PI * (j / (double) rings - 0.5D);
-            double y = Math.sin(lat);
-            double ring = Math.cos(lat);
-            for (int i = 0; i <= segments; i++) {
-                double lon = Math.PI * 2.0D * i / segments + spin;
-                double x = ring * Math.cos(lon);
-                double z = ring * Math.sin(lon);
-                grid[j][i] = new Vec3(x * radius, (y * cs - z * sn) * radius, (y * sn + z * cs) * radius);
-            }
-        }
-        for (int j = 0; j < rings; j++) {
-            float v0 = j / (float) rings;
-            float v1 = (j + 1) / (float) rings;
-            for (int i = 0; i < segments; i++) {
-                float u0 = i / (float) segments * 2.0F;
-                float u1 = (i + 1) / (float) segments * 2.0F;
-                quad(vc, matrix, grid[j][i], u0, v0, alpha, grid[j][i + 1], u1, v0, alpha,
-                        grid[j + 1][i + 1], u1, v1, alpha, grid[j + 1][i], u0, v1, alpha, 1.0F, 1.0F, 1.0F);
-            }
-        }
     }
 
     // ---------------------------------------------------------------- fire jutsu

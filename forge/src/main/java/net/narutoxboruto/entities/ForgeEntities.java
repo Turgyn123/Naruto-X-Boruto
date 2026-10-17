@@ -49,6 +49,14 @@ public class ForgeEntities {
                     .fireImmune()
                     .build("weapon_effect"));
 
+    public static final RegistryObject<EntityType<ChakraSphereEntity>> CHAKRA_SPHERE =
+            MOD_ENTITIES.register("chakra_sphere", () -> EntityType.Builder.<ChakraSphereEntity>of(ChakraSphereEntity::new, MobCategory.MISC)
+                    .sized(0.5F, 0.5F)
+                    .clientTrackingRange(16)
+                    .updateInterval(1)
+                    .fireImmune()
+                    .build("chakra_sphere"));
+
     //Bosses
     public static final RegistryObject<EntityType<KizameHoshigaki>> KISAME_HOSHIGAKI = registerEntity("kisame_hoshigaki", KizameHoshigaki::new, MobCategory.MONSTER, 0.6F, 1.8F);
     public static final RegistryObject<EntityType<JinpachiMunashi>> JINPACHI_MUNASHI = registerEntity("jinpachi_munashi", JinpachiMunashi::new, MobCategory.MONSTER, 0.6F, 1.8F);

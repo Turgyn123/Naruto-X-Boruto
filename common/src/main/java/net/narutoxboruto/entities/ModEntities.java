@@ -3,6 +3,7 @@ package net.narutoxboruto.entities;
 import net.minecraft.world.entity.EntityType;
 import net.narutoxboruto.entities.effects.LightningArcEntity;
 import net.narutoxboruto.entities.effects.WeaponEffectEntity;
+import net.narutoxboruto.entities.jutsus.ChakraSphereEntity;
 import net.narutoxboruto.entities.jutsus.FireBallEntity;
 import net.narutoxboruto.entities.jutsus.SharkBombEntity;
 import net.narutoxboruto.entities.jutsus.WaterDragonEntity;
@@ -33,6 +34,7 @@ public class ModEntities {
     //Effects
     public static EntityType<LightningArcEntity> LIGHTNING_ARC;
     public static EntityType<WeaponEffectEntity> WEAPON_EFFECT;
+    public static EntityType<ChakraSphereEntity> CHAKRA_SPHERE;
 
     //Bosses
     public static EntityType<ZabuzaMomochi> ZABUZA_MOMOCHI;

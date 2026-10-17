@@ -85,6 +85,7 @@ public class ForgeMain {
             ModEntities.WATER_DRAGON = ForgeEntities.WATER_DRAGON.get();
             ModEntities.LIGHTNING_ARC = ForgeEntities.LIGHTNING_ARC.get();
             ModEntities.WEAPON_EFFECT = ForgeEntities.WEAPON_EFFECT.get();
+            ModEntities.CHAKRA_SPHERE = ForgeEntities.CHAKRA_SPHERE.get();
             ModEntities.ZABUZA_MOMOCHI = ForgeEntities.ZABUZA_MOMOCHI.get();
             ModEntities.JINPACHI_MUNASHI = ForgeEntities.JINPACHI_MUNASHI.get();
             ModEntities.JININ_AKEBINO = ForgeEntities.JININ_AKEBINO.get();

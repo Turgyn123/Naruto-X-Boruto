@@ -44,9 +44,6 @@ import java.util.UUID;
  *       Also only particles and damage.</li>
  *   <li>{@link #FLAME_BULLET}: the bullet of flame of Fire Release: Flame Bullet, which flies straight and bursts on
  *       the first thing it hits.</li>
- *   <li>{@link #RASENGAN} and {@link #RASENSHURIKEN}: the spinning spheres of chakra of the Rasengan and the Rasenshuriken,
- *       held in the hand of the caster while they charge, then driven into the target or thrown. Their state
- *       (phase and ticks in it) goes to the clients in TARGET, see {@link #phaseOf}.</li>
  * </ul>
  * The effects only live a short while, are never saved and only the server moves them.
  */
@@ -58,16 +55,12 @@ public class WeaponEffectEntity extends Entity {
     public static final int FIRE_WAVE = 3;
     public static final int ASH_CLOUD = 4;
     public static final int FLAME_BULLET = 5;
-    public static final int RASENGAN = 6;
-    public static final int RASENSHURIKEN = 7;
 
     private static final EntityDataAccessor<Integer> KIND = SynchedEntityData.defineId(WeaponEffectEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Float> SIZE = SynchedEntityData.defineId(WeaponEffectEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Integer> COLOR = SynchedEntityData.defineId(WeaponEffectEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> MAX_LIFE = SynchedEntityData.defineId(WeaponEffectEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> TARGET = SynchedEntityData.defineId(WeaponEffectEntity.class, EntityDataSerializers.INT);
-    /** The entity id of the caster, for the effects that are held in their hand. */
-    private static final EntityDataAccessor<Integer> OWNER_ID = SynchedEntityData.defineId(WeaponEffectEntity.class, EntityDataSerializers.INT);
 
     // Server only: what the thread holds on to
     private int life;
@@ -116,7 +109,6 @@ public class WeaponEffectEntity extends Entity {
         builder.define(COLOR, 0xFFFFFFFF);
         builder.define(MAX_LIFE, 10);
         builder.define(TARGET, -1);
-        builder.define(OWNER_ID, -1);
     }
 
     public int getKind() { return this.entityData.get(KIND); }
@@ -124,11 +116,6 @@ public class WeaponEffectEntity extends Entity {
     public int getColor() { return this.entityData.get(COLOR); }
     public int getMaxLife() { return this.entityData.get(MAX_LIFE); }
     public int getTargetId() { return this.entityData.get(TARGET); }
-    public int getOwnerId() { return this.entityData.get(OWNER_ID); }
-
-    /** The phase (0 charging, 1 thrust or flight, 2 impact) and the ticks in it of a Rasengan or Rasenshuriken, from the synced state. */
-    public static int phaseOf(int state) { return Math.max(0, state) / 1000; }
-    public static int phaseTicksOf(int state) { return Math.max(0, state) % 1000; }
 
     // ---------------------------------------------------------------- spawning
 
@@ -425,235 +412,6 @@ public class WeaponEffectEntity extends Entity {
         serverLevel.playSound(null, getX(), getY() + 2.0D, getZ(), SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 4.0F, 0.8F);
     }
 
-    // ---------------------------------------------------------------- Rasengan and Rasenshuriken
-
-    /** How long the sphere is charged for, in ticks, before it can be used. */
-    public static final int RASENGAN_CHARGE_TICKS = 16;
-    public static final int RASENSHURIKEN_CHARGE_TICKS = 30;
-    /** The Rasengan: how long the caster drives it forward, how long the burst is seen, what it does. */
-    public static final int RASENGAN_THRUST_TICKS = 10;
-    public static final int RASENGAN_BURST_TICKS = 10;
-    private static final float RASENGAN_DAMAGE = 18.0F;
-    /** The Rasenshuriken: how fast and how far it flies, and the sphere of blades it becomes. */
-    private static final double SHURIKEN_SPEED = 1.2D;
-    public static final int SHURIKEN_FLIGHT_TICKS = 40;
-    public static final int SHURIKEN_GROW_TICKS = 10;
-    public static final int SHURIKEN_BLAST_TICKS = 50;
-    public static final double SHURIKEN_RADIUS = 6.0D;
-    private static final float SHURIKEN_TICK_DAMAGE = 3.5F;
-    private static final float SHURIKEN_FINAL_DAMAGE = 10.0F;
-
-    /** 0 while charging, 1 while driven forward or flying, 2 when it has hit. */
-    private int phase;
-    private int phaseTicks;
-    private Vec3 flight = Vec3.ZERO;
-
-    /** Where the sphere is held: a little in front of the caster, to the right and low, like in a hand. */
-    public static Vec3 handPosition(Entity caster, float partialTick) {
-        Vec3 look = caster.getViewVector(partialTick);
-        Vec3 right = new Vec3(-look.z, 0.0D, look.x);
-        right = right.lengthSqr() < 1.0E-4D ? new Vec3(1.0D, 0.0D, 0.0D) : right.normalize();
-        return caster.getEyePosition(partialTick).add(look.scale(0.85D)).add(right.scale(0.4D)).add(0.0D, -0.45D, 0.0D);
-    }
-
-    /** A Rasengan charging in the hand of {@code caster}. */
-    public static WeaponEffectEntity spawnRasengan(ServerLevel level, ServerPlayer caster) {
-        return spawnHeld(level, caster, RASENGAN);
-    }
-
-    /** A Rasenshuriken charging in the hand of {@code caster}. */
-    public static WeaponEffectEntity spawnRasenshuriken(ServerLevel level, ServerPlayer caster) {
-        return spawnHeld(level, caster, RASENSHURIKEN);
-    }
-
-    private static WeaponEffectEntity spawnHeld(ServerLevel level, ServerPlayer caster, int kind) {
-        WeaponEffectEntity effect = create(level, kind, handPosition(caster, 1.0F), caster.getLookAngle(), 1.0F, 0xFFFFFFFF, 1000);
-        effect.owner = caster.getUUID();
-        effect.entityData.set(OWNER_ID, caster.getId());
-        effect.entityData.set(TARGET, 0);
-        level.addFreshEntity(effect);
-        return effect;
-    }
-
-    /** The sphere of {@code caster} that is still being charged, or null. */
-    public static WeaponEffectEntity findHeld(ServerLevel level, ServerPlayer caster, int kind) {
-        for (WeaponEffectEntity effect : level.getEntitiesOfClass(WeaponEffectEntity.class,
-                new AABB(caster.blockPosition()).inflate(8.0D),
-                e -> e.getKind() == kind && caster.getUUID().equals(e.owner) && e.phase == 0)) {
-            return effect;
-        }
-        return null;
-    }
-
-    /** Whether the sphere has been charged long enough to be used. */
-    public boolean isCharged() {
-        if (phase != 0) return false;
-        return phaseTicks >= (getKind() == RASENGAN ? RASENGAN_CHARGE_TICKS : RASENSHURIKEN_CHARGE_TICKS);
-    }
-
-    /** The caster let go too early: the sphere falls apart. */
-    public void cancel() {
-        discard();
-    }
-
-    /** The caster uses the charged sphere: the Rasengan is driven forward, the Rasenshuriken is thrown. */
-    public void release(ServerPlayer caster) {
-        if (phase != 0) return;
-        enterPhase(1);
-        if (getKind() == RASENSHURIKEN) {
-            flight = caster.getLookAngle().normalize().scale(SHURIKEN_SPEED);
-            Vec3 hand = handPosition(caster, 1.0F);
-            setPos(hand.x, hand.y, hand.z);
-            level().playSound(null, hand.x, hand.y, hand.z, SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 1.6F, 0.5F);
-        }
-    }
-
-    private void enterPhase(int newPhase) {
-        phase = newPhase;
-        phaseTicks = 0;
-        this.entityData.set(TARGET, phase * 1000);
-    }
-
-    private void countPhase() {
-        phaseTicks++;
-        this.entityData.set(TARGET, phase * 1000 + Math.min(phaseTicks, 999));
-    }
-
-    private DamageSource sphereSource(Entity caster) {
-        if (caster instanceof ServerPlayer player) return this.damageSources().playerAttack(player);
-        return this.damageSources().magic();
-    }
-
-    /** Whether the caster is still holding the jutsu that made this sphere. */
-    private boolean stillHeld(ServerPlayer caster) {
-        if (!caster.isUsingItem()) return false;
-        Item using = caster.getUseItem().getItem();
-        return getKind() == RASENGAN ? using instanceof net.narutoxboruto.items.jutsus.Rasengan
-                : using instanceof net.narutoxboruto.items.jutsus.Rasenshuriken;
-    }
-
-    /**
-     * The Rasengan. Charging: it follows the hand of the caster. Then the caster dashes forward with it and it is
-     * driven into the first living thing in the way, which it hits hard and throws away.
-     */
-    private void tickRasengan() {
-        if (!(level() instanceof ServerLevel serverLevel)) return;
-        Entity ownerEntity = owner == null ? null : serverLevel.getEntity(owner);
-        if (!(ownerEntity instanceof ServerPlayer caster) || !caster.isAlive()) {
-            discard();
-            return;
-        }
-        countPhase();
-        if (phase == 0) {
-            if (!stillHeld(caster)) {
-                discard();
-                return;
-            }
-            Vec3 hand = handPosition(caster, 1.0F);
-            setPos(hand.x, hand.y, hand.z);
-            if (phaseTicks % 6 == 0) {
-                serverLevel.playSound(null, hand.x, hand.y, hand.z, SoundEvents.BEACON_AMBIENT, SoundSource.PLAYERS, 0.4F, 1.8F);
-            }
-        } else if (phase == 1) {
-            Vec3 hand = handPosition(caster, 1.0F);
-            setPos(hand.x, hand.y, hand.z);
-            // The caster dashes forward with it
-            Vec3 look = caster.getLookAngle();
-            caster.setDeltaMovement(look.x * 0.95D, Math.max(caster.getDeltaMovement().y, 0.0D) * 0.5D, look.z * 0.95D);
-            caster.hurtMarked = true;
-            for (LivingEntity target : serverLevel.getEntitiesOfClass(LivingEntity.class, new AABB(hand, hand).inflate(1.5D),
-                    e -> e != caster && e.isAlive() && !e.isSpectator())) {
-                target.invulnerableTime = 0;
-                target.hurt(sphereSource(caster), RASENGAN_DAMAGE);
-                target.setDeltaMovement(look.x * 2.2D, 0.55D, look.z * 2.2D);
-                target.hurtMarked = true;
-                serverLevel.playSound(null, hand.x, hand.y, hand.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 1.6F, 1.5F);
-                enterPhase(2);
-                break;
-            }
-            if (phase == 1 && phaseTicks >= RASENGAN_THRUST_TICKS) discard();
-        } else if (phaseTicks >= RASENGAN_BURST_TICKS) {
-            discard();
-        }
-    }
-
-    /**
-     * The Rasenshuriken. Charging: it follows the hand of the caster. Then it is thrown and flies straight. Where it
-     * hits, or where it runs out of range, it grows into a huge sphere of blades that cuts everything in it, pulls it
-     * in a little and slows it, and bursts at the end.
-     */
-    private void tickRasenshuriken() {
-        if (!(level() instanceof ServerLevel serverLevel)) return;
-        Entity ownerEntity = owner == null ? null : serverLevel.getEntity(owner);
-        if (phase == 0 && !(ownerEntity instanceof ServerPlayer p && p.isAlive() && stillHeld(p))) {
-            discard();
-            return;
-        }
-        countPhase();
-        if (phase == 0) {
-            Vec3 hand = handPosition(ownerEntity, 1.0F);
-            setPos(hand.x, hand.y, hand.z);
-            if (phaseTicks % 6 == 0) {
-                serverLevel.playSound(null, hand.x, hand.y, hand.z, SoundEvents.BEACON_AMBIENT, SoundSource.PLAYERS, 0.5F, 1.3F);
-            }
-        } else if (phase == 1) {
-            Vec3 from = position();
-            Vec3 to = from.add(flight);
-            HitResult hit = serverLevel.clip(new ClipContext(from, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this));
-            Vec3 end = hit.getType() == HitResult.Type.MISS ? to : hit.getLocation();
-            EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(serverLevel, this, from, end,
-                    new AABB(from, end).inflate(1.0D),
-                    e -> e instanceof LivingEntity && e.isAlive() && e != ownerEntity && !e.isSpectator());
-            if (entityHit != null) {
-                explodeShuriken(entityHit.getLocation());
-            } else if (hit.getType() != HitResult.Type.MISS) {
-                explodeShuriken(hit.getLocation());
-            } else {
-                setPos(to.x, to.y, to.z);
-                if (phaseTicks >= SHURIKEN_FLIGHT_TICKS) explodeShuriken(to);
-            }
-        } else {
-            float grown = Math.min(1.0F, phaseTicks / (float) SHURIKEN_GROW_TICKS);
-            double radius = SHURIKEN_RADIUS * grown;
-            if (phaseTicks % 4 == 0 && phaseTicks <= SHURIKEN_BLAST_TICKS - 4) {
-                for (LivingEntity inside : serverLevel.getEntitiesOfClass(LivingEntity.class,
-                        new AABB(position(), position()).inflate(radius), e -> e != ownerEntity && e.isAlive() && !e.isSpectator())) {
-                    if (inside.position().add(0.0D, inside.getBbHeight() * 0.5D, 0.0D).distanceToSqr(position()) > radius * radius) continue;
-                    inside.invulnerableTime = 0;
-                    inside.hurt(sphereSource(ownerEntity), SHURIKEN_TICK_DAMAGE);
-                    inside.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 30, 2, false, false));
-                    Vec3 pull = position().subtract(inside.position());
-                    if (pull.lengthSqr() > 1.0E-4D) {
-                        Vec3 n = pull.normalize().scale(0.25D);
-                        inside.setDeltaMovement(inside.getDeltaMovement().multiply(0.5D, 0.5D, 0.5D).add(n));
-                        inside.hurtMarked = true;
-                    }
-                }
-                serverLevel.playSound(null, getX(), getY(), getZ(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, 1.5F, 0.6F);
-            }
-            if (phaseTicks == SHURIKEN_BLAST_TICKS - 2) {
-                for (LivingEntity inside : serverLevel.getEntitiesOfClass(LivingEntity.class,
-                        new AABB(position(), position()).inflate(SHURIKEN_RADIUS), e -> e != ownerEntity && e.isAlive() && !e.isSpectator())) {
-                    if (inside.position().distanceToSqr(position()) > SHURIKEN_RADIUS * SHURIKEN_RADIUS) continue;
-                    inside.invulnerableTime = 0;
-                    inside.hurt(sphereSource(ownerEntity), SHURIKEN_FINAL_DAMAGE);
-                    Vec3 away = inside.position().subtract(position());
-                    away = away.lengthSqr() < 1.0E-4D ? new Vec3(0.0D, 1.0D, 0.0D) : away.normalize();
-                    inside.setDeltaMovement(away.x * 1.6D, 0.7D, away.z * 1.6D);
-                    inside.hurtMarked = true;
-                }
-                serverLevel.playSound(null, getX(), getY(), getZ(), SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 3.0F, 1.2F);
-            }
-            if (phaseTicks >= SHURIKEN_BLAST_TICKS) discard();
-        }
-    }
-
-    private void explodeShuriken(Vec3 at) {
-        setPos(at.x, at.y, at.z);
-        enterPhase(2);
-        level().playSound(null, at.x, at.y, at.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 1.5F, 1.6F);
-    }
-
     // ---------------------------------------------------------------- ticking
 
     @Override
@@ -675,14 +433,6 @@ public class WeaponEffectEntity extends Entity {
         }
         if (getKind() == FLAME_BULLET) {
             tickFlameBullet();
-            return;
-        }
-        if (getKind() == RASENGAN) {
-            tickRasengan();
-            return;
-        }
-        if (getKind() == RASENSHURIKEN) {
-            tickRasenshuriken();
             return;
         }
 
