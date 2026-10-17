@@ -119,6 +119,8 @@ public class FabricTab {
                     .icon(() -> FabricItems.FIRE_BALL_JUTSU.getDefaultInstance())
                     .displayItems((parameters, output) -> {
                         output.accept(FabricItems.FIRE_BALL_JUTSU);
+                        output.accept(FabricItems.RASENGAN_JUTSU);
+                        output.accept(FabricItems.RASENSHURIKEN_JUTSU);
                         output.accept(FabricItems.FLAME_BULLET_JUTSU);
                         output.accept(FabricItems.GREAT_FIRE_ANNIHILATION_JUTSU);
                         output.accept(FabricItems.ASH_PILE_BURNING_JUTSU);

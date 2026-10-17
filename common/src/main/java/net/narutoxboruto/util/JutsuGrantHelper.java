@@ -26,6 +26,9 @@ public class JutsuGrantHelper {
     public static void grantJutsuForRelease(ServerPlayer serverPlayer, String releaseType) {
         JutsuStorage storage = Services.PLATFORM.getJutsuStorage(serverPlayer);
 
+        // Everyone who can mold a nature of chakra can learn the Rasengan, which needs none
+        grantSingleJutsu(serverPlayer, storage, ModItems.RASENGAN_JUTSU, "Rasengan");
+
         switch (releaseType.toLowerCase()) {
             case "fire":
                 grantMultipleJutsus(serverPlayer, storage,
@@ -48,6 +51,10 @@ public class JutsuGrantHelper {
             case "lightning":
                 grantSingleJutsu(serverPlayer, storage,
                         ModItems.LIGHTNING_CHAKRA_MODE, "Lightning Chakra Mode");
+                break;
+            case "wind":
+                grantSingleJutsu(serverPlayer, storage,
+                        ModItems.RASENSHURIKEN_JUTSU, "Rasenshuriken");
                 break;
         }
     }
@@ -98,6 +105,23 @@ public class JutsuGrantHelper {
         sendMasteryMessage(serverPlayer, name3, granted3);
     }
 
+    /** Any number of jutsus, as pairs of an item id and a name. */
+    private static void grantMultipleJutsus(ServerPlayer serverPlayer, JutsuStorage storage, String... idsAndNames) {
+        boolean any = false;
+        boolean[] granted = new boolean[idsAndNames.length / 2];
+        for (int i = 0; i < granted.length; i++) {
+            granted[i] = storage.addJutsuIfNotOwned(fromRegistry(idsAndNames[i * 2]), serverPlayer);
+            any |= granted[i];
+        }
+        if (any) {
+            Services.PLATFORM.setJutsuStorage(serverPlayer, storage);
+            storage.syncToClient(serverPlayer);
+        }
+        for (int i = 0; i < granted.length; i++) {
+            sendMasteryMessage(serverPlayer, idsAndNames[i * 2 + 1], granted[i]);
+        }
+    }
+
     private static void sendMasteryMessage(ServerPlayer serverPlayer, String jutsuName, boolean granted) {
         if (granted) {
             serverPlayer.sendSystemMessage(
@@ -127,6 +151,13 @@ public class JutsuGrantHelper {
 
         JutsuStorage storage = Services.PLATFORM.getJutsuStorage(serverPlayer);
         boolean modified = false;
+
+        // The Rasengan is for everyone with a release
+        modified |= restoreIfMissing(serverPlayer, storage, ModItems.RASENGAN_JUTSU, checkInventory);
+
+        if (playerReleases.toLowerCase().contains("wind")) {
+            modified |= restoreIfMissing(serverPlayer, storage, ModItems.RASENSHURIKEN_JUTSU, checkInventory);
+        }
 
         if (playerReleases.toLowerCase().contains("fire")) {
             modified |= restoreIfMissing(serverPlayer, storage, ModItems.FLAME_BULLET_JUTSU, checkInventory);
