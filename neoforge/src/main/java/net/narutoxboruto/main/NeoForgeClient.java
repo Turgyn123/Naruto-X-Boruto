@@ -27,8 +27,6 @@ import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsE
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import net.narutoxboruto.client.model.FireBallModel;
-import net.narutoxboruto.client.model.RasenganModel;
-import net.narutoxboruto.client.model.RasenshurikenDiscModel;
 
 import static net.narutoxboruto.entities.NeoForgeEntities.*;
 
@@ -42,8 +40,6 @@ public class NeoForgeClient {
     @SubscribeEvent
     static void onRegisterLayerDefinitions(EntityRenderersEvent.RegisterLayerDefinitions event) {
         event.registerLayerDefinition(FireBallModel.LAYER_LOCATION, FireBallModel::createBodyLayer);
-        event.registerLayerDefinition(RasenganModel.LAYER_LOCATION, RasenganModel::createBodyLayer);
-        event.registerLayerDefinition(RasenshurikenDiscModel.LAYER_LOCATION, RasenshurikenDiscModel::createBodyLayer);
     }
 
     @SubscribeEvent
