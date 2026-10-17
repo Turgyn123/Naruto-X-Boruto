@@ -172,19 +172,19 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         // The balls go from the inside to the outside: this render type keeps what it has drawn in front, so the heart is
         // drawn first and the bigger balls then glow over it
         float[][] shells = blast
-                ? new float[][]{{0.50F, 0.92F, 0.96F, 1.00F, 0.12F}, {1.00F, 0.79F, 0.89F, 1.00F, 0.10F}}
+                ? new float[][]{{0.50F, 0.83F, 0.94F, 1.00F, 0.12F}, {1.00F, 0.50F, 0.76F, 1.00F, 0.10F}}
                 : style == 1
                 ? new float[][]{
-                        {0.20F, 0.96F, 0.98F, 1.00F, 0.60F}, {0.45F, 0.91F, 0.96F, 1.00F, 0.30F}, {0.75F, 0.82F, 0.92F, 1.00F, 0.25F},
-                        {1.00F, 0.79F, 0.89F, 1.00F, 0.30F}, {1.05F, 0.89F, 0.95F, 1.00F, 0.20F}}
+                        {0.20F, 0.92F, 0.97F, 1.00F, 0.60F}, {0.45F, 0.80F, 0.93F, 1.00F, 0.30F}, {0.75F, 0.59F, 0.84F, 1.00F, 0.25F},
+                        {1.00F, 0.50F, 0.76F, 1.00F, 0.30F}, {1.05F, 0.74F, 0.91F, 1.00F, 0.20F}}
                 : style == 2
                 ? new float[][]{
-                        {0.25F, 0.96F, 0.98F, 1.00F, 0.75F}, {0.50F, 0.91F, 0.96F, 1.00F, 0.40F}, {0.75F, 0.84F, 0.93F, 1.00F, 0.25F},
-                        {1.00F, 0.79F, 0.89F, 1.00F, 0.18F}, {1.10F, 0.77F, 0.88F, 1.00F, 0.07F}}
+                        {0.25F, 0.92F, 0.97F, 1.00F, 0.75F}, {0.50F, 0.80F, 0.93F, 1.00F, 0.40F}, {0.75F, 0.62F, 0.85F, 1.00F, 0.25F},
+                        {1.00F, 0.50F, 0.76F, 1.00F, 0.18F}, {1.10F, 0.47F, 0.73F, 1.00F, 0.07F}}
                 : new float[][]{
-                        {0.22F, 0.96F, 0.98F, 1.00F, 0.70F}, {0.40F, 0.92F, 0.96F, 1.00F, 0.40F}, {0.60F, 0.88F, 0.95F, 1.00F, 0.28F},
-                        {0.80F, 0.82F, 0.92F, 1.00F, 0.20F}, {1.00F, 0.79F, 0.89F, 1.00F, 0.16F}, {1.15F, 0.77F, 0.88F, 1.00F, 0.09F},
-                        {1.30F, 0.76F, 0.85F, 1.00F, 0.05F}};
+                        {0.22F, 0.92F, 0.97F, 1.00F, 0.70F}, {0.40F, 0.83F, 0.94F, 1.00F, 0.40F}, {0.60F, 0.71F, 0.90F, 1.00F, 0.28F},
+                        {0.80F, 0.59F, 0.84F, 1.00F, 0.20F}, {1.00F, 0.50F, 0.76F, 1.00F, 0.16F}, {1.15F, 0.47F, 0.73F, 1.00F, 0.09F},
+                        {1.30F, 0.44F, 0.67F, 1.00F, 0.05F}};
         for (float[] shell : shells) {
             smoothBall(vc, matrix, r * shell[0], shell[1], shell[2], shell[3], shell[4] * alpha);
         }
@@ -250,7 +250,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
     }
 
     // The three layers of a streak: white core, near white middle, wide pale glow, the colours of the wind of the Giant Fan
-    private static final float[][] LAYER_RGB = {{1.0F, 1.0F, 1.0F}, {0.93F, 0.97F, 1.0F}, {0.78F, 0.9F, 1.0F}};
+    private static final float[][] LAYER_RGB = {{1.0F, 1.0F, 1.0F}, {0.7F, 0.9F, 1.0F}, {0.42F, 0.7F, 1.0F}};
     private static final float[] LAYER_WIDTH = {0.42F, 1.0F, 3.0F};
     private static final float[] LAYER_ALPHA = {1.0F, 0.85F, 0.22F};
     private static final float[] LAYER_COS = {1.0F, (float) Math.cos(Math.PI / 6), (float) Math.cos(Math.PI / 3)};
