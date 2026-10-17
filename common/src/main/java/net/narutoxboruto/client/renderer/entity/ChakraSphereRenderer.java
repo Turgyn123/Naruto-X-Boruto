@@ -2,7 +2,6 @@ package net.narutoxboruto.client.renderer.entity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.math.Axis;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderer;
@@ -12,7 +11,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
-import org.joml.Quaternionf;
 import net.narutoxboruto.entities.jutsus.ChakraSphereEntity;
 import net.narutoxboruto.main.Main;
 import org.joml.Matrix4f;
@@ -22,8 +20,8 @@ import org.joml.Matrix4f;
  * the same textures, the white streaks of wind (wind_streak) on ribbons that spiral and scroll, and the white crescent
  * blades (crescent), in the same near white colour.
  * <ul>
- *   <li>Rasengan: an orb of energy drawn like the lightning, see {@link #plasmaBall}. Rasengan V2 and V3 are older test
- *       looks, flat vortex discs.</li>
+ *   <li>Rasengan: an orb of energy drawn like the lightning, see {@link #plasmaBall}, in three looks to compare: the
+ *       plasma orb, the tangle (V2) and the gyroscope (V3).</li>
  *   <li>Rasenshuriken: held up above the head of the caster while it is charged. The same ball, with four big
  *       crescent blades like the blades of the fan turning round it in a pinwheel. Thrown, ribbons of wind spiral
  *       behind it like the wind of the fan. Where it hits it grows into a huge ball of ribbons with pinwheels turning
@@ -34,10 +32,6 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
 
     private static final ResourceLocation WIND_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/wind_streak.png");
     private static final ResourceLocation CRESCENT_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/crescent.png");
-    // The textures of the looks of the Rasengan: the vortex sphere and the flat vortex disc, and the flare of rays
-    private static final ResourceLocation VORTEX_SPHERE_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/rasen_vortex_sphere.png");
-    private static final ResourceLocation VORTEX_DISC_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/rasen_vortex_disc.png");
-    private static final ResourceLocation FLARE_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/rasen_flare.png");
     private static final int FULL_BRIGHT = 0xF000F0;
     /** The colour of the wind of the Giant Fan: white with a touch of blue. */
     private static final float[] WIND = {0.94F, 0.96F, 1.0F};
@@ -150,42 +144,10 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         poseStack.popPose();
     }
 
-    /** The ball in the look of {@code variant}: 0 the vortex ball, 1 the flat vortex facing you, 2 both together. */
+    /** The ball in the look of {@code variant}: 0 the plasma orb, 1 the tangle, 2 the gyroscope. */
     private void ball(MultiBufferSource bufferSource, PoseStack poseStack, Matrix4f matrix, Vec3 aim, Vec3 across, Vec3 up,
                       float radius, float age, float alpha, boolean blast, int variant) {
-        if (variant == 0) {
-            plasmaBall(bufferSource, poseStack, matrix, aim, across, up, radius, age, alpha, blast);
-            return;
-        }
-        // A very faint glow round the ball, two balls bigger than it
-        VertexConsumer white = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(WHITE_TEXTURE));
-        if (!blast) {
-            roundBall(white, matrix, radius * 1.3F, 0.7F, 0.9F, 1.0F, 0.06F * alpha);
-            roundBall(white, matrix, radius * 1.15F, 0.7F, 0.9F, 1.0F, 0.12F * alpha);
-        } else {
-            roundBall(white, matrix, radius, 0.3F, 0.65F, 1.0F, 0.08F * alpha);
-        }
-        Quaternionf camera = this.entityRenderDispatcher.cameraOrientation();
-        if (variant == 2) {
-            vortexDisc(bufferSource, poseStack, camera, radius * (blast ? 1.5F : 3.6F), -age * 0.2F, (blast ? 0.3F : 0.5F) * alpha);
-        }
-        if (variant == 1) {
-            // The flat vortex facing you, as the Rasengan is drawn in the anime: two discs turning against each other
-            vortexDisc(bufferSource, poseStack, camera, radius * (blast ? 2.0F : 2.2F), age * 0.3F, alpha * (blast ? 0.5F : 1.0F));
-            vortexDisc(bufferSource, poseStack, camera, radius * (blast ? 1.6F : 1.7F), -age * 0.45F, alpha * (blast ? 0.4F : 0.8F));
-        } else {
-            // The vortex ball: a ball with the vortex wrapped round it, its pole towards the way it is aimed, so that from
-            // behind it is the vortex of the anime, turning
-            VertexConsumer vortex = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(VORTEX_SPHERE_TEXTURE));
-            polarSphere(vortex, matrix, radius, aim, across, up, age * 0.06F, alpha * (blast ? 0.45F : 1.0F));
-        }
-        // A bright flare in the middle
-        VertexConsumer flare = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(FLARE_TEXTURE));
-        poseStack.pushPose();
-        poseStack.mulPose(camera);
-        poseStack.mulPose(Axis.ZP.rotation(age * 0.03F));
-        billboard(flare, poseStack.last().pose(), radius * (blast ? 1.2F : 2.8F), (blast ? 0.45F : 0.8F) * alpha);
-        poseStack.popPose();
+        plasmaBall(bufferSource, matrix, aim, across, up, radius, age, alpha, blast, variant);
     }
 
     /**
@@ -201,8 +163,8 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
      *   <li>The orb breathes: it swells and shrinks a little.</li>
      * </ul>
      */
-    private void plasmaBall(MultiBufferSource bufferSource, PoseStack poseStack, Matrix4f matrix, Vec3 aim, Vec3 across, Vec3 up,
-                            float radius, float age, float alpha, boolean blast) {
+    private void plasmaBall(MultiBufferSource bufferSource, Matrix4f matrix, Vec3 aim, Vec3 across, Vec3 up,
+                            float radius, float age, float alpha, boolean blast, int style) {
         if (alpha < 0.01F) return;
         float breath = 1.0F + 0.04F * Mth.sin(age * 0.8F);
         float r = radius * (blast ? 1.0F : breath);
@@ -211,6 +173,14 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         // drawn first and the bigger balls then glow over it
         float[][] shells = blast
                 ? new float[][]{{0.5F, 0.85F, 0.95F, 1.0F, 0.12F}, {1.0F, 0.3F, 0.65F, 1.0F, 0.1F}}
+                : style == 1
+                ? new float[][]{
+                        {0.2F, 1.0F, 1.0F, 1.0F, 0.6F}, {0.45F, 0.8F, 0.93F, 1.0F, 0.3F}, {0.75F, 0.45F, 0.78F, 1.0F, 0.25F},
+                        {1.0F, 0.3F, 0.65F, 1.0F, 0.3F}, {1.05F, 0.7F, 0.9F, 1.0F, 0.2F}}
+                : style == 2
+                ? new float[][]{
+                        {0.25F, 1.0F, 1.0F, 1.0F, 0.75F}, {0.5F, 0.8F, 0.93F, 1.0F, 0.4F}, {0.75F, 0.5F, 0.8F, 1.0F, 0.25F},
+                        {1.0F, 0.3F, 0.65F, 1.0F, 0.18F}, {1.1F, 0.25F, 0.6F, 1.0F, 0.07F}}
                 : new float[][]{
                         {0.22F, 1.0F, 1.0F, 1.0F, 0.7F}, {0.4F, 0.85F, 0.95F, 1.0F, 0.4F}, {0.6F, 0.65F, 0.88F, 1.0F, 0.28F},
                         {0.8F, 0.45F, 0.78F, 1.0F, 0.2F}, {1.0F, 0.3F, 0.65F, 1.0F, 0.16F}, {1.15F, 0.25F, 0.6F, 1.0F, 0.09F},
@@ -220,25 +190,53 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         }
 
         float scale = r / 0.35F;
-        // Three thick arms spiralling from pole to pole, turning fast
-        for (int arm = 0; arm < 3; arm++) {
+        // The arms spiral from pole to pole and turn fast: three thick ones for the plasma orb, nine thin ones, some turning
+        // each way, for the tangle, and three thin ones for the gyroscope
+        int arms = style == 1 ? 9 : 3;
+        for (int arm = 0; arm < arms; arm++) {
             int points = 16;
             Vec3[] path = new Vec3[points + 1];
+            double direction = style == 1 && arm % 2 == 1 ? -1.0D : 1.0D;
             for (int j = 0; j <= points; j++) {
                 double t = j / (double) points;
                 double polar = Math.PI * t;
-                double azimuth = arm * (Math.PI * 2.0D / 3.0D) + t * Math.PI * 2.4D + age * 0.32D;
+                double azimuth = arm * (Math.PI * 2.0D / arms) + direction * (t * Math.PI * 2.4D) + age * 0.32D * (style == 1 ? direction : 1.0D);
                 double bulge = r * (blast ? 1.0D : 1.03D);
                 path[j] = aim.scale(Math.cos(polar) * bulge)
                         .add(across.scale(Math.sin(polar) * Math.cos(azimuth) * bulge))
                         .add(up.scale(Math.sin(polar) * Math.sin(azimuth) * bulge));
             }
-            bolt(vc, matrix, path, 0.05F * scale, alpha * (blast ? 0.6F : 1.0F));
+            float width = style == 1 ? 0.028F : (style == 2 ? 0.03F : 0.05F);
+            bolt(vc, matrix, path, width * scale, alpha * (blast ? 0.6F : 1.0F));
+        }
+
+        // The gyroscope: three thin glowing rings round the orb that spin on different axes, and jagged bolts inside it
+        if (style == 2 && !blast) {
+            for (int ring = 0; ring < 3; ring++) {
+                double tilt = Math.toRadians(30.0D + 50.0D * ring);
+                double spin = age * (0.12D + 0.07D * ring) * (ring == 1 ? -1.0D : 1.0D) + ring * 2.0D;
+                Vec3 e1 = new Vec3(Math.cos(spin), 0.0D, Math.sin(spin));
+                Vec3 e2 = new Vec3(-Math.sin(spin) * Math.cos(tilt), Math.sin(tilt), Math.cos(spin) * Math.cos(tilt));
+                int points = 28;
+                Vec3[] path = new Vec3[points + 1];
+                for (int j = 0; j <= points; j++) {
+                    double angle = Math.PI * 2.0D * j / points;
+                    path[j] = e1.scale(Math.cos(angle) * r * 1.3D).add(e2.scale(Math.sin(angle) * r * 1.3D));
+                }
+                bolt(vc, matrix, path, 0.02F * scale, 0.9F * alpha);
+            }
+            int jumpInside = (int) (age * 0.5F);
+            for (int i = 0; i < 6; i++) {
+                Vec3 a = randomDirection(i * 5 + jumpInside * 7).scale(r * 0.75D * hash(i + jumpInside));
+                Vec3 b = randomDirection(i * 5 + jumpInside * 7 + 3).scale(r * 0.75D);
+                Vec3 mid = a.add(b).scale(0.5D).add(randomDirection(i * 3 + jumpInside).scale(r * 0.15D));
+                bolt(vc, matrix, new Vec3[]{a, mid, b}, 0.02F * scale, 0.8F * alpha);
+            }
         }
 
         // Sparks that leap off the surface and jump about ten times a second
         int jump = (int) (age * 0.5F);
-        int sparks = blast ? 24 : 9;
+        int sparks = blast ? 24 : (style == 1 ? 0 : (style == 2 ? 5 : 9));
         for (int i = 0; i < sparks; i++) {
             Vec3 direction = randomDirection(i * 11 + jump * 5);
             double length = r * (0.35D + 0.45D * hash(i * 13 + jump * 3));
@@ -317,62 +315,6 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         Vec3[] corner = {p0, p1, p2, p3};
         for (int c = 0; c < 4; c++) vc.addVertex(matrix, (float) corner[c].x, (float) corner[c].y, (float) corner[c].z).setColor(r, g, b, alpha);
         for (int c = 3; c >= 0; c--) vc.addVertex(matrix, (float) corner[c].x, (float) corner[c].y, (float) corner[c].z).setColor(r, g, b, alpha);
-    }
-
-    /** A flat disc of the vortex, facing the camera and turned by {@code turn}. */
-    private void vortexDisc(MultiBufferSource bufferSource, PoseStack poseStack, Quaternionf camera, float size, float turn, float alpha) {
-        VertexConsumer disc = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(VORTEX_DISC_TEXTURE));
-        poseStack.pushPose();
-        poseStack.mulPose(camera);
-        poseStack.mulPose(Axis.ZP.rotation(turn));
-        billboard(disc, poseStack.last().pose(), size, alpha);
-        poseStack.popPose();
-    }
-
-    /**
-     * A smooth ball whose poles point along {@code aim}, with a texture on it that runs from pole to pole. The texture
-     * moves round the ball by {@code spin} (of a turn), which makes the vortex turn.
-     */
-    private static void polarSphere(VertexConsumer vc, Matrix4f matrix, float radius, Vec3 aim, Vec3 across, Vec3 up, float spin, float alpha) {
-        int segments = 32;
-        int rings = 18;
-        for (int j = 0; j < rings; j++) {
-            for (int i = 0; i < segments; i++) {
-                for (int corner = 0; corner < 4; corner++) {
-                    int ci = i + (corner == 1 || corner == 2 ? 1 : 0);
-                    int cj = j + (corner >= 2 ? 1 : 0);
-                    double lat = Math.PI * (0.5D - cj / (double) rings);
-                    double lon = Math.PI * 2.0D * ci / segments;
-                    Vec3 n = aim.scale(Math.sin(lat))
-                            .add(across.scale(Math.cos(lat) * Math.cos(lon)))
-                            .add(up.scale(Math.cos(lat) * Math.sin(lon)));
-                    vc.addVertex(matrix, (float) (n.x * radius), (float) (n.y * radius), (float) (n.z * radius))
-                            .setColor(1.0F, 1.0F, 1.0F, alpha)
-                            .setUv(ci / (float) segments + spin, cj / (float) rings)
-                            .setOverlay(OverlayTexture.NO_OVERLAY)
-                            .setLight(FULL_BRIGHT)
-                            .setNormal((float) n.x, (float) n.y, (float) n.z);
-                }
-            }
-        }
-    }
-
-    private static void billboard(VertexConsumer vc, Matrix4f matrix, float size, float alpha) {
-        billboard(vc, matrix, size, alpha, 1.0F, 1.0F, 1.0F);
-    }
-
-    /** A square facing the camera (the pose is already turned to it) with the whole texture on it. */
-    private static void billboard(VertexConsumer vc, Matrix4f matrix, float size, float alpha, float r, float g, float b) {
-        float h = size * 0.5F;
-        float[][] corner = {{-h, -h, 0.0F, 1.0F}, {h, -h, 1.0F, 1.0F}, {h, h, 1.0F, 0.0F}, {-h, h, 0.0F, 0.0F}};
-        for (float[] c : corner) {
-            vc.addVertex(matrix, c[0], c[1], 0.0F)
-                    .setColor(r, g, b, alpha)
-                    .setUv(c[2], c[3])
-                    .setOverlay(OverlayTexture.NO_OVERLAY)
-                    .setLight(FULL_BRIGHT)
-                    .setNormal(0.0F, 1.0F, 0.0F);
-        }
     }
 
     /**
@@ -474,36 +416,6 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
             texturedVertex(vc, matrix, c.add(tangent.scale(hw)).subtract(radial.scale(d)), 1.0F, 1.0F, layerAlpha);
             texturedVertex(vc, matrix, c.subtract(tangent.scale(hw)).subtract(radial.scale(d)), 0.0F, 1.0F, layerAlpha);
         }
-    }
-
-    /** A ball of only a few flat facets, seen from outside and from inside, of one colour. */
-    private static void roundBall(VertexConsumer vc, Matrix4f matrix, float radius, float r, float g, float b, float alpha) {
-        int segments = 16;
-        int rings = 10;
-        Vec3[][] grid = new Vec3[rings + 1][segments + 1];
-        for (int j = 0; j <= rings; j++) {
-            double lat = Math.PI * (j / (double) rings - 0.5D);
-            for (int i = 0; i <= segments; i++) {
-                double lon = Math.PI * 2.0D * i / segments;
-                grid[j][i] = new Vec3(Math.cos(lat) * Math.cos(lon) * radius, Math.sin(lat) * radius, Math.cos(lat) * Math.sin(lon) * radius);
-            }
-        }
-        for (int j = 0; j < rings; j++) {
-            for (int i = 0; i < segments; i++) {
-                Vec3[] corner = {grid[j][i], grid[j][i + 1], grid[j + 1][i + 1], grid[j + 1][i]};
-                for (int k = 0; k < 4; k++) flatVertex(vc, matrix, corner[k], r, g, b, alpha);
-                for (int k = 3; k >= 0; k--) flatVertex(vc, matrix, corner[k], r, g, b, alpha);
-            }
-        }
-    }
-
-    private static void flatVertex(VertexConsumer vc, Matrix4f matrix, Vec3 p, float r, float g, float b, float alpha) {
-        vc.addVertex(matrix, (float) p.x, (float) p.y, (float) p.z)
-                .setColor(r, g, b, alpha)
-                .setUv(0.5F, 0.5F)
-                .setOverlay(OverlayTexture.NO_OVERLAY)
-                .setLight(FULL_BRIGHT)
-                .setNormal(0.0F, 1.0F, 0.0F);
     }
 
     private static void texturedVertex(VertexConsumer vc, Matrix4f matrix, Vec3 p, float u, float v, float alpha) {
