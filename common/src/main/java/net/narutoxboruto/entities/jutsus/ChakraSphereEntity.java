@@ -110,7 +110,7 @@ public class ChakraSphereEntity extends Entity {
         }
         Vec3 right = new Vec3(-look.z, 0.0D, look.x);
         right = right.lengthSqr() < 1.0E-4D ? new Vec3(1.0D, 0.0D, 0.0D) : right.normalize();
-        return caster.getEyePosition(partialTick).add(look.scale(0.85D)).add(right.scale(0.4D)).add(0.0D, -0.45D, 0.0D);
+        return caster.getEyePosition(partialTick).add(look.scale(1.05D)).add(right.scale(0.5D)).add(0.0D, -0.5D, 0.0D);
     }
 
     /** A sphere of {@code kind} charging in the hand of {@code caster}. */

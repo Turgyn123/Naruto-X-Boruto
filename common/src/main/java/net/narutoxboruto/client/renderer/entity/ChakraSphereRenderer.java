@@ -69,13 +69,13 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         boolean blast = false;
         if (!shuriken) {
             if (phase == ChakraSphereEntity.CHARGING) {
-                radius = 0.08F + 0.27F * charge;
+                radius = 0.07F + 0.21F * charge;
                 if (charge >= 1.0F) radius *= 1.0F + 0.07F * Mth.sin(age * 1.3F);
             } else if (phase == ChakraSphereEntity.ACTIVE) {
-                radius = 0.36F;
+                radius = 0.3F;
             } else {
                 float t = Mth.clamp(phaseAge / ChakraSphereEntity.RASENGAN_BURST_TICKS, 0.0F, 1.0F);
-                radius = 0.36F + 1.7F * t;
+                radius = 0.3F + 1.7F * t;
                 alpha = 1.0F - t;
             }
         } else if (phase == ChakraSphereEntity.CHARGING) {
@@ -117,22 +117,24 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         // The ball: a white hot heart, a softer middle and a blue edge. It is drawn first, so the streaks behind it
         // are hidden by it and the ones in front of it show.
         if (!blast) {
-            sphere(vc, matrix, radius * 0.38F, 1.0F, 1.0F, 1.0F, 0.95F * alpha);
-            sphere(vc, matrix, radius * 0.68F, 0.65F, 0.92F, 1.0F, 0.55F * alpha);
-            sphere(vc, matrix, radius * 0.94F, 0.3F, 0.65F, 1.0F, 0.4F * alpha);
+            // A small white heart inside a blue ball. The ball must stay blue: the layers are added to each other, so
+            // big bright layers would only make a white blob and hide the streaks on it.
+            sphere(vc, matrix, radius * 0.24F, 1.0F, 1.0F, 1.0F, 0.9F * alpha);
+            sphere(vc, matrix, radius * 0.72F, 0.3F, 0.62F, 1.0F, 0.5F * alpha);
+            sphere(vc, matrix, radius * 0.96F, 0.45F, 0.8F, 1.0F, 0.25F * alpha);
             // Bands of fine streaks spinning round the aim, fastest round the middle of the ball, so that from behind it
             // is a vortex and from the side it is a ball with bands, like the Rasengan of the anime
-            for (int ring = 0; ring < 11; ring++) {
-                double lat = Math.toRadians(-75.0D + 15.0D * ring);
-                for (int k = 0; k < 3; k++) {
-                    band(vc, matrix, aim, across, up, radius * 1.02F, lat, age, ring * 3 + k, k * (Math.PI * 2.0D / 3.0D), 0.014F * scale, alpha);
+            for (int ring = 0; ring < 9; ring++) {
+                double lat = Math.toRadians(-72.0D + 18.0D * ring);
+                for (int k = 0; k < 4; k++) {
+                    band(vc, matrix, aim, across, up, radius * 1.03F, lat, age, ring * 4 + k, k * (Math.PI / 2.0D), 0.04F * scale, alpha);
                 }
             }
             // Thin wisps of wind fly off it
             int wisps = shuriken ? 10 : 6;
             for (int i = 0; i < wisps; i++) {
                 streak(vc, matrix, 100 + i, age, radius * (1.5F + 1.9F * hash(i * 13 + 3)), 0.6F, 30,
-                        0.05D + 0.07D * hash(i * 13 + 5), 2.4D + 1.6D * hash(i * 13 + 7), 0.02F * scale, 0.7F * alpha);
+                        0.05D + 0.07D * hash(i * 13 + 5), 2.4D + 1.6D * hash(i * 13 + 7), 0.035F * scale, 0.9F * alpha);
             }
         } else {
             sphere(vc, matrix, radius, 0.35F, 0.7F, 1.0F, 0.07F * alpha);
