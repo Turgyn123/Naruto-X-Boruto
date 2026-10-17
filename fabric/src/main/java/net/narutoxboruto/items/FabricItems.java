@@ -68,6 +68,8 @@ public class FabricItems {
     public static final Item FIRE_BALL_JUTSU = register("fire_ball_jutsu", new FireBall(new Item.Properties().stacksTo(1)));
     public static final Item FLAME_BULLET_JUTSU = register("flame_bullet_jutsu", new FlameBullet(new Item.Properties().stacksTo(1)));
     public static final Item RASENGAN_JUTSU = register("rasengan_jutsu", new Rasengan(new Item.Properties().stacksTo(1)));
+    public static final Item RASENGAN_V2_JUTSU = register("rasengan_v2_jutsu", new RasenganV2(new Item.Properties().stacksTo(1)));
+    public static final Item RASENGAN_V3_JUTSU = register("rasengan_v3_jutsu", new RasenganV3(new Item.Properties().stacksTo(1)));
     public static final Item RASENSHURIKEN_JUTSU = register("rasenshuriken_jutsu", new Rasenshuriken(new Item.Properties().stacksTo(1)));
     public static final Item GREAT_FIRE_ANNIHILATION_JUTSU = register("great_fire_annihilation_jutsu", new GreatFireAnnihilation(new Item.Properties().stacksTo(1)));
     public static final Item ASH_PILE_BURNING_JUTSU = register("ash_pile_burning_jutsu", new AshPileBurning(new Item.Properties().stacksTo(1)));

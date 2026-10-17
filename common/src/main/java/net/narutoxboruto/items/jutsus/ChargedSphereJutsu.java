@@ -30,6 +30,11 @@ public abstract class ChargedSphereJutsu extends AbstractJutsuItem {
     /** The kind of {@link ChakraSphereEntity} that is the sphere. */
     protected abstract int sphereKind();
 
+    /** Which look the sphere has. */
+    protected int sphereVariant() {
+        return 0;
+    }
+
     /** Never used: this jutsu is used by letting go, see {@link #releaseUsing}. */
     @Override
     protected boolean executeJutsu(ServerPlayer serverPlayer, Level level) {
@@ -59,7 +64,7 @@ public abstract class ChargedSphereJutsu extends AbstractJutsuItem {
         }
 
         player.startUsingItem(hand);
-        ChakraSphereEntity.spawn(serverLevel, serverPlayer, sphereKind());
+        ChakraSphereEntity.spawn(serverLevel, serverPlayer, sphereKind(), sphereVariant());
         return InteractionResultHolder.consume(stack);
     }
 

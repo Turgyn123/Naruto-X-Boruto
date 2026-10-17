@@ -99,6 +99,8 @@ public class NeoForgeTab {
             .displayItems((parameters, output) -> {
                 output.accept(FIRE_BALL_JUTSU.get());
                 output.accept(RASENGAN_JUTSU.get());
+                output.accept(RASENGAN_V2_JUTSU.get());
+                output.accept(RASENGAN_V3_JUTSU.get());
                 output.accept(RASENSHURIKEN_JUTSU.get());
                 output.accept(FLAME_BULLET_JUTSU.get());
                 output.accept(GREAT_FIRE_ANNIHILATION_JUTSU.get());

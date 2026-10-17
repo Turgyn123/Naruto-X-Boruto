@@ -70,6 +70,8 @@ public class ChakraSphereEntity extends Entity {
     /** The phase times 1000 plus the ticks in that phase. */
     private static final EntityDataAccessor<Integer> STATE = SynchedEntityData.defineId(ChakraSphereEntity.class, EntityDataSerializers.INT);
     /** The entity id of the caster, so that the clients can draw the sphere in their hand. */
+    /** Which look the Rasengan has: the test versions each have a style of their own. */
+    private static final EntityDataAccessor<Integer> VARIANT = SynchedEntityData.defineId(ChakraSphereEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> OWNER_ID = SynchedEntityData.defineId(ChakraSphereEntity.class, EntityDataSerializers.INT);
 
     private UUID owner;
@@ -88,12 +90,14 @@ public class ChakraSphereEntity extends Entity {
         builder.define(KIND, RASENGAN);
         builder.define(STATE, 0);
         builder.define(OWNER_ID, -1);
+        builder.define(VARIANT, 0);
     }
 
     public int getKind() { return this.entityData.get(KIND); }
     public int getPhase() { return this.entityData.get(STATE) / 1000; }
     public int getPhaseTicks() { return this.entityData.get(STATE) % 1000; }
     public int getOwnerId() { return this.entityData.get(OWNER_ID); }
+    public int getVariant() { return this.entityData.get(VARIANT); }
 
     // ---------------------------------------------------------------- spawning and using
 
@@ -113,10 +117,11 @@ public class ChakraSphereEntity extends Entity {
         return caster.getEyePosition(partialTick).add(look.scale(1.05D)).add(right.scale(0.5D)).add(0.0D, -0.5D, 0.0D);
     }
 
-    /** A sphere of {@code kind} charging in the hand of {@code caster}. */
-    public static ChakraSphereEntity spawn(ServerLevel level, ServerPlayer caster, int kind) {
+    /** A sphere of {@code kind} and look {@code variant} charging in the hand of {@code caster}. */
+    public static ChakraSphereEntity spawn(ServerLevel level, ServerPlayer caster, int kind, int variant) {
         ChakraSphereEntity sphere = new ChakraSphereEntity(ModEntities.CHAKRA_SPHERE, level);
         sphere.entityData.set(KIND, kind);
+        sphere.entityData.set(VARIANT, variant);
         sphere.entityData.set(OWNER_ID, caster.getId());
         sphere.owner = caster.getUUID();
         Vec3 hand = handPosition(caster, kind, 1.0F);

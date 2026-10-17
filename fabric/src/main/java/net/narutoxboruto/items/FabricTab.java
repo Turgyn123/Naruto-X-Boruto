@@ -120,6 +120,8 @@ public class FabricTab {
                     .displayItems((parameters, output) -> {
                         output.accept(FabricItems.FIRE_BALL_JUTSU);
                         output.accept(FabricItems.RASENGAN_JUTSU);
+                        output.accept(FabricItems.RASENGAN_V2_JUTSU);
+                        output.accept(FabricItems.RASENGAN_V3_JUTSU);
                         output.accept(FabricItems.RASENSHURIKEN_JUTSU);
                         output.accept(FabricItems.FLAME_BULLET_JUTSU);
                         output.accept(FabricItems.GREAT_FIRE_ANNIHILATION_JUTSU);

@@ -2,6 +2,7 @@ package net.narutoxboruto.client.renderer.entity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.math.Axis;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderer;
@@ -11,17 +12,20 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
+import net.narutoxboruto.client.model.FireBallModel;
 import net.narutoxboruto.entities.jutsus.ChakraSphereEntity;
 import net.narutoxboruto.main.Main;
 import org.joml.Matrix4f;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
 /**
  * Draws the {@link ChakraSphereEntity} in the style of the wind of the Giant Fan (see {@code WeaponEffectRenderer}): with
  * the same textures, the white streaks of wind (wind_streak) on ribbons that spiral and scroll, and the white crescent
  * blades (crescent), in the same near white colour.
  * <ul>
- *   <li>Rasengan: a blue ball, white in the middle, covered with a tangle of fine bright lines as in the anime (see
- *       {@link #rasenBall}).</li>
+ *   <li>Rasengan: three looks to compare, the Rasengan (see {@link #glowBall}), Rasengan V2 (see {@link #puffBall}) and
+ *       Rasengan V3 (see {@link #cubeBall}).</li>
  *   <li>Rasenshuriken: held up above the head of the caster while it is charged. The same ball, with four big
  *       crescent blades like the blades of the fan turning round it in a pinwheel. Thrown, ribbons of wind spiral
  *       behind it like the wind of the fan. Where it hits it grows into a huge ball of ribbons with pinwheels turning
@@ -32,14 +36,21 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
 
     private static final ResourceLocation WIND_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/wind_streak.png");
     private static final ResourceLocation CRESCENT_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/crescent.png");
-    private static final ResourceLocation LINE_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/rasen_lines.png");
+    // The textures of the three looks of the Rasengan
+    private static final ResourceLocation SWIRL_BALL_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/rasen_swirl_ball.png");
+    private static final ResourceLocation FLARE_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/rasen_flare.png");
+    private static final ResourceLocation PUFF_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/rasen_puff.png");
+    private static final ResourceLocation CUBE_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/rasengan_cube.png");
     private static final ResourceLocation WHITE_TEXTURE = ResourceLocation.withDefaultNamespace("textures/misc/white.png");
     private static final int FULL_BRIGHT = 0xF000F0;
     /** The colour of the wind of the Giant Fan: white with a touch of blue. */
     private static final float[] WIND = {0.94F, 0.96F, 1.0F};
 
+    private final FireBallModel cubes;
+
     public ChakraSphereRenderer(EntityRendererProvider.Context context) {
         super(context);
+        this.cubes = new FireBallModel(context.bakeLayer(FireBallModel.LAYER_LOCATION));
     }
 
     @Override
@@ -119,7 +130,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         float ribbonAlpha = 0.94F * alpha;
 
         // The ball, the same for both jutsus
-        rasenBall(bufferSource, matrix, radius, age, alpha, blast);
+        ball(bufferSource, poseStack, matrix, radius, age, alpha, blast, shuriken ? 0 : entity.getVariant());
 
         // Thrown, ribbons of wind spiral behind the Rasenshuriken like the wind of the fan
         if (shuriken && phase == ChakraSphereEntity.ACTIVE) {
@@ -146,34 +157,131 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         poseStack.popPose();
     }
 
-    /**
-     * The ball of the Rasengan, as in the anime: a blue ball that is white in the middle and blue at the edge, covered
-     * all over with a tangle of fine bright lines, like thread wound round it. The tangle is a texture of its own
-     * (rasen_lines) of many fine lines, put on two balls, one just inside the other, that turn on different axes in
-     * different directions, so the lines slide over each other.
-     */
-    private static void rasenBall(MultiBufferSource bufferSource, Matrix4f matrix, float radius, float age, float alpha, boolean blast) {
-        VertexConsumer white = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(WHITE_TEXTURE));
-        if (!blast) {
-            // A pale, see-through ball, whiter towards the middle, with a soft glowing edge made of two bigger, very faint balls
-            roundBall(white, matrix, radius * 1.25F, 0.75F, 0.93F, 1.0F, 0.06F * alpha);
-            roundBall(white, matrix, radius * 1.12F, 0.75F, 0.93F, 1.0F, 0.12F * alpha);
-            roundBall(white, matrix, radius * 0.98F, 0.68F, 0.9F, 1.0F, 0.38F * alpha);
-            roundBall(white, matrix, radius * 0.65F, 0.85F, 0.96F, 1.0F, 0.4F * alpha);
-            roundBall(white, matrix, radius * 0.32F, 1.0F, 1.0F, 1.0F, 0.8F * alpha);
-        } else {
-            roundBall(white, matrix, radius, 0.3F, 0.65F, 1.0F, 0.1F * alpha);
-        }
-        VertexConsumer lines = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(LINE_TEXTURE));
-        linedSphere(lines, matrix, radius * 1.01F, age * 0.06F, 0.0F, 0.0F, alpha * 0.6F);
-        linedSphere(lines, matrix, radius * 0.9F, -age * 0.08F, 1.0F, 0.5F, alpha * 0.45F);
+    /** The ball in the look of {@code variant}: 0 the glowing swirl ball, 1 the fluffy ball of puffs, 2 the cube model. */
+    private void ball(MultiBufferSource bufferSource, PoseStack poseStack, Matrix4f matrix, float radius, float age, float alpha, boolean blast, int variant) {
+        if (variant == 1) puffBall(bufferSource, poseStack, radius, age, alpha, blast);
+        else if (variant == 2) cubeBall(bufferSource, poseStack, radius, age, alpha, blast);
+        else glowBall(bufferSource, poseStack, matrix, radius, age, alpha, blast);
     }
 
     /**
-     * A smooth ball with the texture of lines on it once round, turned on its axis by {@code spin} and leaned over by
+     * Look 1, the glowing ball: a pale, see-through blue ball that is whiter in the middle, with a soft glowing edge made of
+     * two bigger, very faint balls. Two balls with a texture of soft swirling bands turn in it on different axes in
+     * different directions, so the swirl slides over itself, and a bright white heart shines in the middle with a flare
+     * of rays that always faces you.
+     */
+    private void glowBall(MultiBufferSource bufferSource, PoseStack poseStack, Matrix4f matrix, float radius, float age, float alpha, boolean blast) {
+        VertexConsumer white = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(WHITE_TEXTURE));
+        if (!blast) {
+            roundBall(white, matrix, radius * 1.3F, 0.7F, 0.9F, 1.0F, 0.05F * alpha);
+            roundBall(white, matrix, radius * 1.15F, 0.7F, 0.9F, 1.0F, 0.1F * alpha);
+            roundBall(white, matrix, radius * 0.97F, 0.62F, 0.86F, 1.0F, 0.45F * alpha);
+            roundBall(white, matrix, radius * 0.6F, 0.85F, 0.96F, 1.0F, 0.45F * alpha);
+            roundBall(white, matrix, radius * 0.3F, 1.0F, 1.0F, 1.0F, 0.9F * alpha);
+        } else {
+            roundBall(white, matrix, radius, 0.3F, 0.65F, 1.0F, 0.1F * alpha);
+        }
+        VertexConsumer swirl = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(SWIRL_BALL_TEXTURE));
+        texturedSphere(swirl, matrix, radius * 1.01F, age * 0.12F, 0.0F, 0.0F, alpha * (blast ? 0.5F : 0.85F));
+        texturedSphere(swirl, matrix, radius * 0.88F, -age * 0.17F, 1.0F, 0.5F, alpha * (blast ? 0.4F : 0.6F));
+        VertexConsumer flare = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(FLARE_TEXTURE));
+        poseStack.pushPose();
+        poseStack.mulPose(this.entityRenderDispatcher.cameraOrientation());
+        poseStack.mulPose(Axis.ZP.rotation(age * 0.03F));
+        billboard(flare, poseStack.last().pose(), radius * (blast ? 1.2F : 3.4F), (blast ? 0.5F : 0.95F) * alpha);
+        poseStack.popPose();
+    }
+
+    /**
+     * Look 2, the fluffy ball: about 56 soft puffs of wind spread through a sphere and turning round it, the ones in the
+     * middle faster, white in the middle and pale blue at the edge, drawn from the far side to the near side so they
+     * blend into each other, with a small flare in the middle.
+     */
+    private void puffBall(MultiBufferSource bufferSource, PoseStack poseStack, float radius, float age, float alpha, boolean blast) {
+        int count = blast ? 70 : 56;
+        Quaternionf camera = this.entityRenderDispatcher.cameraOrientation();
+        Vector3f forward = camera.transform(new Vector3f(0.0F, 0.0F, -1.0F));
+        double[][] puff = new double[count][7]; // x, y, z, size, depth, t, roll
+        for (int i = 0; i < count; i++) {
+            double theta = hash(i * 5 + 1) * Math.PI * 2.0D;
+            double z = hash(i * 5 + 2) * 2.0D - 1.0D;
+            double ring = Math.sqrt(1.0D - z * z);
+            double t = Math.cbrt(0.15D + 0.85D * hash(i * 5 + 3));
+            double spin = age * (0.1D + 0.35D * (1.0D - t)) * (i % 2 == 0 ? 1.0D : -0.7D);
+            double x0 = Math.cos(theta) * ring;
+            double z0 = Math.sin(theta) * ring;
+            puff[i][0] = (x0 * Math.cos(spin) - z0 * Math.sin(spin)) * radius * t * 0.85D;
+            puff[i][1] = z * radius * t * 0.85D;
+            puff[i][2] = (x0 * Math.sin(spin) + z0 * Math.cos(spin)) * radius * t * 0.85D;
+            puff[i][3] = radius * (0.55D + 0.4D * hash(i * 5 + 4)) * (0.8D + 0.4D * t);
+            puff[i][4] = puff[i][0] * forward.x + puff[i][1] * forward.y + puff[i][2] * forward.z;
+            puff[i][5] = t;
+            puff[i][6] = hash(i * 5 + 5) * 4.0D;
+        }
+        Integer[] order = new Integer[count];
+        for (int i = 0; i < count; i++) order[i] = i;
+        java.util.Arrays.sort(order, (p, q) -> Double.compare(puff[q][4], puff[p][4]));
+        VertexConsumer vc = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(PUFF_TEXTURE));
+        for (int n = 0; n < count; n++) {
+            double[] p = puff[order[n]];
+            float t = (float) p[5];
+            poseStack.pushPose();
+            poseStack.translate(p[0], p[1], p[2]);
+            poseStack.mulPose(camera);
+            poseStack.mulPose(Axis.ZP.rotationDegrees(90.0F * (int) p[6]));
+            billboard(vc, poseStack.last().pose(), (float) p[3], (blast ? 0.3F : 0.5F) * alpha * (1.0F - 0.25F * t), 1.0F - 0.25F * t, 1.0F - 0.08F * t, 1.0F);
+            poseStack.popPose();
+        }
+        VertexConsumer flare = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(FLARE_TEXTURE));
+        poseStack.pushPose();
+        poseStack.mulPose(camera);
+        billboard(flare, poseStack.last().pose(), radius * (blast ? 1.0F : 2.0F), 0.7F * alpha);
+        poseStack.popPose();
+    }
+
+    /**
+     * Look 3, the cube model: the same model as the Great Fireball, nested cubes that spin on all axes, with the texture
+     * of the fireball in blue and white, drawn the same way, glowing and see-through.
+     */
+    private void cubeBall(MultiBufferSource bufferSource, PoseStack poseStack, float radius, float age, float alpha, boolean blast) {
+        if (alpha < 0.01F) return;
+        VertexConsumer vc = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(CUBE_TEXTURE));
+        // The middle cube of the model is a block wide
+        float scale = radius * 2.0F;
+        float rotation = age * 15.0F;
+        poseStack.pushPose();
+        poseStack.scale(scale, scale, scale);
+        poseStack.mulPose(Axis.YP.rotationDegrees(rotation));
+        poseStack.mulPose(Axis.XP.rotationDegrees(rotation * 0.7F));
+        poseStack.mulPose(Axis.ZP.rotationDegrees(rotation * 0.3F));
+        int color = (Math.max(0, Math.min(255, (int) ((blast ? 0.4F : 1.0F) * alpha * 255.0F))) << 24) | 0xFFFFFF;
+        cubes.renderToBuffer(poseStack, vc, FULL_BRIGHT, OverlayTexture.NO_OVERLAY, color);
+        poseStack.popPose();
+    }
+
+    private static void billboard(VertexConsumer vc, Matrix4f matrix, float size, float alpha) {
+        billboard(vc, matrix, size, alpha, 1.0F, 1.0F, 1.0F);
+    }
+
+    /** A square facing the camera (the pose is already turned to it) with the whole texture on it. */
+    private static void billboard(VertexConsumer vc, Matrix4f matrix, float size, float alpha, float r, float g, float b) {
+        float h = size * 0.5F;
+        float[][] corner = {{-h, -h, 0.0F, 1.0F}, {h, -h, 1.0F, 1.0F}, {h, h, 1.0F, 0.0F}, {-h, h, 0.0F, 0.0F}};
+        for (float[] c : corner) {
+            vc.addVertex(matrix, c[0], c[1], 0.0F)
+                    .setColor(r, g, b, alpha)
+                    .setUv(c[2], c[3])
+                    .setOverlay(OverlayTexture.NO_OVERLAY)
+                    .setLight(FULL_BRIGHT)
+                    .setNormal(0.0F, 1.0F, 0.0F);
+        }
+    }
+
+    /**
+     * A smooth ball with a texture on it once round, turned on its axis by {@code spin} and leaned over by
      * {@code tilt}, and the texture moved round by {@code shift}.
      */
-    private static void linedSphere(VertexConsumer vc, Matrix4f matrix, float radius, float spin, float tilt, float shift, float alpha) {
+    private static void texturedSphere(VertexConsumer vc, Matrix4f matrix, float radius, float spin, float tilt, float shift, float alpha) {
         int segments = 28;
         int rings = 16;
         double cs = Math.cos(tilt);
