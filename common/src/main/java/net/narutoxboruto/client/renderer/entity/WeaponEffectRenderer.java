@@ -25,6 +25,8 @@ import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
+import java.util.Random;
+
 /**
  * Draws the weapon effects as real shapes with textures, so that they look like wind, energy and thread and not
  * like particles:
@@ -683,7 +685,7 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
         double height = target.getBbHeight();
         // The sizes are for a body as tall as a person, and scale with the target
         double k = height / 1.8D;
-        double yaw = Math.toRadians(target.yBodyRot);
+        double yaw = Math.toRadians(target.yRotO);
         Vec3 side = new Vec3(Math.cos(yaw), 0.0D, Math.sin(yaw));
         Vec3 front = new Vec3(-Math.sin(yaw), 0.0D, Math.cos(yaw));
         // Start height, end height (both as a part of the body), the angle it starts at and how many turns it makes
@@ -696,7 +698,7 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
         // The wraps start a little wide and pull tight over the first moments
         double pull = 1.0D + 0.5D * (1.0D - grow);
         // The same unevenness every frame for the same target, so the rope does not shimmer
-        java.util.Random random = new java.util.Random(target.getId() * 31L + 7L);
+        Random random = new Random(target.getId() * 31L + 7L);
         for (double[] wrap : wraps) {
             int segments = 30;
             double jitterPhase = random.nextDouble() * Math.PI * 2.0D;
