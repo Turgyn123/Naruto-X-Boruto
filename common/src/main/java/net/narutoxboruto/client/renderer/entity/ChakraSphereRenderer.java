@@ -22,8 +22,8 @@ import org.joml.Matrix4f;
  * the same textures, the white streaks of wind (wind_streak) on ribbons that spiral and scroll, and the white crescent
  * blades (crescent), in the same near white colour.
  * <ul>
- *   <li>Rasengan: a vortex like the one in the anime: a ball with a spiral vortex wrapped round it (see {@link #ball}), in
- *       three looks to compare: the vortex ball, a flat vortex facing you, and both together.</li>
+ *   <li>Rasengan: an orb of energy drawn like the lightning, see {@link #plasmaBall}. Rasengan V2 and V3 are older test
+ *       looks, flat vortex discs.</li>
  *   <li>Rasenshuriken: held up above the head of the caster while it is charged. The same ball, with four big
  *       crescent blades like the blades of the fan turning round it in a pinwheel. Thrown, ribbons of wind spiral
  *       behind it like the wind of the fan. Where it hits it grows into a huge ball of ribbons with pinwheels turning
@@ -153,6 +153,10 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
     /** The ball in the look of {@code variant}: 0 the vortex ball, 1 the flat vortex facing you, 2 both together. */
     private void ball(MultiBufferSource bufferSource, PoseStack poseStack, Matrix4f matrix, Vec3 aim, Vec3 across, Vec3 up,
                       float radius, float age, float alpha, boolean blast, int variant) {
+        if (variant == 0) {
+            plasmaBall(bufferSource, poseStack, matrix, aim, across, up, radius, age, alpha, blast);
+            return;
+        }
         // A very faint glow round the ball, two balls bigger than it
         VertexConsumer white = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(WHITE_TEXTURE));
         if (!blast) {
@@ -182,6 +186,137 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         poseStack.mulPose(Axis.ZP.rotation(age * 0.03F));
         billboard(flare, poseStack.last().pose(), radius * (blast ? 1.2F : 2.8F), (blast ? 0.45F : 0.8F) * alpha);
         poseStack.popPose();
+    }
+
+    /**
+     * The Rasengan as I would draw it: an orb of energy, drawn the way the lightning is drawn, with glowing light that is
+     * added to what is behind it and no texture at all.
+     * <ul>
+     *   <li>Seven balls inside each other, from a faint blue haze outside to a white heart in the middle. The light of
+     *       them adds up, so the orb glows smoothly from the edge to the middle, brighter and whiter towards the
+     *       middle, like a ball of plasma.</li>
+     *   <li>Three thick glowing arms spiral over the surface from one pole to the other and turn fast, so the orb seems to
+     *       churn and spin. Every arm has a white core, a light blue middle and a wide blue glow, like a bolt.</li>
+     *   <li>Short jagged sparks leap off the surface and jump from place to place.</li>
+     *   <li>The orb breathes: it swells and shrinks a little.</li>
+     * </ul>
+     */
+    private void plasmaBall(MultiBufferSource bufferSource, PoseStack poseStack, Matrix4f matrix, Vec3 aim, Vec3 across, Vec3 up,
+                            float radius, float age, float alpha, boolean blast) {
+        if (alpha < 0.01F) return;
+        float breath = 1.0F + 0.04F * Mth.sin(age * 0.8F);
+        float r = radius * (blast ? 1.0F : breath);
+        VertexConsumer vc = bufferSource.getBuffer(RenderType.lightning());
+        // The balls go from the inside to the outside: this render type keeps what it has drawn in front, so the heart is
+        // drawn first and the bigger balls then glow over it
+        float[][] shells = blast
+                ? new float[][]{{0.5F, 0.85F, 0.95F, 1.0F, 0.12F}, {1.0F, 0.3F, 0.65F, 1.0F, 0.1F}}
+                : new float[][]{
+                        {0.22F, 1.0F, 1.0F, 1.0F, 0.7F}, {0.4F, 0.85F, 0.95F, 1.0F, 0.4F}, {0.6F, 0.65F, 0.88F, 1.0F, 0.28F},
+                        {0.8F, 0.45F, 0.78F, 1.0F, 0.2F}, {1.0F, 0.3F, 0.65F, 1.0F, 0.16F}, {1.15F, 0.25F, 0.6F, 1.0F, 0.09F},
+                        {1.3F, 0.2F, 0.5F, 1.0F, 0.05F}};
+        for (float[] shell : shells) {
+            smoothBall(vc, matrix, r * shell[0], shell[1], shell[2], shell[3], shell[4] * alpha);
+        }
+
+        float scale = r / 0.35F;
+        // Three thick arms spiralling from pole to pole, turning fast
+        for (int arm = 0; arm < 3; arm++) {
+            int points = 16;
+            Vec3[] path = new Vec3[points + 1];
+            for (int j = 0; j <= points; j++) {
+                double t = j / (double) points;
+                double polar = Math.PI * t;
+                double azimuth = arm * (Math.PI * 2.0D / 3.0D) + t * Math.PI * 2.4D + age * 0.32D;
+                double bulge = r * (blast ? 1.0D : 1.03D);
+                path[j] = aim.scale(Math.cos(polar) * bulge)
+                        .add(across.scale(Math.sin(polar) * Math.cos(azimuth) * bulge))
+                        .add(up.scale(Math.sin(polar) * Math.sin(azimuth) * bulge));
+            }
+            bolt(vc, matrix, path, 0.05F * scale, alpha * (blast ? 0.6F : 1.0F));
+        }
+
+        // Sparks that leap off the surface and jump about ten times a second
+        int jump = (int) (age * 0.5F);
+        int sparks = blast ? 24 : 9;
+        for (int i = 0; i < sparks; i++) {
+            Vec3 direction = randomDirection(i * 11 + jump * 5);
+            double length = r * (0.35D + 0.45D * hash(i * 13 + jump * 3));
+            Vec3 start = direction.scale(r * 1.02D);
+            Vec3 side = direction.cross(randomDirection(i * 17 + jump)).normalize().scale(length * 0.25D);
+            Vec3 middle = direction.scale(r * 1.02D + length * 0.5D).add(side);
+            Vec3 end = direction.scale(r * 1.02D + length).subtract(side.scale(0.6D));
+            bolt(vc, matrix, new Vec3[]{start, middle, end}, 0.018F * scale, 0.9F * alpha);
+        }
+    }
+
+    /** A direction that points anywhere, always the same for the same number. */
+    private static Vec3 randomDirection(int n) {
+        double theta = hash(n * 7 + 1) * Math.PI * 2.0D;
+        double z = hash(n * 7 + 2) * 2.0D - 1.0D;
+        double ring = Math.sqrt(1.0D - z * z);
+        return new Vec3(Math.cos(theta) * ring, z, Math.sin(theta) * ring);
+    }
+
+    // The three layers of a bolt, as in the lightning: white core, light blue middle, wide blue glow
+    private static final float[][] LAYER_RGB = {{1.0F, 1.0F, 1.0F}, {0.45F, 0.82F, 1.0F}, {0.18F, 0.55F, 1.0F}};
+    private static final float[] LAYER_WIDTH = {0.42F, 1.0F, 3.0F};
+    private static final float[] LAYER_ALPHA = {1.0F, 0.85F, 0.22F};
+    private static final float[] LAYER_COS = {1.0F, (float) Math.cos(Math.PI / 6), (float) Math.cos(Math.PI / 3)};
+    private static final float[] LAYER_SIN = {0.0F, (float) Math.sin(Math.PI / 6), (float) Math.sin(Math.PI / 3)};
+
+    /**
+     * A glowing streak along {@code path}, thin at its start and wide at its end, in the three layers of the lightning.
+     * Every layer is two ribbons across each other, turned by the angle of its layer so no two lie in one plane.
+     */
+    private static void bolt(VertexConsumer vc, Matrix4f matrix, Vec3[] path, float halfWidth, float alpha) {
+        int n = path.length - 1;
+        for (int layer = 2; layer >= 0; layer--) {
+            float[] rgb = LAYER_RGB[layer];
+            float a = LAYER_ALPHA[layer] * alpha;
+            for (int j = 0; j < n; j++) {
+                Vec3 direction = path[j + 1].subtract(path[j]);
+                if (direction.lengthSqr() < 1.0E-10D) continue;
+                direction = direction.normalize();
+                Vec3 ref = Math.abs(direction.y) > 0.9D ? new Vec3(1.0D, 0.0D, 0.0D) : new Vec3(0.0D, 1.0D, 0.0D);
+                Vec3 u = direction.cross(ref).normalize();
+                Vec3 w = direction.cross(u).normalize();
+                double w0 = halfWidth * LAYER_WIDTH[layer] * (0.4D + 0.6D * j / n);
+                double w1 = halfWidth * LAYER_WIDTH[layer] * (0.4D + 0.6D * (j + 1) / n);
+                Vec3 sideA = u.scale(LAYER_COS[layer]).add(w.scale(LAYER_SIN[layer]));
+                Vec3 sideB = w.scale(LAYER_COS[layer]).subtract(u.scale(LAYER_SIN[layer]));
+                for (Vec3 side : new Vec3[]{sideA, sideB}) {
+                    glowQuad(vc, matrix, path[j].add(side.scale(w0)), path[j].subtract(side.scale(w0)),
+                            path[j + 1].subtract(side.scale(w1)), path[j + 1].add(side.scale(w1)), rgb[0], rgb[1], rgb[2], a);
+                }
+            }
+        }
+    }
+
+    /** A smooth ball of one colour of glowing light, seen from outside and inside. */
+    private static void smoothBall(VertexConsumer vc, Matrix4f matrix, float radius, float r, float g, float b, float alpha) {
+        int segments = 20;
+        int rings = 12;
+        for (int j = 0; j < rings; j++) {
+            for (int i = 0; i < segments; i++) {
+                Vec3[] corner = new Vec3[4];
+                for (int c = 0; c < 4; c++) {
+                    int ci = i + (c == 1 || c == 2 ? 1 : 0);
+                    int cj = j + (c >= 2 ? 1 : 0);
+                    double lat = Math.PI * (cj / (double) rings - 0.5D);
+                    double lon = Math.PI * 2.0D * ci / segments;
+                    corner[c] = new Vec3(Math.cos(lat) * Math.cos(lon) * radius, Math.sin(lat) * radius, Math.cos(lat) * Math.sin(lon) * radius);
+                }
+                glowQuad(vc, matrix, corner[0], corner[1], corner[2], corner[3], r, g, b, alpha);
+            }
+        }
+    }
+
+    /** One quad of glowing colour, drawn from both sides (this render type does not draw the back of a face). */
+    private static void glowQuad(VertexConsumer vc, Matrix4f matrix, Vec3 p0, Vec3 p1, Vec3 p2, Vec3 p3, float r, float g, float b, float alpha) {
+        Vec3[] corner = {p0, p1, p2, p3};
+        for (int c = 0; c < 4; c++) vc.addVertex(matrix, (float) corner[c].x, (float) corner[c].y, (float) corner[c].z).setColor(r, g, b, alpha);
+        for (int c = 3; c >= 0; c--) vc.addVertex(matrix, (float) corner[c].x, (float) corner[c].y, (float) corner[c].z).setColor(r, g, b, alpha);
     }
 
     /** A flat disc of the vortex, facing the camera and turned by {@code turn}. */
