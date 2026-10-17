@@ -151,16 +151,14 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
     }
 
     /**
-     * The Rasengan as I would draw it: an orb of energy, drawn the way the lightning is drawn, with glowing light that is
-     * added to what is behind it and no texture at all.
+     * The Rasengan as air. The same tangle as before, drawn as wind and not as lightning: a pale, soft glowing heart (light
+     * that is added to what is behind it, whiter than blue) and arms of the white wind streak texture of the wind of the
+     * Giant Fan, wide, soft and with streaks that run along them, that spiral over the ball from pole to pole and turn,
+     * some one way and some the other. No hard bolts and no sparks.
      * <ul>
-     *   <li>Seven balls inside each other, from a faint blue haze outside to a white heart in the middle. The light of
-     *       them adds up, so the orb glows smoothly from the edge to the middle, brighter and whiter towards the
-     *       middle, like a ball of plasma.</li>
-     *   <li>Three thick glowing arms spiral over the surface from one pole to the other and turn fast, so the orb seems to
-     *       churn and spin. Every arm has a white core, a light blue middle and a wide blue glow, like a bolt.</li>
-     *   <li>Short jagged sparks leap off the surface and jump from place to place.</li>
-     *   <li>The orb breathes: it swells and shrinks a little.</li>
+     *   <li>0: six wide arms.</li>
+     *   <li>1: nine arms, the tangle.</li>
+     *   <li>2: the tangle with two thin rings of wind round the ball that spin on different axes.</li>
      * </ul>
      */
     private void plasmaBall(MultiBufferSource bufferSource, Matrix4f matrix, Vec3 aim, Vec3 across, Vec3 up,
@@ -168,30 +166,19 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         if (alpha < 0.01F) return;
         float breath = 1.0F + 0.04F * Mth.sin(age * 0.8F);
         float r = radius * (blast ? 1.0F : breath);
-        VertexConsumer vc = bufferSource.getBuffer(RenderType.lightning());
-        // The balls go from the inside to the outside: this render type keeps what it has drawn in front, so the heart is
-        // drawn first and the bigger balls then glow over it
+        // The heart goes from the inside to the outside: this render type keeps what it has drawn in front, so the middle
+        // is drawn first and the bigger balls then glow over it
+        VertexConsumer glow = bufferSource.getBuffer(RenderType.lightning());
         float[][] shells = blast
-                ? new float[][]{{0.5F, 0.85F, 0.95F, 1.0F, 0.12F}, {1.0F, 0.3F, 0.65F, 1.0F, 0.1F}}
-                : style == 1
-                ? new float[][]{
-                        {0.2F, 1.0F, 1.0F, 1.0F, 0.6F}, {0.45F, 0.8F, 0.93F, 1.0F, 0.3F}, {0.75F, 0.45F, 0.78F, 1.0F, 0.25F},
-                        {1.0F, 0.3F, 0.65F, 1.0F, 0.3F}, {1.05F, 0.7F, 0.9F, 1.0F, 0.2F}}
-                : style == 2
-                ? new float[][]{
-                        {0.25F, 1.0F, 1.0F, 1.0F, 0.75F}, {0.5F, 0.8F, 0.93F, 1.0F, 0.4F}, {0.75F, 0.5F, 0.8F, 1.0F, 0.25F},
-                        {1.0F, 0.3F, 0.65F, 1.0F, 0.18F}, {1.1F, 0.25F, 0.6F, 1.0F, 0.07F}}
-                : new float[][]{
-                        {0.22F, 1.0F, 1.0F, 1.0F, 0.7F}, {0.4F, 0.85F, 0.95F, 1.0F, 0.4F}, {0.6F, 0.65F, 0.88F, 1.0F, 0.28F},
-                        {0.8F, 0.45F, 0.78F, 1.0F, 0.2F}, {1.0F, 0.3F, 0.65F, 1.0F, 0.16F}, {1.15F, 0.25F, 0.6F, 1.0F, 0.09F},
-                        {1.3F, 0.2F, 0.5F, 1.0F, 0.05F}};
+                ? new float[][]{{1.0F, 0.8F, 0.92F, 1.0F, 0.06F}}
+                : new float[][]{{0.2F, 1.0F, 1.0F, 1.0F, 0.5F}, {0.45F, 0.95F, 0.98F, 1.0F, 0.2F}, {0.75F, 0.86F, 0.95F, 1.0F, 0.12F},
+                        {1.0F, 0.8F, 0.92F, 1.0F, 0.1F}, {1.1F, 0.85F, 0.95F, 1.0F, 0.05F}};
         for (float[] shell : shells) {
-            smoothBall(vc, matrix, r * shell[0], shell[1], shell[2], shell[3], shell[4] * alpha);
+            smoothBall(glow, matrix, r * shell[0], shell[1], shell[2], shell[3], shell[4] * alpha);
         }
 
-        float scale = r / 0.35F;
-        // The arms spiral from pole to pole and turn fast: three thick ones for the plasma orb, nine thin ones, some turning
-        // each way, for the tangle, and three thin ones for the gyroscope
+        VertexConsumer wind = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(WIND_TEXTURE));
+        // The arms spiral from pole to pole and turn, some one way and some the other
         int arms = style == 0 ? 6 : 9;
         for (int arm = 0; arm < arms; arm++) {
             int points = 16;
@@ -201,16 +188,15 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
                 double t = j / (double) points;
                 double polar = Math.PI * t;
                 double azimuth = arm * (Math.PI * 2.0D / arms) + direction * (t * Math.PI * 2.4D) + age * 0.32D * direction;
-                double bulge = r * (blast ? 1.0D : 1.03D);
+                double bulge = r * 1.03D;
                 path[j] = aim.scale(Math.cos(polar) * bulge)
                         .add(across.scale(Math.sin(polar) * Math.cos(azimuth) * bulge))
                         .add(up.scale(Math.sin(polar) * Math.sin(azimuth) * bulge));
             }
-            float width = style == 0 ? 0.04F : 0.028F;
-            bolt(vc, matrix, path, width * scale, alpha * (blast ? 0.6F : 1.0F));
+            windRibbon(wind, matrix, path, r * (style == 0 ? 0.12F : 0.085F), age, arm, 0.95F * alpha, true);
         }
 
-        // The tangle with two thin glowing rings round the orb that spin on different axes
+        // Two thin rings of wind round the ball that spin on different axes
         if (style == 2 && !blast) {
             for (int ring = 0; ring < 2; ring++) {
                 double tilt = Math.toRadians(30.0D + 50.0D * ring);
@@ -223,65 +209,47 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
                     double angle = Math.PI * 2.0D * j / points;
                     path[j] = e1.scale(Math.cos(angle) * r * 1.3D).add(e2.scale(Math.sin(angle) * r * 1.3D));
                 }
-                bolt(vc, matrix, path, 0.02F * scale, 0.9F * alpha);
+                windRibbon(wind, matrix, path, r * 0.07F, age, 30 + ring, 0.9F * alpha, false);
             }
         }
-
-        // Sparks that leap off the surface and jump about ten times a second
-        int jump = (int) (age * 0.5F);
-        int sparks = blast ? 24 : (style == 0 ? 4 : 0);
-        for (int i = 0; i < sparks; i++) {
-            Vec3 direction = randomDirection(i * 11 + jump * 5);
-            double length = r * (0.35D + 0.45D * hash(i * 13 + jump * 3));
-            Vec3 start = direction.scale(r * 1.02D);
-            Vec3 side = direction.cross(randomDirection(i * 17 + jump)).normalize().scale(length * 0.25D);
-            Vec3 middle = direction.scale(r * 1.02D + length * 0.5D).add(side);
-            Vec3 end = direction.scale(r * 1.02D + length).subtract(side.scale(0.6D));
-            bolt(vc, matrix, new Vec3[]{start, middle, end}, 0.018F * scale, 0.9F * alpha);
-        }
     }
-
-    /** A direction that points anywhere, always the same for the same number. */
-    private static Vec3 randomDirection(int n) {
-        double theta = hash(n * 7 + 1) * Math.PI * 2.0D;
-        double z = hash(n * 7 + 2) * 2.0D - 1.0D;
-        double ring = Math.sqrt(1.0D - z * z);
-        return new Vec3(Math.cos(theta) * ring, z, Math.sin(theta) * ring);
-    }
-
-    // The three layers of a bolt, as in the lightning: white core, light blue middle, wide blue glow
-    private static final float[][] LAYER_RGB = {{1.0F, 1.0F, 1.0F}, {0.45F, 0.82F, 1.0F}, {0.18F, 0.55F, 1.0F}};
-    private static final float[] LAYER_WIDTH = {0.42F, 1.0F, 3.0F};
-    private static final float[] LAYER_ALPHA = {1.0F, 0.85F, 0.22F};
-    private static final float[] LAYER_COS = {1.0F, (float) Math.cos(Math.PI / 6), (float) Math.cos(Math.PI / 3)};
-    private static final float[] LAYER_SIN = {0.0F, (float) Math.sin(Math.PI / 6), (float) Math.sin(Math.PI / 3)};
 
     /**
-     * A glowing streak along {@code path}, thin at its start and wide at its end, in the three layers of the lightning.
-     * Every layer is two ribbons across each other, turned by the angle of its layer so no two lie in one plane.
+     * A ribbon of the white wind streak texture along {@code path} (points round the middle of the ball), with the streaks
+     * running along it and scrolling. The ribbon lies along the surface: across it is at a right angle to both the way it
+     * runs and the way out from the middle. An open ribbon is thin at its ends and fades in and out there.
      */
-    private static void bolt(VertexConsumer vc, Matrix4f matrix, Vec3[] path, float halfWidth, float alpha) {
+    private static void windRibbon(VertexConsumer vc, Matrix4f matrix, Vec3[] path, float halfWidth, float age, int id, float alpha, boolean open) {
         int n = path.length - 1;
-        for (int layer = 2; layer >= 0; layer--) {
-            float[] rgb = LAYER_RGB[layer];
-            float a = LAYER_ALPHA[layer] * alpha;
-            for (int j = 0; j < n; j++) {
-                Vec3 direction = path[j + 1].subtract(path[j]);
-                if (direction.lengthSqr() < 1.0E-10D) continue;
-                direction = direction.normalize();
-                Vec3 ref = Math.abs(direction.y) > 0.9D ? new Vec3(1.0D, 0.0D, 0.0D) : new Vec3(0.0D, 1.0D, 0.0D);
-                Vec3 u = direction.cross(ref).normalize();
-                Vec3 w = direction.cross(u).normalize();
-                double w0 = halfWidth * LAYER_WIDTH[layer] * (0.4D + 0.6D * j / n);
-                double w1 = halfWidth * LAYER_WIDTH[layer] * (0.4D + 0.6D * (j + 1) / n);
-                Vec3 sideA = u.scale(LAYER_COS[layer]).add(w.scale(LAYER_SIN[layer]));
-                Vec3 sideB = w.scale(LAYER_COS[layer]).subtract(u.scale(LAYER_SIN[layer]));
-                for (Vec3 side : new Vec3[]{sideA, sideB}) {
-                    glowQuad(vc, matrix, path[j].add(side.scale(w0)), path[j].subtract(side.scale(w0)),
-                            path[j + 1].subtract(side.scale(w1)), path[j + 1].add(side.scale(w1)), rgb[0], rgb[1], rgb[2], a);
-                }
-            }
+        Vec3[] side = new Vec3[n + 1];
+        for (int j = 0; j <= n; j++) {
+            Vec3 tangent = path[Math.min(n, j + 1)].subtract(path[Math.max(0, j - 1)]);
+            Vec3 across = path[j].normalize().cross(tangent);
+            double taper = open ? 0.35D + 0.65D * Math.sin(Math.PI * j / n) : 1.0D;
+            side[j] = across.lengthSqr() < 1.0E-10D ? Vec3.ZERO : across.normalize().scale(halfWidth * taper);
         }
+        float scroll = age * (0.1F + 0.04F * (id % 3)) * (id % 2 == 0 ? 1.0F : -1.0F);
+        for (int j = 0; j < n; j++) {
+            float t0 = j / (float) n;
+            float t1 = (j + 1) / (float) n;
+            float a0 = open ? alpha * Math.min(1.0F, Math.min(t0 * 5.0F, (1.0F - t0) * 5.0F)) : alpha;
+            float a1 = open ? alpha * Math.min(1.0F, Math.min(t1 * 5.0F, (1.0F - t1) * 5.0F)) : alpha;
+            float u0 = t0 * 2.0F - scroll + id * 0.33F;
+            float u1 = t1 * 2.0F - scroll + id * 0.33F;
+            windVertex(vc, matrix, path[j].add(side[j]), u0, 0.0F, a0);
+            windVertex(vc, matrix, path[j].subtract(side[j]), u0, 1.0F, a0);
+            windVertex(vc, matrix, path[j + 1].subtract(side[j + 1]), u1, 1.0F, a1);
+            windVertex(vc, matrix, path[j + 1].add(side[j + 1]), u1, 0.0F, a1);
+        }
+    }
+
+    private static void windVertex(VertexConsumer vc, Matrix4f matrix, Vec3 p, float u, float v, float alpha) {
+        vc.addVertex(matrix, (float) p.x, (float) p.y, (float) p.z)
+                .setColor(0.93F, 0.97F, 1.0F, alpha)
+                .setUv(u, v)
+                .setOverlay(OverlayTexture.NO_OVERLAY)
+                .setLight(FULL_BRIGHT)
+                .setNormal(0.0F, 1.0F, 0.0F);
     }
 
     /** A smooth ball of one colour of glowing light, seen from outside and inside. */
