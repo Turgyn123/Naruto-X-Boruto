@@ -1,7 +1,7 @@
 package net.narutoxboruto.items.jutsus;
 
 /**
- * Rasengan V2: a test version of the Rasengan with a look of its own, a soft, fluffy ball of puffs of wind. It works
+ * Rasengan V2: a test version of the Rasengan with a look of its own, a flat vortex that always faces you, drawn as in the anime. It works
  * exactly like the Rasengan.
  */
 public class RasenganV2 extends Rasengan {
