@@ -32,7 +32,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
 
     private static final ResourceLocation WIND_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/wind_streak.png");
     private static final ResourceLocation CRESCENT_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/crescent.png");
-    private static final ResourceLocation LINE_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/rasen_line.png");
+    private static final ResourceLocation LINE_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/rasen_lines.png");
     private static final ResourceLocation WHITE_TEXTURE = ResourceLocation.withDefaultNamespace("textures/misc/white.png");
     private static final int FULL_BRIGHT = 0xF000F0;
     /** The colour of the wind of the Giant Fan: white with a touch of blue. */
@@ -148,68 +148,57 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
 
     /**
      * The ball of the Rasengan, as in the anime: a blue ball that is white in the middle and blue at the edge, covered
-     * all over with a tangle of fine bright lines, like thread wound round it. Every line is a part of a circle round
-     * the middle of the ball, in a plane of its own, and the whole tangle turns slowly. The lines have a texture of
-     * their own: bright in the middle and fading at the edges.
+     * all over with a tangle of fine bright lines, like thread wound round it. The tangle is a texture of its own
+     * (rasen_lines) of many fine lines, put on two balls, one just inside the other, that turn on different axes in
+     * different directions, so the lines slide over each other.
      */
     private static void rasenBall(MultiBufferSource bufferSource, Matrix4f matrix, float radius, float age, float alpha, boolean blast) {
         VertexConsumer white = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(WHITE_TEXTURE));
         if (!blast) {
-            roundBall(white, matrix, radius * 0.97F, 0.3F, 0.62F, 1.0F, 0.5F * alpha);
-            roundBall(white, matrix, radius * 0.6F, 0.7F, 0.92F, 1.0F, 0.4F * alpha);
+            roundBall(white, matrix, radius * 0.97F, 0.2F, 0.5F, 0.95F, 0.45F * alpha);
+            roundBall(white, matrix, radius * 0.6F, 0.6F, 0.88F, 1.0F, 0.4F * alpha);
             roundBall(white, matrix, radius * 0.3F, 1.0F, 1.0F, 1.0F, 0.9F * alpha);
         } else {
-            roundBall(white, matrix, radius, 0.35F, 0.7F, 1.0F, 0.1F * alpha);
+            roundBall(white, matrix, radius, 0.3F, 0.65F, 1.0F, 0.1F * alpha);
         }
         VertexConsumer lines = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(LINE_TEXTURE));
-        int count = blast ? 90 : 60;
-        int segments = 8;
-        double turn = age * 0.05D;
-        double cos = Math.cos(turn);
-        double sin = Math.sin(turn);
-        for (int i = 0; i < count; i++) {
-            double theta = hash(i * 7 + 1) * Math.PI * 2.0D;
-            double z = hash(i * 7 + 2) * 2.0D - 1.0D;
-            double ring = Math.sqrt(1.0D - z * z);
-            Vec3 normal = new Vec3(Math.cos(theta) * ring, z, Math.sin(theta) * ring);
-            Vec3 a = normal.cross(new Vec3(0.0D, 1.0D, 0.0D));
-            a = a.lengthSqr() < 1.0E-4D ? new Vec3(1.0D, 0.0D, 0.0D) : a.normalize();
-            Vec3 b = normal.cross(a).normalize();
-            double direction = hash(i * 7 + 3) < 0.5F ? -1.0D : 1.0D;
-            double start = hash(i * 7 + 4) * Math.PI * 2.0D + age * direction * (0.03D + 0.07D * hash(i * 7 + 5));
-            double span = 1.0D + 1.3D * hash(i * 7 + 6);
-            double size = radius * (0.96D + 0.04D * hash(i * 7 + 8));
-            double half = radius * 0.03D;
-            Vec3 previous = null;
-            for (int s = 0; s <= segments; s++) {
-                float t = s / (float) segments;
-                double angle = start + span * t;
-                Vec3 flat = a.scale(Math.cos(angle)).add(b.scale(Math.sin(angle)));
-                Vec3 point = flat.scale(size);
-                // Turn the tangle round the up axis
-                point = new Vec3(point.x * cos - point.z * sin, point.y, point.x * sin + point.z * cos);
-                Vec3 radial = point.normalize();
-                Vec3 across = new Vec3(normal.x * cos - normal.z * sin, normal.y, normal.x * sin + normal.z * cos).scale(half);
-                Vec3 outward = radial.scale(half);
-                if (previous != null) {
-                    float t0 = (s - 1) / (float) segments;
-                    float a0 = alpha * Math.min(1.0F, Math.min(t0 * 4.0F, (1.0F - t0) * 4.0F));
-                    float a1 = alpha * Math.min(1.0F, Math.min(t * 4.0F, (1.0F - t) * 4.0F));
-                    Vec3 previousRadial = previous.normalize();
-                    Vec3 previousOutward = previousRadial.scale(half);
-                    float u0 = t0 * 2.0F + i * 0.37F;
-                    float u1 = t * 2.0F + i * 0.37F;
-                    // Two ribbons across each other, so the line is seen from every side
-                    texturedVertex(lines, matrix, previous.add(across), u0, 0.0F, a0, 1.0F, 1.0F, 1.0F);
-                    texturedVertex(lines, matrix, previous.subtract(across), u0, 1.0F, a0, 1.0F, 1.0F, 1.0F);
-                    texturedVertex(lines, matrix, point.subtract(across), u1, 1.0F, a1, 1.0F, 1.0F, 1.0F);
-                    texturedVertex(lines, matrix, point.add(across), u1, 0.0F, a1, 1.0F, 1.0F, 1.0F);
-                    texturedVertex(lines, matrix, previous.add(previousOutward), u0, 0.0F, a0, 1.0F, 1.0F, 1.0F);
-                    texturedVertex(lines, matrix, previous.subtract(previousOutward), u0, 1.0F, a0, 1.0F, 1.0F, 1.0F);
-                    texturedVertex(lines, matrix, point.subtract(outward), u1, 1.0F, a1, 1.0F, 1.0F, 1.0F);
-                    texturedVertex(lines, matrix, point.add(outward), u1, 0.0F, a1, 1.0F, 1.0F, 1.0F);
+        linedSphere(lines, matrix, radius * 1.01F, age * 0.06F, 0.0F, 0.0F, alpha);
+        linedSphere(lines, matrix, radius * 0.93F, -age * 0.08F, 1.0F, 0.5F, alpha * 0.85F);
+    }
+
+    /**
+     * A smooth ball with the texture of lines on it once round, turned on its axis by {@code spin} and leaned over by
+     * {@code tilt}, and the texture moved round by {@code shift}.
+     */
+    private static void linedSphere(VertexConsumer vc, Matrix4f matrix, float radius, float spin, float tilt, float shift, float alpha) {
+        int segments = 28;
+        int rings = 16;
+        double cs = Math.cos(tilt);
+        double sn = Math.sin(tilt);
+        double cp = Math.cos(spin);
+        double sp = Math.sin(spin);
+        for (int j = 0; j < rings; j++) {
+            for (int i = 0; i < segments; i++) {
+                for (int corner = 0; corner < 4; corner++) {
+                    int ci = i + (corner == 1 || corner == 2 ? 1 : 0);
+                    int cj = j + (corner >= 2 ? 1 : 0);
+                    double lat = Math.PI * (0.5D - cj / (double) rings);
+                    double lon = Math.PI * 2.0D * ci / segments;
+                    double x = Math.cos(lat) * Math.cos(lon);
+                    double y = Math.sin(lat);
+                    double z = Math.cos(lat) * Math.sin(lon);
+                    // Lean it over, then turn it round the up axis
+                    double y2 = y * cs - z * sn;
+                    double z2 = y * sn + z * cs;
+                    double x3 = x * cp - z2 * sp;
+                    double z3 = x * sp + z2 * cp;
+                    vc.addVertex(matrix, (float) (x3 * radius), (float) (y2 * radius), (float) (z3 * radius))
+                            .setColor(1.0F, 1.0F, 1.0F, alpha)
+                            .setUv(ci / (float) segments + shift, cj / (float) rings)
+                            .setOverlay(OverlayTexture.NO_OVERLAY)
+                            .setLight(FULL_BRIGHT)
+                            .setNormal((float) x3, (float) y2, (float) z3);
                 }
-                previous = point;
             }
         }
     }
