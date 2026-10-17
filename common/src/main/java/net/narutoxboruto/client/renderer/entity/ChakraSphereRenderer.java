@@ -2,44 +2,37 @@ package net.narutoxboruto.client.renderer.entity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.math.Axis;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
-import net.narutoxboruto.client.model.RasenganModel;
-import net.narutoxboruto.client.model.RasenshurikenBladesModel;
 import net.narutoxboruto.entities.jutsus.ChakraSphereEntity;
-import net.narutoxboruto.main.Main;
+import org.joml.Matrix4f;
 
 /**
- * Draws the {@link ChakraSphereEntity}: the ball of the Rasengan, which is a model of cubes spinning inside each other,
- * and for the Rasenshuriken the ball with a model of four blades of wind spinning round it. While it is charged it is
- * drawn in the hand of the caster, so it does not lag behind them. When the Rasenshuriken hits it grows into a huge
- * see-through ball with three sets of blades spinning inside it.
+ * Draws the {@link ChakraSphereEntity} the way the lightning of the Lightning Chakra Mode is drawn, but for wind:
+ * with no model and no texture, only glowing ribbons that are added to the light of the world.
+ * <ul>
+ *   <li>Rasengan: a bright ball with streaks of wind that wind round it like comets, each with a bright head and a tail
+ *       that fades away.</li>
+ *   <li>Rasenshuriken: the same ball with four curved blades of wind spinning round it, facing the way it is aimed.</li>
+ *   <li>When the Rasenshuriken hits it grows into a huge ball of streaks with three sets of blades spinning inside it.</li>
+ * </ul>
+ * While it is charged it is drawn in the hand of the caster, so it does not lag behind them. Every ribbon is bright
+ * in the middle and fades to nothing at its edges, so no layers are needed on top of each other.
  */
 public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
 
-    private static final ResourceLocation BALL_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/rasengan.png");
-    private static final ResourceLocation BLADES_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/rasenshuriken.png");
-    private static final int FULL_BRIGHT = 0xF000F0;
-    /** The size of the biggest cube of the ball: 18 sixteenths of a block. */
-    private static final float BALL_DIAMETER = 18.0F / 16.0F;
-    /** How far the blades reach, with a scale of 1: 25 sixteenths of a block. */
-    private static final float BLADE_REACH = 25.0F / 16.0F;
-
-    private final RasenganModel ball;
-    private final RasenshurikenBladesModel blades;
+    private static final ResourceLocation TEXTURE = ResourceLocation.withDefaultNamespace("textures/misc/white.png");
+    private static final float[] HOT = {1.0F, 1.0F, 1.0F};
+    private static final float[] COOL = {0.35F, 0.72F, 1.0F};
 
     public ChakraSphereRenderer(EntityRendererProvider.Context context) {
         super(context);
-        this.ball = new RasenganModel(context.bakeLayer(RasenganModel.LAYER_LOCATION));
-        this.blades = new RasenshurikenBladesModel(context.bakeLayer(RasenshurikenBladesModel.LAYER_LOCATION));
     }
 
     @Override
@@ -66,40 +59,40 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
             }
         }
 
-        // How big the ball is, how see-through, and how big the blades are
+        // How big the ball is, how big the blades are and how bright everything is
         float charge = Mth.clamp(phaseAge / (shuriken ? ChakraSphereEntity.RASENSHURIKEN_CHARGE_TICKS : ChakraSphereEntity.RASENGAN_CHARGE_TICKS), 0.0F, 1.0F);
-        float ballScale;
-        float bladeScale = 0.0F;
+        float radius;
+        float reach = 0.0F;
         float alpha = 1.0F;
         boolean blast = false;
         if (!shuriken) {
             if (phase == ChakraSphereEntity.CHARGING) {
-                ballScale = 0.2F + 0.35F * charge;
-                if (charge >= 1.0F) ballScale *= 1.0F + 0.07F * Mth.sin(age * 1.3F);
+                radius = 0.08F + 0.27F * charge;
+                if (charge >= 1.0F) radius *= 1.0F + 0.07F * Mth.sin(age * 1.3F);
             } else if (phase == ChakraSphereEntity.ACTIVE) {
-                ballScale = 0.6F;
+                radius = 0.36F;
             } else {
                 float t = Mth.clamp(phaseAge / ChakraSphereEntity.RASENGAN_BURST_TICKS, 0.0F, 1.0F);
-                ballScale = 0.6F + 2.4F * t;
+                radius = 0.36F + 1.7F * t;
                 alpha = 1.0F - t;
             }
         } else if (phase == ChakraSphereEntity.CHARGING) {
-            ballScale = 0.2F + 0.4F * charge;
-            bladeScale = 0.25F + 0.4F * charge;
+            radius = 0.08F + 0.2F * charge;
+            reach = 0.2F + 0.55F * charge;
             if (charge >= 1.0F) {
                 float pulse = 1.0F + 0.07F * Mth.sin(age * 1.3F);
-                ballScale *= pulse;
-                bladeScale *= pulse;
+                radius *= pulse;
+                reach *= pulse;
             }
         } else if (phase == ChakraSphereEntity.ACTIVE) {
-            ballScale = 0.65F;
-            bladeScale = 0.75F;
+            radius = 0.3F;
+            reach = 0.85F;
         } else {
             blast = true;
             float grown = Mth.clamp(phaseAge / ChakraSphereEntity.SHURIKEN_GROW_TICKS, 0.0F, 1.0F);
             grown = grown * grown * (3.0F - 2.0F * grown);
-            ballScale = Mth.lerp(grown, 0.65F, 2.0F * (float) ChakraSphereEntity.SHURIKEN_RADIUS / BALL_DIAMETER);
-            bladeScale = Mth.lerp(grown, 0.75F, (float) ChakraSphereEntity.SHURIKEN_RADIUS / BLADE_REACH);
+            radius = Mth.lerp(grown, 0.3F, (float) ChakraSphereEntity.SHURIKEN_RADIUS);
+            reach = radius;
             alpha = Mth.clamp((ChakraSphereEntity.SHURIKEN_BLAST_TICKS - phaseAge) / 6.0F, 0.0F, 1.0F);
         }
         if (alpha < 0.01F) {
@@ -107,55 +100,179 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
             return;
         }
 
-        // The model's z axis points the way the jutsu is aimed
-        poseStack.mulPose(Axis.YP.rotationDegrees(-yaw));
-        poseStack.mulPose(Axis.XP.rotationDegrees(pitch));
+        // The way it is aimed, and two directions across it
+        double yawRad = Math.toRadians(yaw);
+        double pitchRad = Math.toRadians(pitch);
+        Vec3 aim = new Vec3(-Math.sin(yawRad) * Math.cos(pitchRad), -Math.sin(pitchRad), Math.cos(yawRad) * Math.cos(pitchRad));
+        Vec3 across = aim.cross(new Vec3(0.0D, 1.0D, 0.0D));
+        across = across.lengthSqr() < 1.0E-4D ? new Vec3(1.0D, 0.0D, 0.0D) : across.normalize();
+        Vec3 up = aim.cross(across).normalize();
 
-        // The blades first, behind the ball
-        if (shuriken) {
-            RenderType bladeType = RenderType.entityTranslucentEmissive(BLADES_TEXTURE);
-            VertexConsumer bladeBuffer = bufferSource.getBuffer(bladeType);
-            if (!blast) {
-                poseStack.pushPose();
-                poseStack.scale(bladeScale, bladeScale, bladeScale);
-                blades.render(poseStack, bladeBuffer, FULL_BRIGHT, OverlayTexture.NO_OVERLAY, age * 0.55F, alpha);
-                poseStack.popPose();
-                poseStack.pushPose();
-                poseStack.scale(bladeScale * 0.7F, bladeScale * 0.7F, bladeScale * 0.7F);
-                blades.render(poseStack, bladeBuffer, FULL_BRIGHT, OverlayTexture.NO_OVERLAY, -age * 0.8F + 0.4F, alpha * 0.8F);
-                poseStack.popPose();
-            } else {
-                // Three sets of blades spinning in different planes fill the sphere
-                for (int k = 0; k < 3; k++) {
-                    poseStack.pushPose();
-                    if (k == 1) poseStack.mulPose(Axis.YP.rotationDegrees(90.0F));
-                    if (k == 2) poseStack.mulPose(Axis.XP.rotationDegrees(90.0F));
-                    poseStack.scale(bladeScale, bladeScale, bladeScale);
-                    blades.render(poseStack, bladeBuffer, FULL_BRIGHT, OverlayTexture.NO_OVERLAY, age * (0.5F + 0.15F * k) * (k == 1 ? -1.0F : 1.0F), alpha * 0.8F);
-                    poseStack.popPose();
-                }
-            }
-            flush(bufferSource, bladeType);
+        VertexConsumer vc = bufferSource.getBuffer(RenderType.lightning());
+        Matrix4f matrix = poseStack.last().pose();
+        float scale = Math.max(radius, reach * 0.4F) / 0.35F;
+
+        // The ball itself: a bright heart with a softer shell round it. It is drawn first, so the streaks behind it
+        // are hidden by it and the ones in front of it show.
+        if (!blast) {
+            sphere(vc, matrix, radius * 0.55F, 1.0F, 1.0F, 1.0F, 0.95F * alpha);
+            sphere(vc, matrix, radius * 0.82F, 0.55F, 0.85F, 1.0F, 0.4F * alpha);
+        } else {
+            sphere(vc, matrix, radius, 0.35F, 0.7F, 1.0F, 0.07F * alpha);
         }
 
-        // The ball. The huge sphere of the Rasenshuriken is more see-through, so that the blades show through it
-        RenderType ballType = RenderType.entityTranslucentEmissive(BALL_TEXTURE);
-        VertexConsumer ballBuffer = bufferSource.getBuffer(ballType);
-        poseStack.pushPose();
-        poseStack.scale(ballScale, ballScale, ballScale);
-        ball.render(poseStack, ballBuffer, FULL_BRIGHT, OverlayTexture.NO_OVERLAY, age, blast ? alpha * 0.45F : alpha);
-        poseStack.popPose();
-        flush(bufferSource, ballType);
+        // The streaks of wind winding round the ball
+        int streaks = blast ? 40 : 16;
+        int points = blast ? 14 : 18;
+        for (int i = 0; i < streaks; i++) {
+            float seed = i * 1.37F;
+            // A circle in a plane of its own: two directions across it
+            double theta = hash(i * 7 + 1) * Math.PI * 2.0D;
+            double z = hash(i * 7 + 2) * 2.0D - 1.0D;
+            double ring = Math.sqrt(1.0D - z * z);
+            Vec3 normal = new Vec3(Math.cos(theta) * ring, z, Math.sin(theta) * ring);
+            Vec3 a = normal.cross(new Vec3(0.0D, 1.0D, 0.0D));
+            a = a.lengthSqr() < 1.0E-4D ? new Vec3(1.0D, 0.0D, 0.0D) : a.normalize();
+            Vec3 b = normal.cross(a).normalize();
+            double sign = hash(i * 7 + 3) < 0.5F ? -1.0D : 1.0D;
+            double speed = 0.09D + 0.13D * hash(i * 7 + 4);
+            double head = hash(i * 7 + 5) * Math.PI * 2.0D + age * speed * sign;
+            double span = 1.3D + 1.3D * hash(i * 7 + 6);
+            double size = radius * (0.95D + 0.4D * (hash(i * 7 + 8) - 0.5D)) * (1.0D + 0.05D * Math.sin(age * 0.4F + seed));
+            Vec3[] path = new Vec3[points + 1];
+            for (int j = 0; j <= points; j++) {
+                double angle = head - sign * span * (1.0D - j / (double) points);
+                double wobble = 1.0D + 0.07D * Math.sin(angle * 3.0D + age * 0.3D);
+                path[j] = a.scale(Math.cos(angle) * size * wobble).add(b.scale(Math.sin(angle) * size * wobble));
+            }
+            ribbon(vc, matrix, path, 0.045F * scale, alpha);
+        }
+
+        // The four blades of the Rasenshuriken
+        if (shuriken) {
+            int sets = blast ? 3 : 1;
+            for (int k = 0; k < sets; k++) {
+                Vec3 axis = k == 0 ? aim : (k == 1 ? across : up);
+                Vec3 sideA = k == 0 ? across : (k == 1 ? up : aim);
+                Vec3 sideB = axis.cross(sideA).normalize();
+                float spin = age * (0.5F + 0.12F * k) * (k == 1 ? -1.0F : 1.0F);
+                for (int blade = 0; blade < 4; blade++) {
+                    blade(vc, matrix, axis, sideA, sideB, reach, spin + blade * (float) (Math.PI / 2.0D), alpha * (blast ? 0.7F : 1.0F));
+                }
+            }
+        }
         poseStack.popPose();
     }
 
-    /** Draws what has been collected for this render type now, so the layers keep their order. */
-    private static void flush(MultiBufferSource bufferSource, RenderType type) {
-        if (bufferSource instanceof MultiBufferSource.BufferSource source) source.endBatch(type);
+    /**
+     * A flat curved blade that sweeps out from the middle: wide near the middle and thin at the tip, bright along its
+     * middle and fading at its edges. It lies in the plane of {@code sideA} and {@code sideB}.
+     */
+    private static void blade(VertexConsumer vc, Matrix4f matrix, Vec3 axis, Vec3 sideA, Vec3 sideB, float reach, float start, float alpha) {
+        int steps = 14;
+        Vec3[] center = new Vec3[steps + 1];
+        double[] half = new double[steps + 1];
+        for (int j = 0; j <= steps; j++) {
+            double t = j / (double) steps;
+            double rho = reach * (0.3D + 0.75D * t);
+            double angle = start + 1.1D * t;
+            center[j] = sideA.scale(Math.cos(angle) * rho).add(sideB.scale(Math.sin(angle) * rho));
+            half[j] = reach * 0.17D * Math.pow(1.0D - t, 0.8D) + reach * 0.012D;
+        }
+        for (int j = 0; j < steps; j++) {
+            Vec3 tangent = center[j + 1].subtract(center[j]);
+            if (tangent.lengthSqr() < 1.0E-8D) continue;
+            Vec3 normal = axis.cross(tangent).normalize();
+            Vec3 normal2 = j + 2 <= steps ? axis.cross(center[j + 2].subtract(center[j + 1])).normalize() : normal;
+            float head = 1.0F - 0.55F * (j / (float) steps);
+            float head2 = 1.0F - 0.55F * ((j + 1) / (float) steps);
+            Vec3 l0 = center[j].add(normal.scale(half[j]));
+            Vec3 r0 = center[j].subtract(normal.scale(half[j]));
+            Vec3 l1 = center[j + 1].add(normal2.scale(half[j + 1]));
+            Vec3 r1 = center[j + 1].subtract(normal2.scale(half[j + 1]));
+            quad(vc, matrix, l0, COOL, 0.0F, center[j], HOT, head * alpha, center[j + 1], HOT, head2 * alpha, l1, COOL, 0.0F);
+            quad(vc, matrix, center[j], HOT, head * alpha, r0, COOL, 0.0F, r1, COOL, 0.0F, center[j + 1], HOT, head2 * alpha);
+        }
+    }
+
+    /**
+     * A streak: a ribbon along {@code path} that is bright in the middle and fades to nothing at its edges, thin and
+     * clear at its tail and bright at its head. It is drawn twice, across each other, so it can be seen from every
+     * side.
+     */
+    private static void ribbon(VertexConsumer vc, Matrix4f matrix, Vec3[] path, float halfWidth, float alpha) {
+        int n = path.length - 1;
+        for (int j = 0; j < n; j++) {
+            Vec3 direction = path[j + 1].subtract(path[j]);
+            if (direction.lengthSqr() < 1.0E-10D) continue;
+            direction = direction.normalize();
+            Vec3 ref = Math.abs(direction.y) > 0.9D ? new Vec3(1.0D, 0.0D, 0.0D) : new Vec3(0.0D, 1.0D, 0.0D);
+            Vec3 u = direction.cross(ref).normalize();
+            Vec3 w = direction.cross(u).normalize();
+            float t0 = j / (float) n;
+            float t1 = (j + 1) / (float) n;
+            float a0 = alpha * t0 * t0;
+            float a1 = alpha * t1 * t1;
+            double w0 = halfWidth * (0.25D + 0.75D * t0);
+            double w1 = halfWidth * (0.25D + 0.75D * t1);
+            for (Vec3 side : new Vec3[]{u, w}) {
+                Vec3 l0 = path[j].add(side.scale(w0));
+                Vec3 r0 = path[j].subtract(side.scale(w0));
+                Vec3 l1 = path[j + 1].add(side.scale(w1));
+                Vec3 r1 = path[j + 1].subtract(side.scale(w1));
+                quad(vc, matrix, l0, COOL, 0.0F, path[j], HOT, a0, path[j + 1], HOT, a1, l1, COOL, 0.0F);
+                quad(vc, matrix, path[j], HOT, a0, r0, COOL, 0.0F, r1, COOL, 0.0F, path[j + 1], HOT, a1);
+            }
+        }
+    }
+
+    /** A round ball of one colour, seen from the outside and from the inside. */
+    private static void sphere(VertexConsumer vc, Matrix4f matrix, float radius, float r, float g, float b, float alpha) {
+        int segments = 14;
+        int rings = 9;
+        float[] color = {r, g, b};
+        Vec3[][] grid = new Vec3[rings + 1][segments + 1];
+        for (int j = 0; j <= rings; j++) {
+            double lat = Math.PI * (j / (double) rings - 0.5D);
+            for (int i = 0; i <= segments; i++) {
+                double lon = Math.PI * 2.0D * i / segments;
+                grid[j][i] = new Vec3(Math.cos(lat) * Math.cos(lon) * radius, Math.sin(lat) * radius, Math.cos(lat) * Math.sin(lon) * radius);
+            }
+        }
+        for (int j = 0; j < rings; j++) {
+            for (int i = 0; i < segments; i++) {
+                quad(vc, matrix, grid[j][i], color, alpha, grid[j][i + 1], color, alpha,
+                        grid[j + 1][i + 1], color, alpha, grid[j + 1][i], color, alpha);
+            }
+        }
+    }
+
+    /** One quad of glowing colour, drawn from both sides (this render type does not draw the back of a face). */
+    private static void quad(VertexConsumer vc, Matrix4f matrix, Vec3 p0, float[] c0, float a0, Vec3 p1, float[] c1, float a1,
+                             Vec3 p2, float[] c2, float a2, Vec3 p3, float[] c3, float a3) {
+        vertex(vc, matrix, p0, c0, a0);
+        vertex(vc, matrix, p1, c1, a1);
+        vertex(vc, matrix, p2, c2, a2);
+        vertex(vc, matrix, p3, c3, a3);
+        vertex(vc, matrix, p3, c3, a3);
+        vertex(vc, matrix, p2, c2, a2);
+        vertex(vc, matrix, p1, c1, a1);
+        vertex(vc, matrix, p0, c0, a0);
+    }
+
+    private static void vertex(VertexConsumer vc, Matrix4f matrix, Vec3 p, float[] c, float alpha) {
+        vc.addVertex(matrix, (float) p.x, (float) p.y, (float) p.z).setColor(c[0], c[1], c[2], alpha);
+    }
+
+    /** A pseudo random number from 0 to 1 for a whole number, always the same for the same number. */
+    private static float hash(int n) {
+        int h = n * 374761393 + 668265263;
+        h = (h ^ (h >>> 13)) * 1274126177;
+        return ((h ^ (h >>> 16)) & 0xFFFF) / 65535.0F;
     }
 
     @Override
     public ResourceLocation getTextureLocation(ChakraSphereEntity entity) {
-        return BALL_TEXTURE;
+        return TEXTURE;
     }
 }
