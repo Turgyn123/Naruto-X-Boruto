@@ -1,7 +1,7 @@
 package net.narutoxboruto.items.jutsus;
 
 /**
- * Rasengan V2: a test version of the Rasengan with a look of its own, seven bands of wind whirling round the ball like the layers of a spinning top. It works
+ * Rasengan V2: a test version of the Rasengan with a look of its own, seven rings of wind whirling round the ball like the layers of a spinning top. It works
  * exactly like the Rasengan.
  */
 public class RasenganV2 extends Rasengan {
