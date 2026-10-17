@@ -20,8 +20,8 @@ import org.joml.Matrix4f;
  * the same textures, the white streaks of wind (wind_streak) on ribbons that spiral and scroll, and the white crescent
  * blades (crescent), in the same near white colour.
  * <ul>
- *   <li>Rasengan: a ball of bands of whirling wind, see {@link #windOrb}, in three looks: the dense bands (the Rasengan), the
- *       bands (V2) and the crossed bands (V3).</li>
+ *   <li>Rasengan: a ball of bands of whirling wind, see {@link #windOrb}, in three looks: the bold bands (the Rasengan), the
+ *       bands (V2) and the double layer of bands (V3).</li>
  *   <li>Rasenshuriken: held up above the head of the caster while it is charged. The same ball, with four big
  *       crescent blades like the blades of the fan turning round it in a pinwheel. Thrown, ribbons of wind spiral
  *       behind it like the wind of the fan. Where it hits it grows into a huge ball of ribbons with pinwheels turning
@@ -144,7 +144,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         poseStack.popPose();
     }
 
-    /** The ball in the look of {@code variant}: 0 the dense bands, 1 the bands, 2 the crossed bands. */
+    /** The ball in the look of {@code variant}: 0 the bold bands, 1 the bands, 2 the double layer of bands. */
     private void ball(MultiBufferSource bufferSource, PoseStack poseStack, Matrix4f matrix, Vec3 aim, Vec3 across, Vec3 up,
                       float radius, float age, float alpha, boolean blast, int variant) {
         windOrb(bufferSource, matrix, aim, across, up, radius, age, alpha, blast, variant);
@@ -156,8 +156,9 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
      * made of bands of wind, rings that whirl round the aim at their own speeds like the layers of a spinning top:
      * <ul>
      *   <li>1, the bands: seven bands one above the other.</li>
-     *   <li>0, the dense bands: twelve thinner bands, close together, as if the ball is wound with wind.</li>
-     *   <li>2, the crossed bands: two sets of five bands whirling round two different axes, crossing each other.</li>
+     *   <li>0, the bold bands: five wide bands and a stronger glow in the middle.</li>
+     *   <li>2, the double layer: the seven bands with a second, bigger layer of six thinner bands whirling the other way
+     *       outside them.</li>
      * </ul>
      * Where the Rasenshuriken hits, a bigger ball of spiralling ribbons is drawn instead.
      */
@@ -172,7 +173,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
                 : new float[][]{{0.2F, 1.0F, 1.0F, 1.0F, 0.55F}, {0.4F, 0.88F, 0.96F, 1.0F, 0.28F},
                         {0.7F, 0.65F, 0.88F, 1.0F, 0.14F}, {1.0F, 0.45F, 0.75F, 1.0F, 0.07F}};
         for (float[] shell : shells) {
-            smoothBall(glow, matrix, r * shell[0], shell[1], shell[2], shell[3], shell[4] * alpha);
+            smoothBall(glow, matrix, r * shell[0], shell[1], shell[2], shell[3], Math.min(1.0F, shell[4] * (style == 0 && !blast ? 1.5F : 1.0F)) * alpha);
         }
 
         VertexConsumer wind = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(WIND_TEXTURE));
@@ -186,10 +187,10 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
                 spiralRibbon(wind, matrix, aim, across, up, r * 0.72F, r * 0.16F, i * (float) (Math.PI * 2.0D / (outer - 2)), -1.3F, age, 20 + i, a * 0.85F);
             }
         } else if (style == 0) {
-            // Twelve thinner bands, close together, so the ball looks wound with wind
-            for (int band = 0; band < 12; band++) {
-                double lat = Math.toRadians(-66.0D + 12.0D * band);
-                bandRibbon(wind, matrix, aim, across, up, r * 1.03F, lat, r * 0.1F, age, band, a);
+            // The bands of V2 made bolder: five wide bands, and a stronger glow in the middle
+            for (int band = 0; band < 5; band++) {
+                double lat = Math.toRadians(-48.0D + 24.0D * band);
+                bandRibbon(wind, matrix, aim, across, up, r * 1.03F, lat, r * 0.26F, age, band, a);
             }
         } else if (style == 1) {
             // Seven bands, one above the other
@@ -198,11 +199,14 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
                 bandRibbon(wind, matrix, aim, across, up, r * 1.03F, lat, r * 0.17F, age, band, a);
             }
         } else {
-            // Two sets of five bands whirling round two different axes, crossing each other
-            for (int band = 0; band < 5; band++) {
-                double lat = Math.toRadians(-48.0D + 24.0D * band);
-                bandRibbon(wind, matrix, aim, across, up, r * 1.03F, lat, r * 0.15F, age, band, a);
-                bandRibbon(wind, matrix, across, up, aim, r * 1.0F, lat, r * 0.13F, age, band + 20, a * 0.9F);
+            // The bands of V2 with a second, bigger layer of thinner bands whirling the other way outside them
+            for (int band = 0; band < 7; band++) {
+                double lat = Math.toRadians(-60.0D + 20.0D * band);
+                bandRibbon(wind, matrix, aim, across, up, r * 1.03F, lat, r * 0.17F, age, band, a);
+            }
+            for (int band = 0; band < 6; band++) {
+                double lat = Math.toRadians(-55.0D + 22.0D * band);
+                bandRibbon(wind, matrix, aim, across, up, r * 1.2F, lat, r * 0.1F, -age, band + 31, a * 0.6F);
             }
         }
     }
