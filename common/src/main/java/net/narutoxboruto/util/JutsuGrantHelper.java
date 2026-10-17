@@ -37,7 +37,7 @@ public class JutsuGrantHelper {
             case "earth":
                 grantMultipleJutsus(serverPlayer, storage,
                         ModItems.EARTH_WALL_JUTSU, "Earth Wall",
-                        ModItems.EARTH_WAVE_JUTSU, "Earth Wave");
+                        ModItems.EARTH_WAVE_JUTSU, "Earth Wave", ModItems.GREAT_FIRE_ANNIHILATION_JUTSU, "Great Fire Annihilation", ModItems.ASH_PILE_BURNING_JUTSU, "Fire Release: Ash Pile Burning");
                 break;
             case "water":
                 grantMultipleJutsus(serverPlayer, storage,
@@ -69,7 +69,7 @@ public class JutsuGrantHelper {
     }
 
     private static void grantMultipleJutsus(ServerPlayer serverPlayer, JutsuStorage storage,
-                                            String itemId1, String name1, String itemId2, String name2) {
+                                            String itemId1, String name1, String itemId2, String name2, String greatFireAnnihilationJutsu, String greatFireAnnihilation, String ashPileBurningJutsu, String s) {
         boolean granted1 = storage.addJutsuIfNotOwned(fromRegistry(itemId1), serverPlayer);
         boolean granted2 = storage.addJutsuIfNotOwned(fromRegistry(itemId2), serverPlayer);
 
