@@ -41,7 +41,7 @@ public class Rasenshuriken extends ChargedSphereJutsu {
     }
 
     @Override
-    protected int sphereKind() {
+    public int sphereKind() {
         return ChakraSphereEntity.RASENSHURIKEN;
     }
 
@@ -50,6 +50,6 @@ public class Rasenshuriken extends ChargedSphereJutsu {
         super.appendHoverText(stack, context, tooltip, flag);
         tooltip.add(Component.literal("Rank: S").withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.literal("Range: 45 meters").withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.literal("Hold to charge, let go to throw").withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.literal("Right click to form it, left click to throw").withStyle(ChatFormatting.GRAY));
     }
 }

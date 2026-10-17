@@ -24,14 +24,14 @@ import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.narutoxboruto.entities.ModEntities;
-import net.narutoxboruto.items.jutsus.Rasengan;
-import net.narutoxboruto.items.jutsus.Rasenshuriken;
+import net.narutoxboruto.items.jutsus.ChargedSphereJutsu;
 
 import java.util.UUID;
 
 /**
  * The sphere of chakra of the Rasengan and of the Rasenshuriken. It is an entity with a model of its own (see
- * {@code ChakraSphereRenderer}). It is made in the hand of the caster while the jutsu is charged, and then:
+ * {@code ChakraSphereRenderer}). It is made in the hand of the caster by a right click, grows, and waits there. A left click
+ * (a punch) uses it, and then:
  * <ul>
  *   <li>Rasengan: the caster dashes forward with it and it is driven into the first living thing in the way, which
  *       it hits hard and throws away.</li>
@@ -70,11 +70,13 @@ public class ChakraSphereEntity extends Entity {
     /** The phase times 1000 plus the ticks in that phase. */
     private static final EntityDataAccessor<Integer> STATE = SynchedEntityData.defineId(ChakraSphereEntity.class, EntityDataSerializers.INT);
     /** The entity id of the caster, so that the clients can draw the sphere in their hand. */
-    /** Which look the Rasengan has: the test versions each have a style of their own. */
-    private static final EntityDataAccessor<Integer> VARIANT = SynchedEntityData.defineId(ChakraSphereEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> OWNER_ID = SynchedEntityData.defineId(ChakraSphereEntity.class, EntityDataSerializers.INT);
 
     private UUID owner;
+    /** Whether the caster was swinging their arm a tick ago. It starts as true, so the swing of the right click that made the sphere is not taken for a punch. */
+    private boolean wasSwinging = true;
+    /** The sphere is put away if it is not used in 30 seconds. */
+    private static final int HOLD_TICKS = 600;
     private int phase;
     private int phaseTicks;
     private Vec3 flight = Vec3.ZERO;
@@ -90,14 +92,12 @@ public class ChakraSphereEntity extends Entity {
         builder.define(KIND, RASENGAN);
         builder.define(STATE, 0);
         builder.define(OWNER_ID, -1);
-        builder.define(VARIANT, 0);
     }
 
     public int getKind() { return this.entityData.get(KIND); }
     public int getPhase() { return this.entityData.get(STATE) / 1000; }
     public int getPhaseTicks() { return this.entityData.get(STATE) % 1000; }
     public int getOwnerId() { return this.entityData.get(OWNER_ID); }
-    public int getVariant() { return this.entityData.get(VARIANT); }
 
     // ---------------------------------------------------------------- spawning and using
 
@@ -117,11 +117,10 @@ public class ChakraSphereEntity extends Entity {
         return caster.getEyePosition(partialTick).add(look.scale(1.05D)).add(right.scale(0.5D)).add(0.0D, -0.5D, 0.0D);
     }
 
-    /** A sphere of {@code kind} and look {@code variant} charging in the hand of {@code caster}. */
-    public static ChakraSphereEntity spawn(ServerLevel level, ServerPlayer caster, int kind, int variant) {
+    /** A sphere of {@code kind} charging in the hand of {@code caster}. */
+    public static ChakraSphereEntity spawn(ServerLevel level, ServerPlayer caster, int kind) {
         ChakraSphereEntity sphere = new ChakraSphereEntity(ModEntities.CHAKRA_SPHERE, level);
         sphere.entityData.set(KIND, kind);
-        sphere.entityData.set(VARIANT, variant);
         sphere.entityData.set(OWNER_ID, caster.getId());
         sphere.owner = caster.getUUID();
         Vec3 hand = handPosition(caster, kind, 1.0F);
@@ -182,11 +181,26 @@ public class ChakraSphereEntity extends Entity {
         return this.damageSources().magic();
     }
 
-    /** Whether the caster is still holding the jutsu that made this sphere. */
-    private boolean stillHeld(ServerPlayer caster) {
-        if (!caster.isUsingItem()) return false;
-        Item using = caster.getUseItem().getItem();
-        return getKind() == RASENGAN ? using instanceof Rasengan : using instanceof Rasenshuriken;
+    /** The jutsu of this sphere that the caster holds, in either hand, or null. */
+    private ChargedSphereJutsu heldJutsu(ServerPlayer caster) {
+        for (Item item : new Item[]{caster.getMainHandItem().getItem(), caster.getOffhandItem().getItem()}) {
+            if (item instanceof ChargedSphereJutsu jutsu && jutsu.sphereKind() == getKind()) return jutsu;
+        }
+        return null;
+    }
+
+    /** Whether the caster has just started to swing their arm: a left click, at the air or at anything. */
+    private boolean punched(ServerPlayer caster) {
+        boolean punched = caster.swinging && !wasSwinging;
+        wasSwinging = caster.swinging;
+        return punched;
+    }
+
+    /** A left click uses the sphere once it has grown. */
+    private void useIfPunched(ServerPlayer caster) {
+        if (!punched(caster) || !isCharged()) return;
+        ChargedSphereJutsu jutsu = heldJutsu(caster);
+        if (jutsu != null) jutsu.strike(caster, this);
     }
 
     // ---------------------------------------------------------------- ticking
@@ -210,7 +224,7 @@ public class ChakraSphereEntity extends Entity {
             discard();
             return;
         }
-        if (phase == CHARGING && !stillHeld(caster)) {
+        if (phase == CHARGING && (heldJutsu(caster) == null || phaseTicks > HOLD_TICKS)) {
             discard();
             return;
         }
@@ -222,6 +236,7 @@ public class ChakraSphereEntity extends Entity {
             if (phaseTicks % 6 == 0) {
                 serverLevel.playSound(null, hand.x, hand.y, hand.z, SoundEvents.BEACON_AMBIENT, SoundSource.PLAYERS, 0.4F, 1.8F);
             }
+            useIfPunched(caster);
         } else if (phase == ACTIVE) {
             Vec3 hand = handPosition(caster, RASENGAN, 1.0F);
             setPos(hand.x, hand.y, hand.z);
@@ -254,7 +269,7 @@ public class ChakraSphereEntity extends Entity {
     private void tickRasenshuriken() {
         if (!(level() instanceof ServerLevel serverLevel)) return;
         Entity ownerEntity = owner == null ? null : serverLevel.getEntity(owner);
-        if (phase == CHARGING && !(ownerEntity instanceof ServerPlayer p && p.isAlive() && stillHeld(p))) {
+        if (phase == CHARGING && (!(ownerEntity instanceof ServerPlayer p && p.isAlive() && heldJutsu(p) != null) || phaseTicks > HOLD_TICKS)) {
             discard();
             return;
         }
@@ -266,6 +281,7 @@ public class ChakraSphereEntity extends Entity {
             if (phaseTicks % 6 == 0) {
                 serverLevel.playSound(null, hand.x, hand.y, hand.z, SoundEvents.BEACON_AMBIENT, SoundSource.PLAYERS, 0.5F, 1.3F);
             }
+            if (ownerEntity instanceof ServerPlayer shooter) useIfPunched(shooter);
         } else if (phase == ACTIVE) {
             Vec3 from = position();
             Vec3 to = from.add(flight);

@@ -20,8 +20,8 @@ import org.joml.Matrix4f;
  * the same textures, the white streaks of wind (wind_streak) on ribbons that spiral and scroll, and the white crescent
  * blades (crescent), in the same near white colour.
  * <ul>
- *   <li>Rasengan: an orb of energy drawn like the lightning, see {@link #plasmaBall}, in three looks to compare: the
- *       plasma orb, the tangle (V2) and the gyroscope (V3).</li>
+ *   <li>Rasengan: a ball of soft pale blue light with nine thin glowing arms spiralling over it, some one way and some the
+ *       other, drawn like the lightning but in the pale colours of wind (see {@link #plasmaBall}).</li>
  *   <li>Rasenshuriken: held up above the head of the caster while it is charged. The same ball, with four big
  *       crescent blades like the blades of the fan turning round it in a pinwheel. Thrown, ribbons of wind spiral
  *       behind it like the wind of the fan. Where it hits it grows into a huge ball of ribbons with pinwheels turning
@@ -117,7 +117,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         float ribbonAlpha = 0.94F * alpha;
 
         // The ball, the same for both jutsus
-        ball(bufferSource, poseStack, matrix, aim, across, up, radius, age, alpha, blast, shuriken ? 1 : entity.getVariant());
+        ball(bufferSource, poseStack, matrix, aim, across, up, radius, age, alpha, blast);
 
         // Thrown, ribbons of wind spiral behind the Rasenshuriken like the wind of the fan
         if (shuriken && phase == ChakraSphereEntity.ACTIVE) {
@@ -144,10 +144,10 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         poseStack.popPose();
     }
 
-    /** The ball in the look of {@code variant}: 0 the plasma orb, 1 the tangle, 2 the gyroscope. */
+    /** The ball of the Rasengan, and of the Rasenshuriken. */
     private void ball(MultiBufferSource bufferSource, PoseStack poseStack, Matrix4f matrix, Vec3 aim, Vec3 across, Vec3 up,
-                      float radius, float age, float alpha, boolean blast, int variant) {
-        plasmaBall(bufferSource, matrix, aim, across, up, radius, age, alpha, blast, variant);
+                      float radius, float age, float alpha, boolean blast) {
+        plasmaBall(bufferSource, matrix, aim, across, up, radius, age, alpha, blast);
     }
 
     /**
@@ -164,7 +164,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
      * </ul>
      */
     private void plasmaBall(MultiBufferSource bufferSource, Matrix4f matrix, Vec3 aim, Vec3 across, Vec3 up,
-                            float radius, float age, float alpha, boolean blast, int style) {
+                            float radius, float age, float alpha, boolean blast) {
         if (alpha < 0.01F) return;
         float breath = 1.0F + 0.04F * Mth.sin(age * 0.8F);
         float r = radius * (blast ? 1.0F : breath);
@@ -175,18 +175,9 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         // makes a white blob that hides the arms
         float[][] shells = blast
                 ? new float[][]{{0.50F, 0.7F, 0.85F, 0.95F, 0.1F}, {1.00F, 0.5F, 0.7F, 0.9F, 0.08F}}
-                : style == 1
-                ? new float[][]{
-                        {0.20F, 0.9F, 0.95F, 1.0F, 0.4F}, {0.45F, 0.65F, 0.82F, 0.95F, 0.2F}, {0.75F, 0.55F, 0.75F, 0.9F, 0.18F},
-                        {1.00F, 0.5F, 0.7F, 0.88F, 0.2F}, {1.05F, 0.6F, 0.78F, 0.92F, 0.12F}}
-                : style == 2
-                ? new float[][]{
-                        {0.25F, 0.9F, 0.95F, 1.0F, 0.45F}, {0.50F, 0.65F, 0.82F, 0.95F, 0.25F}, {0.75F, 0.55F, 0.75F, 0.9F, 0.18F},
-                        {1.00F, 0.5F, 0.7F, 0.88F, 0.15F}, {1.10F, 0.5F, 0.7F, 0.88F, 0.06F}}
                 : new float[][]{
-                        {0.22F, 0.9F, 0.95F, 1.0F, 0.45F}, {0.40F, 0.7F, 0.85F, 0.95F, 0.25F}, {0.60F, 0.6F, 0.8F, 0.92F, 0.2F},
-                        {0.80F, 0.55F, 0.75F, 0.9F, 0.15F}, {1.00F, 0.5F, 0.7F, 0.88F, 0.12F}, {1.15F, 0.5F, 0.7F, 0.88F, 0.07F},
-                        {1.30F, 0.5F, 0.7F, 0.88F, 0.04F}};
+                        {0.20F, 0.9F, 0.95F, 1.0F, 0.4F}, {0.45F, 0.65F, 0.82F, 0.95F, 0.2F}, {0.75F, 0.55F, 0.75F, 0.9F, 0.18F},
+                        {1.00F, 0.5F, 0.7F, 0.88F, 0.2F}, {1.05F, 0.6F, 0.78F, 0.92F, 0.12F}};
         for (float[] shell : shells) {
             smoothBall(vc, matrix, r * shell[0], shell[1], shell[2], shell[3], shell[4] * alpha);
         }
@@ -194,7 +185,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         float scale = r / 0.35F;
         // The arms spiral from pole to pole and turn fast: three thick ones for the plasma orb, nine thin ones, some turning
         // each way, for the tangle, and three thin ones for the gyroscope
-        int arms = style == 0 ? 16 : 9;
+        int arms = 9;
         for (int arm = 0; arm < arms; arm++) {
             int points = 16;
             Vec3[] path = new Vec3[points + 1];
@@ -208,30 +199,13 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
                         .add(across.scale(Math.sin(polar) * Math.cos(azimuth) * bulge))
                         .add(up.scale(Math.sin(polar) * Math.sin(azimuth) * bulge));
             }
-            float width = style == 0 ? 0.018F : 0.028F;
+            float width = 0.028F;
             bolt(vc, matrix, path, width * scale, alpha * (blast ? 0.6F : 1.0F));
-        }
-
-        // The tangle with two thin glowing rings round the orb that spin on different axes
-        if (style == 2 && !blast) {
-            for (int ring = 0; ring < 2; ring++) {
-                double tilt = Math.toRadians(30.0D + 50.0D * ring);
-                double spin = age * (0.12D + 0.07D * ring) * (ring == 1 ? -1.0D : 1.0D) + ring * 2.0D;
-                Vec3 e1 = new Vec3(Math.cos(spin), 0.0D, Math.sin(spin));
-                Vec3 e2 = new Vec3(-Math.sin(spin) * Math.cos(tilt), Math.sin(tilt), Math.cos(spin) * Math.cos(tilt));
-                int points = 28;
-                Vec3[] path = new Vec3[points + 1];
-                for (int j = 0; j <= points; j++) {
-                    double angle = Math.PI * 2.0D * j / points;
-                    path[j] = e1.scale(Math.cos(angle) * r * 1.3D).add(e2.scale(Math.sin(angle) * r * 1.3D));
-                }
-                bolt(vc, matrix, path, 0.02F * scale, 0.9F * alpha);
-            }
         }
 
         // Sparks that leap off the surface and jump about ten times a second
         int jump = (int) (age * 0.5F);
-        int sparks = blast ? 24 : (style == 0 ? 4 : 0);
+        int sparks = blast ? 24 : 0;
         for (int i = 0; i < sparks; i++) {
             Vec3 direction = randomDirection(i * 11 + jump * 5);
             double length = r * (0.35D + 0.45D * hash(i * 13 + jump * 3));

@@ -27,10 +27,7 @@ public class JutsuGrantHelper {
         JutsuStorage storage = Services.PLATFORM.getJutsuStorage(serverPlayer);
 
         // Everyone who can mold a nature of chakra can learn the Rasengan, which needs none
-        grantMultipleJutsus(serverPlayer, storage,
-                ModItems.RASENGAN_JUTSU, "Rasengan",
-                ModItems.RASENGAN_V2_JUTSU, "Rasengan V2",
-                ModItems.RASENGAN_V3_JUTSU, "Rasengan V3");
+        grantSingleJutsu(serverPlayer, storage, ModItems.RASENGAN_JUTSU, "Rasengan");
 
         switch (releaseType.toLowerCase()) {
             case "fire":
@@ -157,8 +154,6 @@ public class JutsuGrantHelper {
 
         // The Rasengan is for everyone with a release
         modified |= restoreIfMissing(serverPlayer, storage, ModItems.RASENGAN_JUTSU, checkInventory);
-        modified |= restoreIfMissing(serverPlayer, storage, ModItems.RASENGAN_V2_JUTSU, checkInventory);
-        modified |= restoreIfMissing(serverPlayer, storage, ModItems.RASENGAN_V3_JUTSU, checkInventory);
 
         if (playerReleases.toLowerCase().contains("wind")) {
             modified |= restoreIfMissing(serverPlayer, storage, ModItems.RASENSHURIKEN_JUTSU, checkInventory);
