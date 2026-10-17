@@ -30,6 +30,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
     private static final ResourceLocation TEXTURE = ResourceLocation.withDefaultNamespace("textures/misc/white.png");
     private static final float[] HOT = {1.0F, 1.0F, 1.0F};
     private static final float[] COOL = {0.35F, 0.72F, 1.0F};
+    private static final float[] BODY = {0.55F, 0.85F, 1.0F};
 
     public ChakraSphereRenderer(EntityRendererProvider.Context context) {
         super(context);
@@ -78,7 +79,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
             }
         } else if (phase == ChakraSphereEntity.CHARGING) {
             radius = 0.08F + 0.2F * charge;
-            reach = 0.2F + 0.55F * charge;
+            reach = 0.25F + 0.95F * charge;
             if (charge >= 1.0F) {
                 float pulse = 1.0F + 0.07F * Mth.sin(age * 1.3F);
                 radius *= pulse;
@@ -86,7 +87,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
             }
         } else if (phase == ChakraSphereEntity.ACTIVE) {
             radius = 0.3F;
-            reach = 0.85F;
+            reach = 1.25F;
         } else {
             blast = true;
             float grown = Mth.clamp(phaseAge / ChakraSphereEntity.SHURIKEN_GROW_TICKS, 0.0F, 1.0F);
@@ -112,40 +113,28 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         Matrix4f matrix = poseStack.last().pose();
         float scale = Math.max(radius, reach * 0.4F) / 0.35F;
 
-        // The ball itself: a bright heart with a softer shell round it. It is drawn first, so the streaks behind it
-        // are hidden by it and the ones in front of it show.
+        // The ball itself, as in the anime: a white hot heart, a softer middle and a blue edge, drawn first, so the
+        // streaks behind it are hidden by it and the ones in front of it show.
         if (!blast) {
-            sphere(vc, matrix, radius * 0.55F, 1.0F, 1.0F, 1.0F, 0.95F * alpha);
-            sphere(vc, matrix, radius * 0.82F, 0.55F, 0.85F, 1.0F, 0.4F * alpha);
+            sphere(vc, matrix, radius * 0.38F, 1.0F, 1.0F, 1.0F, 0.95F * alpha);
+            sphere(vc, matrix, radius * 0.68F, 0.65F, 0.92F, 1.0F, 0.55F * alpha);
+            sphere(vc, matrix, radius * 0.94F, 0.3F, 0.65F, 1.0F, 0.4F * alpha);
         } else {
             sphere(vc, matrix, radius, 0.35F, 0.7F, 1.0F, 0.07F * alpha);
         }
 
-        // The streaks of wind winding round the ball
-        int streaks = blast ? 40 : 16;
-        int points = blast ? 14 : 18;
-        for (int i = 0; i < streaks; i++) {
-            float seed = i * 1.37F;
-            // A circle in a plane of its own: two directions across it
-            double theta = hash(i * 7 + 1) * Math.PI * 2.0D;
-            double z = hash(i * 7 + 2) * 2.0D - 1.0D;
-            double ring = Math.sqrt(1.0D - z * z);
-            Vec3 normal = new Vec3(Math.cos(theta) * ring, z, Math.sin(theta) * ring);
-            Vec3 a = normal.cross(new Vec3(0.0D, 1.0D, 0.0D));
-            a = a.lengthSqr() < 1.0E-4D ? new Vec3(1.0D, 0.0D, 0.0D) : a.normalize();
-            Vec3 b = normal.cross(a).normalize();
-            double sign = hash(i * 7 + 3) < 0.5F ? -1.0D : 1.0D;
-            double speed = 0.09D + 0.13D * hash(i * 7 + 4);
-            double head = hash(i * 7 + 5) * Math.PI * 2.0D + age * speed * sign;
-            double span = 1.3D + 1.3D * hash(i * 7 + 6);
-            double size = radius * (0.95D + 0.4D * (hash(i * 7 + 8) - 0.5D)) * (1.0D + 0.05D * Math.sin(age * 0.4F + seed));
-            Vec3[] path = new Vec3[points + 1];
-            for (int j = 0; j <= points; j++) {
-                double angle = head - sign * span * (1.0D - j / (double) points);
-                double wobble = 1.0D + 0.07D * Math.sin(angle * 3.0D + age * 0.3D);
-                path[j] = a.scale(Math.cos(angle) * size * wobble).add(b.scale(Math.sin(angle) * size * wobble));
+        // Lots of fine streaks that spin fast just inside the surface of the ball, so that it looks like water
+        // swirling round, and then long thin wisps of wind that sweep round the outside of it
+        int fine = blast ? 36 : 34;
+        for (int i = 0; i < fine; i++) {
+            streak(vc, matrix, i, age, radius * (blast ? 0.55F : 0.55F + 0.45F * hash(i * 11 + 9)), 1.0F, blast ? 14 : 20,
+                    0.2D + 0.3D * hash(i * 7 + 4), 1.6D + 1.4D * hash(i * 7 + 6), (blast ? 0.03F : 0.014F) * scale, alpha);
+        }
+        if (!blast) {
+            for (int i = 0; i < 9; i++) {
+                streak(vc, matrix, 100 + i, age, radius * (1.5F + 1.7F * hash(i * 13 + 3)), 0.6F, 30,
+                        0.05D + 0.07D * hash(i * 13 + 5), 2.4D + 1.6D * hash(i * 13 + 7), 0.02F * scale, 0.7F * alpha);
             }
-            ribbon(vc, matrix, path, 0.045F * scale, alpha);
         }
 
         // The four blades of the Rasenshuriken
@@ -165,6 +154,30 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
     }
 
     /**
+     * One streak of wind that winds round the middle of the ball in a circle (or an oval, when {@code flatten} is less
+     * than 1) of {@code size}, in a plane of its own. It has a bright head and a tail that fades away.
+     */
+    private static void streak(VertexConsumer vc, Matrix4f matrix, int i, float age, float size, float flatten, int points,
+                               double speed, double span, float halfWidth, float alpha) {
+        double theta = hash(i * 7 + 1) * Math.PI * 2.0D;
+        double z = hash(i * 7 + 2) * 2.0D - 1.0D;
+        double ring = Math.sqrt(1.0D - z * z);
+        Vec3 normal = new Vec3(Math.cos(theta) * ring, z, Math.sin(theta) * ring);
+        Vec3 a = normal.cross(new Vec3(0.0D, 1.0D, 0.0D));
+        a = a.lengthSqr() < 1.0E-4D ? new Vec3(1.0D, 0.0D, 0.0D) : a.normalize();
+        Vec3 b = normal.cross(a).normalize();
+        double sign = hash(i * 7 + 3) < 0.5F ? -1.0D : 1.0D;
+        double head = hash(i * 7 + 5) * Math.PI * 2.0D + age * speed * sign;
+        Vec3[] path = new Vec3[points + 1];
+        for (int j = 0; j <= points; j++) {
+            double angle = head - sign * span * (1.0D - j / (double) points);
+            double wobble = 1.0D + 0.06D * Math.sin(angle * 3.0D + age * 0.3D + i);
+            path[j] = a.scale(Math.cos(angle) * size * wobble).add(b.scale(Math.sin(angle) * size * wobble * flatten));
+        }
+        ribbon(vc, matrix, path, halfWidth, alpha);
+    }
+
+    /**
      * A flat curved blade that sweeps out from the middle: wide near the middle and thin at the tip, bright along its
      * middle and fading at its edges. It lies in the plane of {@code sideA} and {@code sideB}.
      */
@@ -177,7 +190,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
             double rho = reach * (0.3D + 0.75D * t);
             double angle = start + 1.1D * t;
             center[j] = sideA.scale(Math.cos(angle) * rho).add(sideB.scale(Math.sin(angle) * rho));
-            half[j] = reach * 0.17D * Math.pow(1.0D - t, 0.8D) + reach * 0.012D;
+            half[j] = reach * 0.3D * Math.pow(1.0D - t, 0.65D) + reach * 0.015D;
         }
         for (int j = 0; j < steps; j++) {
             Vec3 tangent = center[j + 1].subtract(center[j]);
@@ -190,8 +203,11 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
             Vec3 r0 = center[j].subtract(normal.scale(half[j]));
             Vec3 l1 = center[j + 1].add(normal2.scale(half[j + 1]));
             Vec3 r1 = center[j + 1].subtract(normal2.scale(half[j + 1]));
-            quad(vc, matrix, l0, COOL, 0.0F, center[j], HOT, head * alpha, center[j + 1], HOT, head2 * alpha, l1, COOL, 0.0F);
-            quad(vc, matrix, center[j], HOT, head * alpha, r0, COOL, 0.0F, r1, COOL, 0.0F, center[j + 1], HOT, head2 * alpha);
+            // A solid pale blue blade with a white edge
+            quad(vc, matrix, l0, HOT, 0.95F * head * alpha, center[j], BODY, 0.55F * head * alpha,
+                    center[j + 1], BODY, 0.55F * head2 * alpha, l1, HOT, 0.95F * head2 * alpha);
+            quad(vc, matrix, center[j], BODY, 0.55F * head * alpha, r0, HOT, 0.95F * head * alpha,
+                    r1, HOT, 0.95F * head2 * alpha, center[j + 1], BODY, 0.55F * head2 * alpha);
         }
     }
 
