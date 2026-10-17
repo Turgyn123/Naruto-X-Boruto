@@ -1,7 +1,7 @@
 package net.narutoxboruto.items.jutsus;
 
 /**
- * Rasengan V3: a test version of the Rasengan with a look of its own, a glowing orb held by three thin spinning rings with jagged bolts inside it, like a gyroscope. It works
+ * Rasengan V3: a test version of the Rasengan with a look of its own, a cyclone of five arms of wind spiralling out of the middle in a flat disc round the ball. It works
  * exactly like the Rasengan.
  */
 public class RasenganV3 extends Rasengan {
