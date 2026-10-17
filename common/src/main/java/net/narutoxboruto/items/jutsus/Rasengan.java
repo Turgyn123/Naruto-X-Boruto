@@ -48,6 +48,6 @@ public class Rasengan extends ChargedSphereJutsu {
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, context, tooltip, flag);
         tooltip.add(Component.literal("Rank: A").withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.literal("Right click to form it, left click to strike").withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.literal("Right click to form it, punch something to explode it").withStyle(ChatFormatting.GRAY));
     }
 }

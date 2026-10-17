@@ -33,8 +33,8 @@ import java.util.UUID;
  * {@code ChakraSphereRenderer}). It is made in the hand of the caster by a right click, grows, and waits there. A left click
  * (a punch) uses it, and then:
  * <ul>
- *   <li>Rasengan: the caster dashes forward with it and it is driven into the first living thing in the way, which
- *       it hits hard and throws away.</li>
+ *   <li>Rasengan: only a punch that hits a living thing uses it: it explodes there, hurting what was hit most and
+ *       everything near it less, and throws them away. It never hurts the caster.</li>
  *   <li>Rasenshuriken: it is thrown and flies straight. Where it hits it grows into a huge sphere of blades that cuts
  *       everything in it, pulls it in and slows it, and bursts at the end.</li>
  * </ul>
@@ -57,6 +57,9 @@ public class ChakraSphereEntity extends Entity {
     public static final int RASENGAN_THRUST_TICKS = 10;
     public static final int RASENGAN_BURST_TICKS = 10;
     private static final float RASENGAN_DAMAGE = 18.0F;
+    /** How far a punch reaches, and how far the explosion of the Rasengan reaches. */
+    private static final double PUNCH_REACH = 3.5D;
+    private static final double RASENGAN_BLAST_RADIUS = 3.5D;
     /** The Rasenshuriken: how fast and how far it flies, and the sphere of blades it becomes. */
     private static final double SHURIKEN_SPEED = 1.2D;
     public static final int SHURIKEN_FLIGHT_TICKS = 40;
@@ -73,6 +76,8 @@ public class ChakraSphereEntity extends Entity {
     private static final EntityDataAccessor<Integer> OWNER_ID = SynchedEntityData.defineId(ChakraSphereEntity.class, EntityDataSerializers.INT);
 
     private UUID owner;
+    /** The living thing the Rasengan was punched into. */
+    private LivingEntity punchedTarget;
     /** Whether the caster was swinging their arm a tick ago. It starts as true, so the swing of the right click that made the sphere is not taken for a punch. */
     private boolean wasSwinging = true;
     /** The sphere is put away if it is not used in 30 seconds. */
@@ -102,7 +107,7 @@ public class ChakraSphereEntity extends Entity {
     // ---------------------------------------------------------------- spawning and using
 
     /**
-     * Where the sphere is held. The Rasengan: a little in front of the caster, to the right and low, like in a hand.
+     * Where the sphere is held. The Rasengan: in the right hand of the caster.
      * The Rasenshuriken: above the head of the caster, like a hand held up high.
      */
     public static Vec3 handPosition(Entity caster, int kind, float partialTick) {
@@ -112,9 +117,11 @@ public class ChakraSphereEntity extends Entity {
             flat = flat.lengthSqr() < 1.0E-4D ? Vec3.ZERO : flat.normalize().scale(0.3D);
             return caster.getEyePosition(partialTick).add(0.0D, 1.0D, 0.0D).add(flat);
         }
-        Vec3 right = new Vec3(-look.z, 0.0D, look.x);
-        right = right.lengthSqr() < 1.0E-4D ? new Vec3(1.0D, 0.0D, 0.0D) : right.normalize();
-        return caster.getEyePosition(partialTick).add(look.scale(1.05D)).add(right.scale(0.5D)).add(0.0D, -0.5D, 0.0D);
+        // The Rasengan is in the right hand of the body, a little in front of it, wherever the caster looks
+        double yaw = Math.toRadians(caster instanceof LivingEntity living ? Mth.rotLerp(partialTick, living.yBodyRotO, living.yBodyRot) : caster.getYRot());
+        Vec3 forward = new Vec3(-Math.sin(yaw), 0.0D, Math.cos(yaw));
+        Vec3 right = new Vec3(-Math.cos(yaw), 0.0D, -Math.sin(yaw));
+        return caster.getPosition(partialTick).add(right.scale(0.38D)).add(forward.scale(0.62D)).add(0.0D, caster.getBbHeight() * 0.5D, 0.0D);
     }
 
     /** A sphere of {@code kind} charging in the hand of {@code caster}. */
@@ -154,6 +161,10 @@ public class ChakraSphereEntity extends Entity {
     /** The caster uses the charged sphere: the Rasengan is driven forward, the Rasenshuriken is thrown. */
     public void release(ServerPlayer caster) {
         if (phase != CHARGING) return;
+        if (getKind() == RASENGAN) {
+            explodeRasengan(caster);
+            return;
+        }
         enterPhase(ACTIVE);
         if (getKind() == RASENSHURIKEN) {
             Vec3 look = caster.getLookAngle().normalize();
@@ -196,11 +207,53 @@ public class ChakraSphereEntity extends Entity {
         return punched;
     }
 
-    /** A left click uses the sphere once it has grown. */
+    /**
+     * A left click uses the sphere once it has grown. The Rasengan is only used when the punch hits a living thing in reach;
+     * a punch at the air or at a block does nothing and the sphere stays. The Rasenshuriken is thrown by any punch.
+     */
     private void useIfPunched(ServerPlayer caster) {
         if (!punched(caster) || !isCharged()) return;
         ChargedSphereJutsu jutsu = heldJutsu(caster);
-        if (jutsu != null) jutsu.strike(caster, this);
+        if (jutsu == null) return;
+        if (getKind() == RASENGAN) {
+            punchedTarget = findPunchedTarget(caster);
+            if (punchedTarget == null) return;
+        }
+        jutsu.strike(caster, this);
+    }
+
+    /** The living thing in front of the caster, in reach of a punch, that is not the caster, or null. */
+    private LivingEntity findPunchedTarget(ServerPlayer caster) {
+        Vec3 eye = caster.getEyePosition();
+        Vec3 end = eye.add(caster.getLookAngle().scale(PUNCH_REACH));
+        EntityHitResult hit = ProjectileUtil.getEntityHitResult(caster.level(), caster, eye, end, new AABB(eye, end).inflate(1.0D),
+                e -> e instanceof LivingEntity && e.isAlive() && e != caster && !e.isSpectator());
+        return hit != null && hit.getEntity() instanceof LivingEntity living ? living : null;
+    }
+
+    /**
+     * The Rasengan explodes where it hit: the one that was punched takes the full damage, everything else near it takes
+     * less, and all of them are thrown away from the middle of it. It never hurts the caster, and it does not break blocks.
+     */
+    private void explodeRasengan(ServerPlayer caster) {
+        if (!(level() instanceof ServerLevel serverLevel)) return;
+        LivingEntity hit = punchedTarget;
+        Vec3 centre = hit != null ? hit.position().add(0.0D, hit.getBbHeight() * 0.5D, 0.0D) : position();
+        setPos(centre.x, centre.y, centre.z);
+        for (LivingEntity target : serverLevel.getEntitiesOfClass(LivingEntity.class, new AABB(centre, centre).inflate(RASENGAN_BLAST_RADIUS),
+                e -> e != caster && e.isAlive() && !e.isSpectator())) {
+            Vec3 away = target.position().add(0.0D, target.getBbHeight() * 0.5D, 0.0D).subtract(centre);
+            double distance = away.length();
+            if (target != hit && distance > RASENGAN_BLAST_RADIUS) continue;
+            float damage = target == hit ? RASENGAN_DAMAGE : RASENGAN_DAMAGE * 0.55F * (float) (1.0D - distance / RASENGAN_BLAST_RADIUS * 0.6D);
+            target.invulnerableTime = 0;
+            target.hurt(sphereSource(caster), damage);
+            Vec3 push = distance < 1.0E-3D ? caster.getLookAngle() : away.normalize();
+            target.setDeltaMovement(push.x * 1.6D, 0.5D, push.z * 1.6D);
+            target.hurtMarked = true;
+        }
+        serverLevel.playSound(null, centre.x, centre.y, centre.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 2.0F, 1.3F);
+        enterPhase(IMPACT);
     }
 
     // ---------------------------------------------------------------- ticking
@@ -237,25 +290,6 @@ public class ChakraSphereEntity extends Entity {
                 serverLevel.playSound(null, hand.x, hand.y, hand.z, SoundEvents.BEACON_AMBIENT, SoundSource.PLAYERS, 0.4F, 1.8F);
             }
             useIfPunched(caster);
-        } else if (phase == ACTIVE) {
-            Vec3 hand = handPosition(caster, RASENGAN, 1.0F);
-            setPos(hand.x, hand.y, hand.z);
-            setRot(caster.getYRot(), caster.getXRot());
-            // The caster dashes forward with it
-            Vec3 look = caster.getLookAngle();
-            caster.setDeltaMovement(look.x * 0.95D, Math.max(caster.getDeltaMovement().y, 0.0D) * 0.5D, look.z * 0.95D);
-            caster.hurtMarked = true;
-            for (LivingEntity target : serverLevel.getEntitiesOfClass(LivingEntity.class, new AABB(hand, hand).inflate(1.5D),
-                    e -> e != caster && e.isAlive() && !e.isSpectator())) {
-                target.invulnerableTime = 0;
-                target.hurt(sphereSource(caster), RASENGAN_DAMAGE);
-                target.setDeltaMovement(look.x * 2.2D, 0.55D, look.z * 2.2D);
-                target.hurtMarked = true;
-                serverLevel.playSound(null, hand.x, hand.y, hand.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 1.6F, 1.5F);
-                enterPhase(IMPACT);
-                break;
-            }
-            if (phase == ACTIVE && phaseTicks >= RASENGAN_THRUST_TICKS) discard();
         } else if (phaseTicks >= RASENGAN_BURST_TICKS) {
             discard();
         }
