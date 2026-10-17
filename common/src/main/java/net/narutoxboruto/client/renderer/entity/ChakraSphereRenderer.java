@@ -2,6 +2,7 @@ package net.narutoxboruto.client.renderer.entity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.math.Axis;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderer;
@@ -11,6 +12,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
+import net.narutoxboruto.client.model.FireBallModel;
 import net.narutoxboruto.entities.jutsus.ChakraSphereEntity;
 import net.narutoxboruto.main.Main;
 import org.joml.Matrix4f;
@@ -20,8 +22,7 @@ import org.joml.Matrix4f;
  * the same textures, the white streaks of wind (wind_streak) on ribbons that spiral and scroll, and the white crescent
  * blades (crescent), in the same near white colour.
  * <ul>
- *   <li>Rasengan: a ball made only of lines, a tangle of thin ribbons of wind (see {@link #rasenganLines}) round a
- *       white heart.</li>
+ *   <li>Rasengan: the same kind of model as the Great Fireball, in blue and white (see {@link #rasenganModel}).</li>
  *   <li>Rasenshuriken: held up above the head of the caster while it is charged. The same ball, with four big
  *       crescent blades like the blades of the fan turning round it in a pinwheel. Thrown, ribbons of wind spiral
  *       behind it like the wind of the fan. Where it hits it grows into a huge ball of ribbons with pinwheels turning
@@ -33,12 +34,16 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
     private static final ResourceLocation WIND_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/wind_streak.png");
     private static final ResourceLocation CRESCENT_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/crescent.png");
     private static final ResourceLocation WHITE_TEXTURE = ResourceLocation.withDefaultNamespace("textures/misc/white.png");
+    private static final ResourceLocation RASENGAN_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/rasengan.png");
     private static final int FULL_BRIGHT = 0xF000F0;
     /** The colour of the wind of the Giant Fan: white with a touch of blue. */
     private static final float[] WIND = {0.94F, 0.96F, 1.0F};
 
+    private final FireBallModel ball;
+
     public ChakraSphereRenderer(EntityRendererProvider.Context context) {
         super(context);
+        this.ball = new FireBallModel(context.bakeLayer(FireBallModel.LAYER_LOCATION));
     }
 
     @Override
@@ -116,7 +121,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
 
         Matrix4f matrix = poseStack.last().pose();
         if (!shuriken) {
-            rasenganLines(bufferSource, matrix, radius, age, alpha);
+            rasenganModel(bufferSource, poseStack, radius, age, alpha);
             poseStack.popPose();
             return;
         }
@@ -162,53 +167,24 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
     }
 
     /**
-     * The Rasengan: a ball that is made of lines and nothing else, like thread wound round a ball of air, as the Rasengan
-     * is drawn in the anime. About 70 thin ribbons of wind, with the white streak texture of the wind of the Giant
-     * Fan on them, lie across each other on and just under the surface of the ball. Each one is a part of a circle
-     * round the middle in a plane of its own and turns round the ball at its own speed, so the tangle is always
-     * changing. A small white heart glows in the middle.
+     * The Rasengan: the same kind of model as the Great Fireball (see {@code FireBallModel}), nested cubes that spin on all
+     * axes, with a texture of the same kind in blue and white, drawn the same way: glowing and see-through. It turns
+     * like the fireball does.
      */
-    private void rasenganLines(MultiBufferSource bufferSource, Matrix4f matrix, float radius, float age, float alpha) {
-        VertexConsumer white = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(WHITE_TEXTURE));
-        roundBall(white, matrix, radius * 0.2F, 1.0F, 1.0F, 1.0F, 0.95F * alpha);
-        roundBall(white, matrix, radius * 0.45F, 0.7F, 0.9F, 1.0F, 0.3F * alpha);
-        VertexConsumer wind = bufferSource.getBuffer(RenderType.entityTranslucent(WIND_TEXTURE));
-        int lines = 70;
-        int segments = 10;
-        for (int i = 0; i < lines; i++) {
-            // A circle round the middle of the ball, in a plane of its own
-            double theta = hash(i * 7 + 1) * Math.PI * 2.0D;
-            double z = hash(i * 7 + 2) * 2.0D - 1.0D;
-            double ring = Math.sqrt(1.0D - z * z);
-            Vec3 normal = new Vec3(Math.cos(theta) * ring, z, Math.sin(theta) * ring);
-            Vec3 a = normal.cross(new Vec3(0.0D, 1.0D, 0.0D));
-            a = a.lengthSqr() < 1.0E-4D ? new Vec3(1.0D, 0.0D, 0.0D) : a.normalize();
-            Vec3 b = normal.cross(a).normalize();
-            double direction = hash(i * 7 + 3) < 0.5F ? -1.0D : 1.0D;
-            double start = hash(i * 7 + 4) * Math.PI * 2.0D + age * direction * (0.04D + 0.16D * hash(i * 7 + 5));
-            double span = 1.3D + 1.4D * hash(i * 7 + 6);
-            // Some lie on the surface and some a little under it, so the tangle has some depth
-            double size = radius * (0.72D + 0.28D * hash(i * 7 + 8));
-            Vec3 side = normal.scale(radius * 0.04D);
-            Vec3 previous = null;
-            for (int s = 0; s <= segments; s++) {
-                float t = s / (float) segments;
-                double angle = start + span * t;
-                Vec3 point = a.scale(Math.cos(angle) * size).add(b.scale(Math.sin(angle) * size));
-                if (previous != null) {
-                    float t0 = (s - 1) / (float) segments;
-                    float a0 = alpha * 0.9F * Math.min(1.0F, Math.min(t0 * 4.0F, (1.0F - t0) * 4.0F));
-                    float a1 = alpha * 0.9F * Math.min(1.0F, Math.min(t * 4.0F, (1.0F - t) * 4.0F));
-                    float u0 = t0 * 1.5F - age * 0.1F * (float) direction + i * 0.31F;
-                    float u1 = t * 1.5F - age * 0.1F * (float) direction + i * 0.31F;
-                    texturedVertex(wind, matrix, previous.add(side), u0, 0.0F, a0, 0.75F, 0.9F, 1.0F);
-                    texturedVertex(wind, matrix, previous.subtract(side), u0, 1.0F, a0, 0.75F, 0.9F, 1.0F);
-                    texturedVertex(wind, matrix, point.subtract(side), u1, 1.0F, a1, 0.75F, 0.9F, 1.0F);
-                    texturedVertex(wind, matrix, point.add(side), u1, 0.0F, a1, 0.75F, 0.9F, 1.0F);
-                }
-                previous = point;
-            }
-        }
+    private void rasenganModel(MultiBufferSource bufferSource, PoseStack poseStack, float radius, float age, float alpha) {
+        if (alpha < 0.01F) return;
+        VertexConsumer vc = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(RASENGAN_TEXTURE));
+        // The middle cube of the model is a block wide
+        float scale = radius * 2.0F;
+        float rotation = age * 15.0F;
+        poseStack.pushPose();
+        poseStack.scale(scale, scale, scale);
+        poseStack.mulPose(Axis.YP.rotationDegrees(rotation));
+        poseStack.mulPose(Axis.XP.rotationDegrees(rotation * 0.7F));
+        poseStack.mulPose(Axis.ZP.rotationDegrees(rotation * 0.3F));
+        int color = (Math.max(0, Math.min(255, (int) (alpha * 255.0F))) << 24) | 0xFFFFFF;
+        ball.renderToBuffer(poseStack, vc, FULL_BRIGHT, OverlayTexture.NO_OVERLAY, color);
+        poseStack.popPose();
     }
 
     /**
