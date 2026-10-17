@@ -6,37 +6,36 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 import net.narutoxboruto.entities.jutsus.ChakraSphereEntity;
+import net.narutoxboruto.main.Main;
 import org.joml.Matrix4f;
 
 /**
- * Draws the {@link ChakraSphereEntity} in the same style as the lightning of the Lightning Chakra Mode: no models and
- * no textures, only flat, hard coloured shapes with angular corners that are added to the light of the world. Like the
- * lightning, a streak is made of three flat layers (a white core, a light blue middle and a wide soft blue glow) and
- * is made of a few straight pieces, so it looks angular and a bit blocky, like Minecraft, and not smooth and real.
+ * Draws the {@link ChakraSphereEntity} in the style of the wind of the Giant Fan (see {@code WeaponEffectRenderer}): with
+ * the same textures, the white streaks of wind (wind_streak) on ribbons that spiral and scroll, and the white crescent
+ * blades (crescent), in the same near white colour.
  * <ul>
- *   <li>Rasengan: a ball of flat facets (a white heart in a blue ball) covered with a tangle of fine thin lines, with a
- *       few short rays shooting out of it, as in the anime.</li>
- *   <li>Rasenshuriken: held up above the head of the caster while it is charged. The same ball with four big curved
- *       blades of flat colour with a white edge turning round it. Where it hits it grows into a huge ball of streaks
- *       with blades turning in three planes.</li>
+ *   <li>Rasengan: a ball made of ribbons of wind that spiral from one end of the ball to the other and turn round it,
+ *       an outer layer one way and an inner layer the other way, round a soft white heart.</li>
+ *   <li>Rasenshuriken: held up above the head of the caster while it is charged. The same ball, with four big
+ *       crescent blades like the blades of the fan turning round it in a pinwheel. Thrown, ribbons of wind spiral
+ *       behind it like the wind of the fan. Where it hits it grows into a huge ball of ribbons with pinwheels turning
+ *       in three planes.</li>
  * </ul>
  */
 public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
 
-    private static final ResourceLocation TEXTURE = ResourceLocation.withDefaultNamespace("textures/misc/white.png");
-
-    // The three layers of a streak, as in the lightning: white core, light blue middle, wide blue glow
-    private static final float[][] LAYER_RGB = {{1.0F, 1.0F, 1.0F}, {0.45F, 0.82F, 1.0F}, {0.18F, 0.55F, 1.0F}};
-    private static final float[] LAYER_WIDTH = {0.42F, 1.0F, 3.0F};
-    private static final float[] LAYER_ALPHA = {1.0F, 0.85F, 0.22F};
-    // Each layer is turned by a different angle, so no two layers lie in the same plane and fight over the same pixels
-    private static final float[] LAYER_COS = {1.0F, (float) Math.cos(Math.PI / 6), (float) Math.cos(Math.PI / 3)};
-    private static final float[] LAYER_SIN = {0.0F, (float) Math.sin(Math.PI / 6), (float) Math.sin(Math.PI / 3)};
+    private static final ResourceLocation WIND_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/wind_streak.png");
+    private static final ResourceLocation CRESCENT_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/crescent.png");
+    private static final ResourceLocation WHITE_TEXTURE = ResourceLocation.withDefaultNamespace("textures/misc/white.png");
+    private static final int FULL_BRIGHT = 0xF000F0;
+    /** The colour of the wind of the Giant Fan: white with a touch of blue. */
+    private static final float[] WIND = {0.94F, 0.96F, 1.0F};
 
     public ChakraSphereRenderer(EntityRendererProvider.Context context) {
         super(context);
@@ -115,170 +114,151 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         across = across.lengthSqr() < 1.0E-4D ? new Vec3(1.0D, 0.0D, 0.0D) : across.normalize();
         Vec3 up = aim.cross(across).normalize();
 
-        VertexConsumer vc = bufferSource.getBuffer(RenderType.lightning());
         Matrix4f matrix = poseStack.last().pose();
-        float scale = Math.max(radius, reach * 0.35F) / 0.35F;
-        // The streaks jump from shape to shape 10 times a second, like the bolts of the lightning
-        int jump = (int) (age * 0.5F);
+        float ribbonAlpha = 0.94F * alpha;
 
-        // The ball, drawn first so that it hides the streaks behind it: a white heart in a blue ball, so it is white in
-        // the middle and blue at the edge, each of a few flat facets of its own shade, so it is round but blocky
+        // The soft heart of the ball: a translucent ball with a white core in it
+        RenderType whiteType = RenderType.entityTranslucentEmissive(WHITE_TEXTURE);
+        VertexConsumer white = bufferSource.getBuffer(whiteType);
         if (!blast) {
-            facetSphere(vc, matrix, radius * 0.28F, 1.0F, 1.0F, 1.0F, 0.9F * alpha, 7);
-            facetSphere(vc, matrix, radius * 0.55F, 0.75F, 0.93F, 1.0F, 0.4F * alpha, 17);
-            facetSphere(vc, matrix, radius * 0.97F, 0.35F, 0.68F, 1.0F, 0.5F * alpha, 31);
-            // A tangle of fine thin lines over the whole ball, as in the anime, turning slowly
-            yarn(vc, matrix, radius * 1.01F, age, jump, shuriken ? 38 : 46, 0.009F * scale, alpha);
-            if (!shuriken) {
-                // A few short straight rays shoot out of it
-                for (int i = 0; i < 14; i++) {
-                    Vec3 dir = randomDirection(i * 5 + jump * 11);
-                    double from = radius * (1.1D + 0.1D * hash(i * 3 + jump));
-                    double to = radius * (1.5D + 0.9D * hash(i * 7 + jump * 3));
-                    bolt(vc, matrix, new Vec3[]{dir.scale(from), dir.scale(to)}, 0.012F * scale, 0.7F * alpha);
-                }
-            }
+            roundBall(white, matrix, radius * 0.97F, 0.72F, 0.88F, 1.0F, 0.3F * alpha);
+            roundBall(white, matrix, radius * 0.4F, 1.0F, 1.0F, 1.0F, 0.85F * alpha);
         } else {
-            facetSphere(vc, matrix, radius, 0.35F, 0.7F, 1.0F, 0.08F * alpha, 41);
-            yarn(vc, matrix, radius * 0.98F, age, jump, 70, 0.02F * scale, alpha);
+            roundBall(white, matrix, radius, 0.72F, 0.88F, 1.0F, 0.1F * alpha);
         }
 
-        // The four big blades of the Rasenshuriken, across the way it is aimed
+        // The ribbons of wind spiralling round the ball, as in the wind of the Giant Fan
+        VertexConsumer wind = bufferSource.getBuffer(RenderType.entityTranslucent(WIND_TEXTURE));
+        int ribbons = blast ? 14 : 8;
+        windBall(wind, matrix, aim, across, up, radius, age, ribbons, 1.0F, ribbonAlpha);
+        windBall(wind, matrix, aim, across, up, radius * 0.7F, age, ribbons - 2, -1.3F, ribbonAlpha * 0.9F);
+        // Thrown, ribbons of wind spiral behind the Rasenshuriken like the wind of the fan
+        if (shuriken && phase == ChakraSphereEntity.ACTIVE) {
+            for (int r = 0; r < 4; r++) {
+                trail(wind, matrix, aim, across, up, reach, age, r, ribbonAlpha);
+            }
+        }
+
+        // The four big crescent blades of the Rasenshuriken, across the way it is aimed
         if (shuriken) {
+            VertexConsumer crescent = bufferSource.getBuffer(RenderType.entityTranslucent(CRESCENT_TEXTURE));
             int sets = blast ? 3 : 1;
             for (int k = 0; k < sets; k++) {
                 Vec3 axis = k == 0 ? aim : (k == 1 ? across : up);
                 Vec3 sideA = k == 0 ? across : (k == 1 ? up : aim);
                 Vec3 sideB = axis.cross(sideA).normalize();
-                float spin = (float) (Math.floor(age * 0.5F) * 0.3D * (0.5F + 0.12F * k)) * (k == 1 ? -1.0F : 1.0F) * 3.3F;
+                float spin = age * (0.35F + 0.1F * k) * (k == 1 ? -1.0F : 1.0F);
                 for (int blade = 0; blade < 4; blade++) {
-                    blade(vc, matrix, axis, sideA, sideB, reach, spin + blade * (float) (Math.PI / 2.0D), alpha * (blast ? 0.7F : 1.0F));
+                    crescentBlade(crescent, matrix, axis, sideA, sideB, reach, spin + blade * (float) (Math.PI / 2.0D), alpha * (blast ? 0.7F : 0.95F));
                 }
             }
         }
         poseStack.popPose();
     }
 
-    /** A direction that points anywhere, always the same for the same number. */
-    private static Vec3 randomDirection(int n) {
-        double theta = hash(n * 7 + 1) * Math.PI * 2.0D;
-        double z = hash(n * 7 + 2) * 2.0D - 1.0D;
-        double ring = Math.sqrt(1.0D - z * z);
-        return new Vec3(Math.cos(theta) * ring, z, Math.sin(theta) * ring);
-    }
-
     /**
-     * A tangle of fine thin lines over the surface of a ball, like thread wound round it, as the Rasengan is drawn in
-     * the anime. Every line is a part of a circle round the middle of the ball, made of a few straight pieces, and the
-     * whole tangle turns slowly round the ball.
+     * Ribbons of wind that spiral over the surface of a ball from one end of it (towards the way it is aimed) to the
+     * other, and turn round it. The texture of the wind streaks runs along the ribbons and scrolls.
      */
-    private static void yarn(VertexConsumer vc, Matrix4f matrix, float radius, float age, int jump, int lines, float halfWidth, float alpha) {
-        double turn = age * 0.06D;
-        double cos = Math.cos(turn);
-        double sin = Math.sin(turn);
-        for (int i = 0; i < lines; i++) {
-            Vec3 normal = randomDirection(i * 3 + 50);
-            Vec3 a = normal.cross(new Vec3(0.0D, 1.0D, 0.0D));
-            a = a.lengthSqr() < 1.0E-4D ? new Vec3(1.0D, 0.0D, 0.0D) : a.normalize();
-            Vec3 b = normal.cross(a).normalize();
-            double start = hash(i * 3 + 51) * Math.PI * 2.0D;
-            double span = 0.7D + 1.1D * hash(i * 3 + 52);
-            int points = 6;
-            Vec3[] path = new Vec3[points + 1];
-            for (int j = 0; j <= points; j++) {
-                double angle = start + span * j / points;
-                // A little knocked out of line, and a little different from time to time
-                double kink = 1.0D + 0.04D * (hash(i * 23 + j * 5 + jump) - 0.5D);
-                Vec3 point = a.scale(Math.cos(angle)).add(b.scale(Math.sin(angle))).scale(radius * kink);
-                // The tangle turns round the up axis
-                path[j] = new Vec3(point.x * cos - point.z * sin, point.y, point.x * sin + point.z * cos);
-            }
-            bolt(vc, matrix, path, halfWidth, alpha);
-        }
-    }
-
-    /**
-     * A streak along {@code path}: thin at its tail and wide at its head, in the three flat layers of the lightning.
-     * Every layer is two ribbons across each other, turned by the angle of its layer.
-     */
-    private static void bolt(VertexConsumer vc, Matrix4f matrix, Vec3[] path, float halfWidth, float alpha) {
-        int n = path.length - 1;
-        for (int layer = 2; layer >= 0; layer--) {
-            float[] rgb = LAYER_RGB[layer];
-            float a = LAYER_ALPHA[layer] * alpha;
-            for (int j = 0; j < n; j++) {
-                Vec3 direction = path[j + 1].subtract(path[j]);
-                if (direction.lengthSqr() < 1.0E-10D) continue;
-                direction = direction.normalize();
-                Vec3 ref = Math.abs(direction.y) > 0.9D ? new Vec3(1.0D, 0.0D, 0.0D) : new Vec3(0.0D, 1.0D, 0.0D);
-                Vec3 u = direction.cross(ref).normalize();
-                Vec3 w = direction.cross(u).normalize();
-                double w0 = halfWidth * LAYER_WIDTH[layer] * (0.2D + 0.8D * j / n);
-                double w1 = halfWidth * LAYER_WIDTH[layer] * (0.2D + 0.8D * (j + 1) / n);
-                // The layer's own angle
-                Vec3 sideA = u.scale(LAYER_COS[layer]).add(w.scale(LAYER_SIN[layer]));
-                Vec3 sideB = w.scale(LAYER_COS[layer]).subtract(u.scale(LAYER_SIN[layer]));
-                for (Vec3 side : new Vec3[]{sideA, sideB}) {
-                    quad(vc, matrix, path[j].add(side.scale(w0)), path[j].subtract(side.scale(w0)),
-                            path[j + 1].subtract(side.scale(w1)), path[j + 1].add(side.scale(w1)), rgb[0], rgb[1], rgb[2], a);
+    private static void windBall(VertexConsumer vc, Matrix4f matrix, Vec3 aim, Vec3 across, Vec3 up, float radius, float age,
+                                 int ribbons, float turnSpeed, float alpha) {
+        int segments = 14;
+        for (int r = 0; r < ribbons; r++) {
+            float offset = r * (float) (Math.PI * 2.0D / ribbons);
+            Vec3 previous = null;
+            Vec3 previousSide = null;
+            float previousT = 0.0F;
+            for (int s = 0; s <= segments; s++) {
+                float t = s / (float) segments;
+                double polar = Math.PI * t;
+                double azimuth = offset + t * Math.PI * 3.0D + age * 0.18D * turnSpeed;
+                Vec3 radial = aim.scale(Math.cos(polar))
+                        .add(across.scale(Math.sin(polar) * Math.cos(azimuth)))
+                        .add(up.scale(Math.sin(polar) * Math.sin(azimuth)));
+                Vec3 point = radial.scale(radius);
+                // Across the ribbon, along the surface of the ball
+                double nextPolar = Math.PI * Math.min(1.0F, t + 0.02F);
+                double nextAzimuth = offset + Math.min(1.0F, t + 0.02F) * Math.PI * 3.0D + age * 0.18D * turnSpeed;
+                Vec3 nextRadial = aim.scale(Math.cos(nextPolar))
+                        .add(across.scale(Math.sin(nextPolar) * Math.cos(nextAzimuth)))
+                        .add(up.scale(Math.sin(nextPolar) * Math.sin(nextAzimuth)));
+                Vec3 tangent = nextRadial.subtract(radial);
+                Vec3 side = radial.cross(tangent);
+                side = side.lengthSqr() < 1.0E-10D ? up : side.normalize();
+                side = side.scale(radius * 0.17D * (0.4D + 0.6D * Math.sin(Math.PI * t)));
+                if (previous != null) {
+                    float a0 = alpha * Math.min(1.0F, Math.min(previousT * 5.0F, (1.0F - previousT) * 5.0F));
+                    float a1 = alpha * Math.min(1.0F, Math.min(t * 5.0F, (1.0F - t) * 5.0F));
+                    float u0 = previousT * 2.0F - age * 0.12F + r * 0.33F;
+                    float u1 = t * 2.0F - age * 0.12F + r * 0.33F;
+                    texturedVertex(vc, matrix, previous.add(previousSide), u0, 0.0F, a0);
+                    texturedVertex(vc, matrix, previous.subtract(previousSide), u0, 1.0F, a0);
+                    texturedVertex(vc, matrix, point.subtract(side), u1, 1.0F, a1);
+                    texturedVertex(vc, matrix, point.add(side), u1, 0.0F, a1);
                 }
+                previous = point;
+                previousSide = side;
+                previousT = t;
             }
         }
     }
 
-    /**
-     * A big curved blade that sweeps out from the middle, made of a few straight pieces: wide near the middle and
-     * pointed at the tip, flat light blue, with a wide blue glow under it and a white edge on its leading side. It lies
-     * in the plane of {@code sideA} and {@code sideB}.
-     */
-    private static void blade(VertexConsumer vc, Matrix4f matrix, Vec3 axis, Vec3 sideA, Vec3 sideB, float reach, float start, float alpha) {
-        int steps = 6;
-        Vec3[] center = new Vec3[steps + 1];
-        double[] half = new double[steps + 1];
-        for (int j = 0; j <= steps; j++) {
-            double t = j / (double) steps;
-            double rho = reach * (0.3D + 0.75D * t);
-            double angle = start + 1.1D * t;
-            center[j] = sideA.scale(Math.cos(angle) * rho).add(sideB.scale(Math.sin(angle) * rho));
-            half[j] = reach * 0.3D * Math.pow(1.0D - t, 0.65D) + reach * 0.015D;
+    /** A ribbon of wind that spirals around the way the Rasenshuriken flies, behind it, like the wind of the fan. */
+    private static void trail(VertexConsumer vc, Matrix4f matrix, Vec3 aim, Vec3 across, Vec3 up, float reach, float age, int r, float alpha) {
+        int segments = 12;
+        float length = 4.0F;
+        Vec3[] inner = new Vec3[segments + 1];
+        Vec3[] outer = new Vec3[segments + 1];
+        for (int s = 0; s <= segments; s++) {
+            float t = s / (float) segments;
+            double angle = r * Math.PI / 2.0D + t * 5.0D + age * 0.9D;
+            double ring = reach * (0.25D + 0.4D * t);
+            double width = reach * 0.18D * (0.5D + t);
+            Vec3 centre = aim.scale(-t * length).add(across.scale(Math.cos(angle)).add(up.scale(Math.sin(angle))).scale(ring));
+            Vec3 outward = across.scale(Math.cos(angle)).add(up.scale(Math.sin(angle)));
+            inner[s] = centre.subtract(outward.scale(width * 0.5D));
+            outer[s] = centre.add(outward.scale(width * 0.5D));
         }
-        Vec3[] left = new Vec3[steps + 1];
-        Vec3[] right = new Vec3[steps + 1];
-        for (int j = 0; j <= steps; j++) {
-            Vec3 tangent = j < steps ? center[j + 1].subtract(center[j]) : center[j].subtract(center[j - 1]);
-            Vec3 normal = axis.cross(tangent).normalize();
-            left[j] = center[j].add(normal.scale(half[j]));
-            right[j] = center[j].subtract(normal.scale(half[j]));
-        }
-        // Three flat layers a little apart along the axis: the wide glow at the back, the body, the white edge in front
-        double apart = reach * 0.012D;
-        for (int layer = 0; layer < 3; layer++) {
-            Vec3 lift = axis.scale((layer - 1) * apart);
-            for (int j = 0; j < steps; j++) {
-                if (layer == 0) {
-                    // The glow: wider than the blade
-                    Vec3 gl0 = center[j].add(left[j].subtract(center[j]).scale(1.5D)).add(lift);
-                    Vec3 gr0 = center[j].add(right[j].subtract(center[j]).scale(1.5D)).add(lift);
-                    Vec3 gl1 = center[j + 1].add(left[j + 1].subtract(center[j + 1]).scale(1.5D)).add(lift);
-                    Vec3 gr1 = center[j + 1].add(right[j + 1].subtract(center[j + 1]).scale(1.5D)).add(lift);
-                    quad(vc, matrix, gl0, gr0, gr1, gl1, 0.18F, 0.55F, 1.0F, 0.22F * alpha);
-                } else if (layer == 1) {
-                    quad(vc, matrix, left[j].add(lift), right[j].add(lift), right[j + 1].add(lift), left[j + 1].add(lift), 0.45F, 0.82F, 1.0F, 0.6F * alpha);
-                } else {
-                    // The white edge, along the leading side of the blade
-                    Vec3 edge = center[j].add(left[j].subtract(center[j]).scale(0.78D)).add(lift);
-                    Vec3 edge1 = center[j + 1].add(left[j + 1].subtract(center[j + 1]).scale(0.78D)).add(lift);
-                    quad(vc, matrix, left[j].add(lift), edge, edge1, left[j + 1].add(lift), 1.0F, 1.0F, 1.0F, 0.95F * alpha);
-                }
-            }
+        for (int s = 0; s < segments; s++) {
+            float t0 = s / (float) segments;
+            float t1 = (s + 1) / (float) segments;
+            float a0 = alpha * Math.min(1.0F, Math.min(t0 * 5.0F, (1.0F - t0) * 5.0F)) * 0.8F;
+            float a1 = alpha * Math.min(1.0F, Math.min(t1 * 5.0F, (1.0F - t1) * 5.0F)) * 0.8F;
+            float u0 = t0 * 2.0F - age * 0.12F + r * 0.33F;
+            float u1 = t1 * 2.0F - age * 0.12F + r * 0.33F;
+            texturedVertex(vc, matrix, inner[s], u0, 0.0F, a0);
+            texturedVertex(vc, matrix, outer[s], u0, 1.0F, a0);
+            texturedVertex(vc, matrix, outer[s + 1], u1, 1.0F, a1);
+            texturedVertex(vc, matrix, inner[s + 1], u1, 0.0F, a1);
         }
     }
 
     /**
-     * A round ball of only a few flat facets, seen from outside and from inside. Every facet has a shade of its own, so
-     * the ball looks cut from blocks. {@code seed} decides the shades.
+     * One crescent blade like the blade of the fan: its curved side faces out and it is turned a little so the four of
+     * them make a pinwheel. It lies in the plane of {@code sideA} and {@code sideB}, in three layers a little apart so
+     * it has some thickness.
      */
-    private static void facetSphere(VertexConsumer vc, Matrix4f matrix, float radius, float r, float g, float b, float alpha, int seed) {
+    private static void crescentBlade(VertexConsumer vc, Matrix4f matrix, Vec3 axis, Vec3 sideA, Vec3 sideB, float reach, float angle, float alpha) {
+        double tilt = angle + 0.6D;
+        Vec3 radial = sideA.scale(Math.cos(tilt)).add(sideB.scale(Math.sin(tilt)));
+        Vec3 tangent = sideA.scale(-Math.sin(tilt)).add(sideB.scale(Math.cos(tilt)));
+        Vec3 centre = sideA.scale(Math.cos(angle)).add(sideB.scale(Math.sin(angle))).scale(reach * 0.6D);
+        for (int layer = -1; layer <= 1; layer++) {
+            Vec3 lift = axis.scale(layer * reach * 0.04D);
+            double scale = layer == 0 ? 1.0D : 0.85D;
+            double hw = reach * 0.5D * scale;
+            double d = reach * 0.45D * scale;
+            float layerAlpha = layer == 0 ? alpha : alpha * 0.55F;
+            Vec3 c = centre.add(lift);
+            texturedVertex(vc, matrix, c.subtract(tangent.scale(hw)).add(radial.scale(d)), 0.0F, 0.0F, layerAlpha);
+            texturedVertex(vc, matrix, c.add(tangent.scale(hw)).add(radial.scale(d)), 1.0F, 0.0F, layerAlpha);
+            texturedVertex(vc, matrix, c.add(tangent.scale(hw)).subtract(radial.scale(d)), 1.0F, 1.0F, layerAlpha);
+            texturedVertex(vc, matrix, c.subtract(tangent.scale(hw)).subtract(radial.scale(d)), 0.0F, 1.0F, layerAlpha);
+        }
+    }
+
+    /** A ball of only a few flat facets, seen from outside and from inside, of one colour. */
+    private static void roundBall(VertexConsumer vc, Matrix4f matrix, float radius, float r, float g, float b, float alpha) {
         int segments = 10;
         int rings = 7;
         Vec3[][] grid = new Vec3[rings + 1][segments + 1];
@@ -291,37 +271,33 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         }
         for (int j = 0; j < rings; j++) {
             for (int i = 0; i < segments; i++) {
-                float shade = 0.75F + 0.25F * hash(seed * 101 + j * 13 + i);
-                quad(vc, matrix, grid[j][i], grid[j][i + 1], grid[j + 1][i + 1], grid[j + 1][i], r * shade, g * shade, b * shade, alpha);
+                Vec3[] corner = {grid[j][i], grid[j][i + 1], grid[j + 1][i + 1], grid[j + 1][i]};
+                for (int k = 0; k < 4; k++) flatVertex(vc, matrix, corner[k], r, g, b, alpha);
+                for (int k = 3; k >= 0; k--) flatVertex(vc, matrix, corner[k], r, g, b, alpha);
             }
         }
     }
 
-    /** One flat coloured quad, drawn from both sides (this render type does not draw the back of a face). */
-    private static void quad(VertexConsumer vc, Matrix4f matrix, Vec3 p0, Vec3 p1, Vec3 p2, Vec3 p3, float r, float g, float b, float alpha) {
-        vertex(vc, matrix, p0, r, g, b, alpha);
-        vertex(vc, matrix, p1, r, g, b, alpha);
-        vertex(vc, matrix, p2, r, g, b, alpha);
-        vertex(vc, matrix, p3, r, g, b, alpha);
-        vertex(vc, matrix, p3, r, g, b, alpha);
-        vertex(vc, matrix, p2, r, g, b, alpha);
-        vertex(vc, matrix, p1, r, g, b, alpha);
-        vertex(vc, matrix, p0, r, g, b, alpha);
+    private static void flatVertex(VertexConsumer vc, Matrix4f matrix, Vec3 p, float r, float g, float b, float alpha) {
+        vc.addVertex(matrix, (float) p.x, (float) p.y, (float) p.z)
+                .setColor(r, g, b, alpha)
+                .setUv(0.5F, 0.5F)
+                .setOverlay(OverlayTexture.NO_OVERLAY)
+                .setLight(FULL_BRIGHT)
+                .setNormal(0.0F, 1.0F, 0.0F);
     }
 
-    private static void vertex(VertexConsumer vc, Matrix4f matrix, Vec3 p, float r, float g, float b, float alpha) {
-        vc.addVertex(matrix, (float) p.x, (float) p.y, (float) p.z).setColor(r, g, b, alpha);
-    }
-
-    /** A pseudo random number from 0 to 1 for a whole number, always the same for the same number. */
-    private static float hash(int n) {
-        int h = n * 374761393 + 668265263;
-        h = (h ^ (h >>> 13)) * 1274126177;
-        return ((h ^ (h >>> 16)) & 0xFFFF) / 65535.0F;
+    private static void texturedVertex(VertexConsumer vc, Matrix4f matrix, Vec3 p, float u, float v, float alpha) {
+        vc.addVertex(matrix, (float) p.x, (float) p.y, (float) p.z)
+                .setColor(WIND[0], WIND[1], WIND[2], alpha)
+                .setUv(u, v)
+                .setOverlay(OverlayTexture.NO_OVERLAY)
+                .setLight(FULL_BRIGHT)
+                .setNormal(0.0F, 1.0F, 0.0F);
     }
 
     @Override
     public ResourceLocation getTextureLocation(ChakraSphereEntity entity) {
-        return TEXTURE;
+        return WIND_TEXTURE;
     }
 }
