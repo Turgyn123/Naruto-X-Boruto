@@ -20,8 +20,8 @@ import org.joml.Matrix4f;
  * the same textures, the white streaks of wind (wind_streak) on ribbons that spiral and scroll, and the white crescent
  * blades (crescent), in the same near white colour.
  * <ul>
- *   <li>Rasengan: a white heart in a soft blue ball, held by three flat bright rings that spin on different axes
- *       (see {@link #rasenganRings}).</li>
+ *   <li>Rasengan: a ball made only of lines, a tangle of thin ribbons of wind (see {@link #rasenganLines}) round a
+ *       white heart.</li>
  *   <li>Rasenshuriken: held up above the head of the caster while it is charged. The same ball, with four big
  *       crescent blades like the blades of the fan turning round it in a pinwheel. Thrown, ribbons of wind spiral
  *       behind it like the wind of the fan. Where it hits it grows into a huge ball of ribbons with pinwheels turning
@@ -116,7 +116,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
 
         Matrix4f matrix = poseStack.last().pose();
         if (!shuriken) {
-            rasenganRings(bufferSource, matrix, radius, age, alpha);
+            rasenganLines(bufferSource, matrix, radius, age, alpha);
             poseStack.popPose();
             return;
         }
@@ -162,38 +162,51 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
     }
 
     /**
-     * The Rasengan: a glowing white heart in a soft blue ball, held together by three flat bright rings that spin on
-     * different axes, like the rings of a gyroscope or of an atom, so the ball seems to be held by turning bands of
-     * energy. Everything is flat colour with hard edges.
+     * The Rasengan: a ball that is made of lines and nothing else, like thread wound round a ball of air, as the Rasengan
+     * is drawn in the anime. About 70 thin ribbons of wind, with the white streak texture of the wind of the Giant
+     * Fan on them, lie across each other on and just under the surface of the ball. Each one is a part of a circle
+     * round the middle in a plane of its own and turns round the ball at its own speed, so the tangle is always
+     * changing. A small white heart glows in the middle.
      */
-    private void rasenganRings(MultiBufferSource bufferSource, Matrix4f matrix, float radius, float age, float alpha) {
-        VertexConsumer vc = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(WHITE_TEXTURE));
-        roundBall(vc, matrix, radius * 0.38F, 1.0F, 1.0F, 1.0F, 0.95F * alpha);
-        roundBall(vc, matrix, radius * 0.8F, 0.4F, 0.72F, 1.0F, 0.32F * alpha);
-        float[][] colour = {{1.0F, 1.0F, 1.0F}, {0.62F, 0.9F, 1.0F}, {0.35F, 0.7F, 1.0F}};
-        for (int k = 0; k < 3; k++) {
-            double tilt = Math.toRadians(25.0D + 55.0D * k);
-            double spin = age * (0.22D + 0.1D * k) * (k == 1 ? -1.0D : 1.0D) + k * 2.1D;
-            // The flat plane of the ring: tipped over by tilt, then turned round the up axis by spin
-            Vec3 u = new Vec3(1.0D, 0.0D, 0.0D);
-            Vec3 v = new Vec3(0.0D, Math.sin(tilt), Math.cos(tilt));
-            u = new Vec3(u.x * Math.cos(spin) - u.z * Math.sin(spin), u.y, u.x * Math.sin(spin) + u.z * Math.cos(spin));
-            v = new Vec3(v.x * Math.cos(spin) - v.z * Math.sin(spin), v.y, v.x * Math.sin(spin) + v.z * Math.cos(spin));
-            double outer = radius * (1.0D + 0.14D * k);
-            double inner = outer * 0.86D;
-            int segments = 20;
-            for (int i = 0; i < segments; i++) {
-                double a0 = Math.PI * 2.0D * i / segments;
-                double a1 = Math.PI * 2.0D * (i + 1) / segments;
-                Vec3 o0 = u.scale(Math.cos(a0) * outer).add(v.scale(Math.sin(a0) * outer));
-                Vec3 o1 = u.scale(Math.cos(a1) * outer).add(v.scale(Math.sin(a1) * outer));
-                Vec3 i0 = u.scale(Math.cos(a0) * inner).add(v.scale(Math.sin(a0) * inner));
-                Vec3 i1 = u.scale(Math.cos(a1) * inner).add(v.scale(Math.sin(a1) * inner));
-                Vec3[] corner = {o0, o1, i1, i0};
-                // Every other piece is brighter, so the turning of the ring can be seen
-                float shade = i % 2 == 0 ? 1.0F : 0.7F;
-                for (int c = 0; c < 4; c++) flatVertex(vc, matrix, corner[c], colour[k][0] * shade, colour[k][1] * shade, colour[k][2] * shade, 0.9F * alpha);
-                for (int c = 3; c >= 0; c--) flatVertex(vc, matrix, corner[c], colour[k][0] * shade, colour[k][1] * shade, colour[k][2] * shade, 0.9F * alpha);
+    private void rasenganLines(MultiBufferSource bufferSource, Matrix4f matrix, float radius, float age, float alpha) {
+        VertexConsumer white = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(WHITE_TEXTURE));
+        roundBall(white, matrix, radius * 0.2F, 1.0F, 1.0F, 1.0F, 0.95F * alpha);
+        roundBall(white, matrix, radius * 0.45F, 0.7F, 0.9F, 1.0F, 0.3F * alpha);
+        VertexConsumer wind = bufferSource.getBuffer(RenderType.entityTranslucent(WIND_TEXTURE));
+        int lines = 70;
+        int segments = 10;
+        for (int i = 0; i < lines; i++) {
+            // A circle round the middle of the ball, in a plane of its own
+            double theta = hash(i * 7 + 1) * Math.PI * 2.0D;
+            double z = hash(i * 7 + 2) * 2.0D - 1.0D;
+            double ring = Math.sqrt(1.0D - z * z);
+            Vec3 normal = new Vec3(Math.cos(theta) * ring, z, Math.sin(theta) * ring);
+            Vec3 a = normal.cross(new Vec3(0.0D, 1.0D, 0.0D));
+            a = a.lengthSqr() < 1.0E-4D ? new Vec3(1.0D, 0.0D, 0.0D) : a.normalize();
+            Vec3 b = normal.cross(a).normalize();
+            double direction = hash(i * 7 + 3) < 0.5F ? -1.0D : 1.0D;
+            double start = hash(i * 7 + 4) * Math.PI * 2.0D + age * direction * (0.04D + 0.16D * hash(i * 7 + 5));
+            double span = 1.3D + 1.4D * hash(i * 7 + 6);
+            // Some lie on the surface and some a little under it, so the tangle has some depth
+            double size = radius * (0.72D + 0.28D * hash(i * 7 + 8));
+            Vec3 side = normal.scale(radius * 0.04D);
+            Vec3 previous = null;
+            for (int s = 0; s <= segments; s++) {
+                float t = s / (float) segments;
+                double angle = start + span * t;
+                Vec3 point = a.scale(Math.cos(angle) * size).add(b.scale(Math.sin(angle) * size));
+                if (previous != null) {
+                    float t0 = (s - 1) / (float) segments;
+                    float a0 = alpha * 0.9F * Math.min(1.0F, Math.min(t0 * 4.0F, (1.0F - t0) * 4.0F));
+                    float a1 = alpha * 0.9F * Math.min(1.0F, Math.min(t * 4.0F, (1.0F - t) * 4.0F));
+                    float u0 = t0 * 1.5F - age * 0.1F * (float) direction + i * 0.31F;
+                    float u1 = t * 1.5F - age * 0.1F * (float) direction + i * 0.31F;
+                    texturedVertex(wind, matrix, previous.add(side), u0, 0.0F, a0, 0.75F, 0.9F, 1.0F);
+                    texturedVertex(wind, matrix, previous.subtract(side), u0, 1.0F, a0, 0.75F, 0.9F, 1.0F);
+                    texturedVertex(wind, matrix, point.subtract(side), u1, 1.0F, a1, 0.75F, 0.9F, 1.0F);
+                    texturedVertex(wind, matrix, point.add(side), u1, 0.0F, a1, 0.75F, 0.9F, 1.0F);
+                }
+                previous = point;
             }
         }
     }
@@ -330,8 +343,12 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
     }
 
     private static void texturedVertex(VertexConsumer vc, Matrix4f matrix, Vec3 p, float u, float v, float alpha) {
+        texturedVertex(vc, matrix, p, u, v, alpha, WIND[0], WIND[1], WIND[2]);
+    }
+
+    private static void texturedVertex(VertexConsumer vc, Matrix4f matrix, Vec3 p, float u, float v, float alpha, float r, float g, float b) {
         vc.addVertex(matrix, (float) p.x, (float) p.y, (float) p.z)
-                .setColor(WIND[0], WIND[1], WIND[2], alpha)
+                .setColor(r, g, b, alpha)
                 .setUv(u, v)
                 .setOverlay(OverlayTexture.NO_OVERLAY)
                 .setLight(FULL_BRIGHT)
