@@ -10,6 +10,8 @@ import net.narutoxboruto.client.FabricClientEvents;
 import net.narutoxboruto.client.gui.JutsuStorageScreen;
 import net.narutoxboruto.client.overlay.FabricHudOverlay;
 import net.narutoxboruto.client.model.FireBallModel;
+import net.narutoxboruto.client.model.RasenganModel;
+import net.narutoxboruto.client.model.RasenshurikenDiscModel;
 import net.narutoxboruto.client.renderer.entity.*;
 import net.narutoxboruto.client.renderer.item.FabricLightningCloakRenderer;
 import net.narutoxboruto.client.renderer.FabricDojutsuEyeRenderer;
@@ -51,6 +53,8 @@ public class FabricClient implements ClientModInitializer {
 
         // Register model layers
         EntityModelLayerRegistry.registerModelLayer(FireBallModel.LAYER_LOCATION, FireBallModel::createBodyLayer);
+        EntityModelLayerRegistry.registerModelLayer(RasenganModel.LAYER_LOCATION, RasenganModel::createBodyLayer);
+        EntityModelLayerRegistry.registerModelLayer(RasenshurikenDiscModel.LAYER_LOCATION, RasenshurikenDiscModel::createBodyLayer);
 
         // Throwable renderers
         EntityRendererRegistry.register(FabricEntities.SHURIKEN, ShurikenRenderer::new);
