@@ -97,9 +97,17 @@ public class ChakraSphereEntity extends Entity {
 
     // ---------------------------------------------------------------- spawning and using
 
-    /** Where the sphere is held: a little in front of the caster, to the right and low, like in a hand. */
-    public static Vec3 handPosition(Entity caster, float partialTick) {
+    /**
+     * Where the sphere is held. The Rasengan: a little in front of the caster, to the right and low, like in a hand.
+     * The Rasenshuriken: above the head of the caster, like a hand held up high.
+     */
+    public static Vec3 handPosition(Entity caster, int kind, float partialTick) {
         Vec3 look = caster.getViewVector(partialTick);
+        if (kind == RASENSHURIKEN) {
+            Vec3 flat = new Vec3(look.x, 0.0D, look.z);
+            flat = flat.lengthSqr() < 1.0E-4D ? Vec3.ZERO : flat.normalize().scale(0.3D);
+            return caster.getEyePosition(partialTick).add(0.0D, 1.0D, 0.0D).add(flat);
+        }
         Vec3 right = new Vec3(-look.z, 0.0D, look.x);
         right = right.lengthSqr() < 1.0E-4D ? new Vec3(1.0D, 0.0D, 0.0D) : right.normalize();
         return caster.getEyePosition(partialTick).add(look.scale(0.85D)).add(right.scale(0.4D)).add(0.0D, -0.45D, 0.0D);
@@ -111,7 +119,7 @@ public class ChakraSphereEntity extends Entity {
         sphere.entityData.set(KIND, kind);
         sphere.entityData.set(OWNER_ID, caster.getId());
         sphere.owner = caster.getUUID();
-        Vec3 hand = handPosition(caster, 1.0F);
+        Vec3 hand = handPosition(caster, kind, 1.0F);
         sphere.setPos(hand.x, hand.y, hand.z);
         sphere.setRot(caster.getYRot(), caster.getXRot());
         level.addFreshEntity(sphere);
@@ -146,7 +154,7 @@ public class ChakraSphereEntity extends Entity {
         if (getKind() == RASENSHURIKEN) {
             Vec3 look = caster.getLookAngle().normalize();
             flight = look.scale(SHURIKEN_SPEED);
-            Vec3 hand = handPosition(caster, 1.0F);
+            Vec3 hand = handPosition(caster, RASENSHURIKEN, 1.0F);
             setPos(hand.x, hand.y, hand.z);
             setRot(caster.getYRot(), caster.getXRot());
             level().playSound(null, hand.x, hand.y, hand.z, SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 1.6F, 0.5F);
@@ -203,14 +211,14 @@ public class ChakraSphereEntity extends Entity {
         }
         countPhase();
         if (phase == CHARGING) {
-            Vec3 hand = handPosition(caster, 1.0F);
+            Vec3 hand = handPosition(caster, RASENGAN, 1.0F);
             setPos(hand.x, hand.y, hand.z);
             setRot(caster.getYRot(), caster.getXRot());
             if (phaseTicks % 6 == 0) {
                 serverLevel.playSound(null, hand.x, hand.y, hand.z, SoundEvents.BEACON_AMBIENT, SoundSource.PLAYERS, 0.4F, 1.8F);
             }
         } else if (phase == ACTIVE) {
-            Vec3 hand = handPosition(caster, 1.0F);
+            Vec3 hand = handPosition(caster, RASENGAN, 1.0F);
             setPos(hand.x, hand.y, hand.z);
             setRot(caster.getYRot(), caster.getXRot());
             // The caster dashes forward with it
@@ -247,7 +255,7 @@ public class ChakraSphereEntity extends Entity {
         }
         countPhase();
         if (phase == CHARGING) {
-            Vec3 hand = handPosition(ownerEntity, 1.0F);
+            Vec3 hand = handPosition(ownerEntity, RASENSHURIKEN, 1.0F);
             setPos(hand.x, hand.y, hand.z);
             setRot(ownerEntity.getYRot(), ownerEntity.getXRot());
             if (phaseTicks % 6 == 0) {
