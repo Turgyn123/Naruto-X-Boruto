@@ -3,7 +3,9 @@ package net.narutoxboruto.client.renderer.entity;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.MultiBufferSource;
+import com.mojang.math.Axis;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
@@ -11,14 +13,16 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 import net.narutoxboruto.entities.jutsus.ChakraSphereEntity;
+import net.narutoxboruto.main.Main;
 import org.joml.Matrix4f;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
 /**
  * Draws the {@link ChakraSphereEntity} the way the lightning of the Lightning Chakra Mode is drawn, but for wind:
  * with no model and no texture, only glowing ribbons that are added to the light of the world.
  * <ul>
- *   <li>Rasengan: a bright ball with streaks of wind that wind round it like comets, each with a bright head and a tail
- *       that fades away.</li>
+ *   <li>Rasengan: a soft round ball of white and pale blue made of many puffs of wind that turn round each other.</li>
  *   <li>Rasenshuriken: the same ball with four curved blades of wind spinning round it, facing the way it is aimed.</li>
  *   <li>When the Rasenshuriken hits it grows into a huge ball of streaks with three sets of blades spinning inside it.</li>
  * </ul>
@@ -28,6 +32,7 @@ import org.joml.Matrix4f;
 public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
 
     private static final ResourceLocation TEXTURE = ResourceLocation.withDefaultNamespace("textures/misc/white.png");
+    private static final ResourceLocation PUFF_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/wind_puff.png");
     private static final float[] HOT = {1.0F, 1.0F, 1.0F};
     private static final float[] COOL = {0.35F, 0.72F, 1.0F};
     private static final float[] BODY = {0.55F, 0.85F, 1.0F};
@@ -109,28 +114,24 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         across = across.lengthSqr() < 1.0E-4D ? new Vec3(1.0D, 0.0D, 0.0D) : across.normalize();
         Vec3 up = aim.cross(across).normalize();
 
+        // The puffs go first: asking for another kind of buffer finishes the one before it, so every buffer is asked
+        // for right before it is used
+        if (!blast) puffBall(bufferSource, poseStack, radius, age, alpha);
         VertexConsumer vc = bufferSource.getBuffer(RenderType.lightning());
         Matrix4f matrix = poseStack.last().pose();
         float scale = Math.max(radius, reach * 0.4F) / 0.35F;
 
-        // The ball itself, as in the anime: a white hot heart, a softer middle and a blue edge, drawn first, so the
-        // streaks behind it are hidden by it and the ones in front of it show.
-        if (!blast) {
-            sphere(vc, matrix, radius * 0.38F, 1.0F, 1.0F, 1.0F, 0.95F * alpha);
-            sphere(vc, matrix, radius * 0.68F, 0.65F, 0.92F, 1.0F, 0.55F * alpha);
-            sphere(vc, matrix, radius * 0.94F, 0.3F, 0.65F, 1.0F, 0.4F * alpha);
-        } else {
+        // The Rasengan is a soft, round ball of pale blue and white wind, made of many puffs that turn round each
+        // other, brighter in the middle. The Rasenshuriken has the same ball in the middle.
+        if (blast) {
             sphere(vc, matrix, radius, 0.35F, 0.7F, 1.0F, 0.07F * alpha);
+            for (int i = 0; i < 36; i++) {
+                streak(vc, matrix, i, age, radius * (0.55F + 0.45F * hash(i * 11 + 9)), 1.0F, 14,
+                        0.2D + 0.3D * hash(i * 7 + 4), 1.6D + 1.4D * hash(i * 7 + 6), 0.03F * scale, alpha);
+            }
         }
-
-        // Lots of fine streaks that spin fast just inside the surface of the ball, so that it looks like water
-        // swirling round, and then long thin wisps of wind that sweep round the outside of it
-        int fine = blast ? 36 : 34;
-        for (int i = 0; i < fine; i++) {
-            streak(vc, matrix, i, age, radius * (blast ? 0.55F : 0.55F + 0.45F * hash(i * 11 + 9)), 1.0F, blast ? 14 : 20,
-                    0.2D + 0.3D * hash(i * 7 + 4), 1.6D + 1.4D * hash(i * 7 + 6), (blast ? 0.03F : 0.014F) * scale, alpha);
-        }
-        if (!blast) {
+        // Long thin wisps of wind sweep round the Rasenshuriken
+        if (shuriken && !blast) {
             for (int i = 0; i < 9; i++) {
                 streak(vc, matrix, 100 + i, age, radius * (1.5F + 1.7F * hash(i * 13 + 3)), 0.6F, 30,
                         0.05D + 0.07D * hash(i * 13 + 5), 2.4D + 1.6D * hash(i * 13 + 7), 0.02F * scale, 0.7F * alpha);
@@ -151,6 +152,77 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
             }
         }
         poseStack.popPose();
+    }
+
+    /**
+     * The ball: about 44 soft puffs of wind, spread through a sphere and turning round it, the ones in the middle
+     * faster. Together they make a soft, round, glowing ball that is white in the middle and pale blue at its edge.
+     * The puffs are drawn from the far side to the near side, so that they blend into each other.
+     */
+    private void puffBall(MultiBufferSource bufferSource, PoseStack poseStack, float radius, float age, float alpha) {
+        int count = 44;
+        Quaternionf camera = this.entityRenderDispatcher.cameraOrientation();
+        Vector3f forward = camera.transform(new Vector3f(0.0F, 0.0F, -1.0F));
+        double[][] puff = new double[count][8]; // x, y, z, size, depth, red/green/blue brightness (t), roll
+        for (int i = 0; i < count; i++) {
+            double theta = hash(i * 5 + 1) * Math.PI * 2.0D;
+            double z = hash(i * 5 + 2) * 2.0D - 1.0D;
+            double ring = Math.sqrt(1.0D - z * z);
+            double t = Math.cbrt(0.1D + 0.9D * hash(i * 5 + 3));
+            double spin = age * (0.12D + 0.38D * (1.0D - t)) * (i % 2 == 0 ? 1.0D : -0.7D);
+            double x0 = Math.cos(theta) * ring;
+            double y0 = z;
+            double z0 = Math.sin(theta) * ring;
+            double x1 = x0 * Math.cos(spin) - z0 * Math.sin(spin);
+            double z1 = x0 * Math.sin(spin) + z0 * Math.cos(spin);
+            puff[i][0] = x1 * radius * t * 0.85D;
+            puff[i][1] = y0 * radius * t * 0.85D;
+            puff[i][2] = z1 * radius * t * 0.85D;
+            puff[i][3] = radius * (0.5D + 0.4D * hash(i * 5 + 4)) * (0.8D + 0.4D * t);
+            puff[i][4] = puff[i][0] * forward.x + puff[i][1] * forward.y + puff[i][2] * forward.z;
+            puff[i][5] = t;
+            puff[i][6] = hash(i * 5 + 5) * 4.0D;
+        }
+        Integer[] order = new Integer[count];
+        for (int i = 0; i < count; i++) order[i] = i;
+        // The far ones first
+        java.util.Arrays.sort(order, (p, q) -> Double.compare(puff[q][4], puff[p][4]));
+        RenderType type = RenderType.entityTranslucentEmissive(PUFF_TEXTURE);
+        VertexConsumer vc = bufferSource.getBuffer(type);
+        for (int n = 0; n < count; n++) {
+            double[] p = puff[order[n]];
+            float t = (float) p[5];
+            poseStack.pushPose();
+            poseStack.translate(p[0], p[1], p[2]);
+            poseStack.mulPose(camera);
+            poseStack.mulPose(Axis.ZP.rotationDegrees(90.0F * (int) p[6]));
+            puffQuad(vc, poseStack.last().pose(), (float) p[3], 0.5F * alpha * (1.0F - 0.25F * t), 1.0F - 0.25F * t, 1.0F - 0.1F * t, 1.0F);
+            poseStack.popPose();
+        }
+        // A bright glow in the middle
+        poseStack.pushPose();
+        poseStack.mulPose(camera);
+        puffQuad(vc, poseStack.last().pose(), radius * 1.15F, 0.45F * alpha, 1.0F, 1.0F, 1.0F);
+        poseStack.popPose();
+    }
+
+    /** A square facing the camera (the pose is already turned to it) with the whole puff on it. */
+    private static void puffQuad(VertexConsumer vc, Matrix4f matrix, float size, float alpha, float red, float green, float blue) {
+        float h = size * 0.5F;
+        puffVertex(vc, matrix, -h, -h, 0.0F, 1.0F, red, green, blue, alpha);
+        puffVertex(vc, matrix, h, -h, 1.0F, 1.0F, red, green, blue, alpha);
+        puffVertex(vc, matrix, h, h, 1.0F, 0.0F, red, green, blue, alpha);
+        puffVertex(vc, matrix, -h, h, 0.0F, 0.0F, red, green, blue, alpha);
+    }
+
+    private static void puffVertex(VertexConsumer vc, Matrix4f matrix, float x, float y, float u, float v,
+                                   float red, float green, float blue, float alpha) {
+        vc.addVertex(matrix, x, y, 0.0F)
+                .setColor(red, green, blue, alpha)
+                .setUv(u, v)
+                .setOverlay(OverlayTexture.NO_OVERLAY)
+                .setLight(0xF000F0)
+                .setNormal(0.0F, 1.0F, 0.0F);
     }
 
     /**
