@@ -20,8 +20,8 @@ import org.joml.Matrix4f;
  * the same textures, the white streaks of wind (wind_streak) on ribbons that spiral and scroll, and the white crescent
  * blades (crescent), in the same near white colour.
  * <ul>
- *   <li>Rasengan: a ball made of ribbons of wind that spiral from one end of the ball to the other and turn round it,
- *       an outer layer one way and an inner layer the other way, round a soft white heart.</li>
+ *   <li>Rasengan: a ball wrapped in the swirling energy of a charged creeper (see {@link #rasenganSwirl}), round a
+ *       white heart.</li>
  *   <li>Rasenshuriken: held up above the head of the caster while it is charged. The same ball, with four big
  *       crescent blades like the blades of the fan turning round it in a pinwheel. Thrown, ribbons of wind spiral
  *       behind it like the wind of the fan. Where it hits it grows into a huge ball of ribbons with pinwheels turning
@@ -33,6 +33,8 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
     private static final ResourceLocation WIND_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/wind_streak.png");
     private static final ResourceLocation CRESCENT_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/crescent.png");
     private static final ResourceLocation WHITE_TEXTURE = ResourceLocation.withDefaultNamespace("textures/misc/white.png");
+    /** The swirling energy of the charged creeper, which the Rasengan wears. */
+    private static final ResourceLocation SWIRL_TEXTURE = ResourceLocation.withDefaultNamespace("textures/entity/creeper/creeper_armor.png");
     private static final int FULL_BRIGHT = 0xF000F0;
     /** The colour of the wind of the Giant Fan: white with a touch of blue. */
     private static final float[] WIND = {0.94F, 0.96F, 1.0F};
@@ -115,6 +117,11 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         Vec3 up = aim.cross(across).normalize();
 
         Matrix4f matrix = poseStack.last().pose();
+        if (!shuriken) {
+            rasenganSwirl(bufferSource, matrix, radius, age, alpha);
+            poseStack.popPose();
+            return;
+        }
         float ribbonAlpha = 0.94F * alpha;
 
         // The soft heart of the ball: a translucent ball with a white core in it
@@ -154,6 +161,46 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
             }
         }
         poseStack.popPose();
+    }
+
+    /**
+     * The Rasengan: a ball wrapped in the swirling energy of a charged creeper, the same effect Minecraft puts on a
+     * creeper that was hit by lightning. Two balls, one inside the other, wear the swirl and it runs over them in
+     * different directions at different speeds, so it looks like a ball of water turning inside itself. A white
+     * heart glows in the middle.
+     */
+    private void rasenganSwirl(MultiBufferSource bufferSource, Matrix4f matrix, float radius, float age, float alpha) {
+        VertexConsumer white = bufferSource.getBuffer(RenderType.entityTranslucentEmissive(WHITE_TEXTURE));
+        roundBall(white, matrix, radius * 0.4F, 1.0F, 1.0F, 1.0F, 0.9F * alpha);
+        VertexConsumer outer = bufferSource.getBuffer(RenderType.energySwirl(SWIRL_TEXTURE, (age * 0.011F) % 1.0F, (age * 0.017F) % 1.0F));
+        swirlSphere(outer, matrix, radius, 0.45F, 0.78F, 1.0F, alpha);
+        VertexConsumer inner = bufferSource.getBuffer(RenderType.energySwirl(SWIRL_TEXTURE, (-age * 0.019F) % 1.0F, (age * 0.013F) % 1.0F));
+        swirlSphere(inner, matrix, radius * 0.72F, 0.8F, 0.95F, 1.0F, alpha);
+    }
+
+    /** A smooth ball with the swirl texture wrapped round it three times. */
+    private static void swirlSphere(VertexConsumer vc, Matrix4f matrix, float radius, float r, float g, float b, float alpha) {
+        int segments = 24;
+        int rings = 14;
+        for (int j = 0; j < rings; j++) {
+            for (int i = 0; i < segments; i++) {
+                for (int corner = 0; corner < 4; corner++) {
+                    int ci = i + (corner == 1 || corner == 2 ? 1 : 0);
+                    int cj = j + (corner >= 2 ? 1 : 0);
+                    double lat = Math.PI * (cj / (double) rings - 0.5D);
+                    double lon = Math.PI * 2.0D * ci / segments;
+                    float x = (float) (Math.cos(lat) * Math.cos(lon));
+                    float y = (float) Math.sin(lat);
+                    float z = (float) (Math.cos(lat) * Math.sin(lon));
+                    vc.addVertex(matrix, x * radius, y * radius, z * radius)
+                            .setColor(r, g, b, alpha)
+                            .setUv(ci / (float) segments * 3.0F, cj / (float) rings * 1.5F)
+                            .setOverlay(OverlayTexture.NO_OVERLAY)
+                            .setLight(FULL_BRIGHT)
+                            .setNormal(x, y, z);
+                }
+            }
+        }
     }
 
     /**
