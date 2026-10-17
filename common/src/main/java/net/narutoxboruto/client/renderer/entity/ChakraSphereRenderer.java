@@ -19,8 +19,8 @@ import org.joml.Matrix4f;
  * lightning, a streak is made of three flat layers (a white core, a light blue middle and a wide soft blue glow) and
  * is made of a few straight pieces, so it looks angular and a bit blocky, like Minecraft, and not smooth and real.
  * <ul>
- *   <li>Rasengan: a ball of a few flat facets (a white heart in a blue ball) with angular streaks of wind winding
- *       round it, and a few longer ones flying off it. The streaks jump a little, like the bolts do.</li>
+ *   <li>Rasengan: a ball of flat facets (a white heart in a blue ball) covered with a tangle of fine thin lines, with a
+ *       few short rays shooting out of it, as in the anime.</li>
  *   <li>Rasenshuriken: held up above the head of the caster while it is charged. The same ball with four big curved
  *       blades of flat colour with a white edge turning round it. Where it hits it grows into a huge ball of streaks
  *       with blades turning in three planes.</li>
@@ -121,31 +121,26 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         // The streaks jump from shape to shape 10 times a second, like the bolts of the lightning
         int jump = (int) (age * 0.5F);
 
-        // The ball, drawn first so that it hides the streaks behind it: a white heart in a blue ball, each of a few flat
-        // facets of their own shade, so that it is a round but blocky ball
+        // The ball, drawn first so that it hides the streaks behind it: a white heart in a blue ball, so it is white in
+        // the middle and blue at the edge, each of a few flat facets of its own shade, so it is round but blocky
         if (!blast) {
-            facetSphere(vc, matrix, radius * 0.3F, 1.0F, 1.0F, 1.0F, 0.9F * alpha, 7);
-            facetSphere(vc, matrix, radius * 0.72F, 0.3F, 0.62F, 1.0F, 0.5F * alpha, 17);
-            facetSphere(vc, matrix, radius * 0.96F, 0.45F, 0.8F, 1.0F, 0.22F * alpha, 31);
-            // Streaks of wind winding round the ball in bands, as straight pieces
-            for (int ring = 0; ring < 5; ring++) {
-                double lat = Math.toRadians(-60.0D + 30.0D * ring);
-                for (int k = 0; k < 3; k++) {
-                    band(vc, matrix, aim, across, up, radius * 1.05F, lat, age, jump, ring * 3 + k, k * (Math.PI * 2.0D / 3.0D), 0.03F * scale, alpha);
+            facetSphere(vc, matrix, radius * 0.28F, 1.0F, 1.0F, 1.0F, 0.9F * alpha, 7);
+            facetSphere(vc, matrix, radius * 0.55F, 0.75F, 0.93F, 1.0F, 0.4F * alpha, 17);
+            facetSphere(vc, matrix, radius * 0.97F, 0.35F, 0.68F, 1.0F, 0.5F * alpha, 31);
+            // A tangle of fine thin lines over the whole ball, as in the anime, turning slowly
+            yarn(vc, matrix, radius * 1.01F, age, jump, shuriken ? 38 : 46, 0.009F * scale, alpha);
+            if (!shuriken) {
+                // A few short straight rays shoot out of it
+                for (int i = 0; i < 14; i++) {
+                    Vec3 dir = randomDirection(i * 5 + jump * 11);
+                    double from = radius * (1.1D + 0.1D * hash(i * 3 + jump));
+                    double to = radius * (1.5D + 0.9D * hash(i * 7 + jump * 3));
+                    bolt(vc, matrix, new Vec3[]{dir.scale(from), dir.scale(to)}, 0.012F * scale, 0.7F * alpha);
                 }
-            }
-            // Longer streaks fly off it
-            int wisps = shuriken ? 8 : 5;
-            for (int i = 0; i < wisps; i++) {
-                loop(vc, matrix, 100 + i, age, jump, radius * (1.5F + 1.9F * hash(i * 13 + 3)), 0.6F, 9,
-                        0.05D + 0.07D * hash(i * 13 + 5), 2.4D + 1.6D * hash(i * 13 + 7), 0.03F * scale, 0.9F * alpha);
             }
         } else {
             facetSphere(vc, matrix, radius, 0.35F, 0.7F, 1.0F, 0.08F * alpha, 41);
-            for (int i = 0; i < 26; i++) {
-                loop(vc, matrix, i, age, jump, radius * (0.5F + 0.5F * hash(i * 11 + 9)), 1.0F, 8,
-                        0.2D + 0.3D * hash(i * 7 + 4), 1.6D + 1.4D * hash(i * 7 + 6), 0.04F * scale, alpha);
-            }
+            yarn(vc, matrix, radius * 0.98F, age, jump, 70, 0.02F * scale, alpha);
         }
 
         // The four big blades of the Rasenshuriken, across the way it is aimed
@@ -164,49 +159,42 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         poseStack.popPose();
     }
 
-    /**
-     * A band of streaks: a streak round a circle that lies across the aim, at the height {@code lat} of the ball (so the
-     * circle is smaller towards the ends). Its few straight pieces are knocked a little out of line, and jump.
-     */
-    private static void band(VertexConsumer vc, Matrix4f matrix, Vec3 aim, Vec3 across, Vec3 up, float radius, double lat, float age,
-                             int jump, int id, double phase, float halfWidth, float alpha) {
-        double along = Math.sin(lat) * radius;
-        double ring = Math.cos(lat) * radius;
-        double speed = 0.12D + 0.42D * Math.cos(lat) + 0.05D * hash(id * 3 + 1);
-        double span = 1.3D + 0.7D * hash(id * 3 + 2);
-        double head = phase + age * speed + hash(id * 3 + 3) * Math.PI * 2.0D;
-        int points = 7;
-        Vec3[] path = new Vec3[points + 1];
-        for (int j = 0; j <= points; j++) {
-            double angle = head - span * (1.0D - j / (double) points);
-            double kink = 1.0D + 0.12D * (hash(id * 17 + j * 5 + jump * 7) - 0.5D);
-            path[j] = aim.scale(along).add(across.scale(Math.cos(angle) * ring * kink)).add(up.scale(Math.sin(angle) * ring * kink));
-        }
-        bolt(vc, matrix, path, halfWidth, alpha);
+    /** A direction that points anywhere, always the same for the same number. */
+    private static Vec3 randomDirection(int n) {
+        double theta = hash(n * 7 + 1) * Math.PI * 2.0D;
+        double z = hash(n * 7 + 2) * 2.0D - 1.0D;
+        double ring = Math.sqrt(1.0D - z * z);
+        return new Vec3(Math.cos(theta) * ring, z, Math.sin(theta) * ring);
     }
 
     /**
-     * A streak round a circle (or an oval, when {@code flatten} is less than 1) of {@code size}, in a plane of its own,
-     * made of a few straight pieces that jump a little.
+     * A tangle of fine thin lines over the surface of a ball, like thread wound round it, as the Rasengan is drawn in
+     * the anime. Every line is a part of a circle round the middle of the ball, made of a few straight pieces, and the
+     * whole tangle turns slowly round the ball.
      */
-    private static void loop(VertexConsumer vc, Matrix4f matrix, int i, float age, int jump, float size, float flatten, int points,
-                             double speed, double span, float halfWidth, float alpha) {
-        double theta = hash(i * 7 + 1) * Math.PI * 2.0D;
-        double z = hash(i * 7 + 2) * 2.0D - 1.0D;
-        double ring = Math.sqrt(1.0D - z * z);
-        Vec3 normal = new Vec3(Math.cos(theta) * ring, z, Math.sin(theta) * ring);
-        Vec3 a = normal.cross(new Vec3(0.0D, 1.0D, 0.0D));
-        a = a.lengthSqr() < 1.0E-4D ? new Vec3(1.0D, 0.0D, 0.0D) : a.normalize();
-        Vec3 b = normal.cross(a).normalize();
-        double sign = hash(i * 7 + 3) < 0.5F ? -1.0D : 1.0D;
-        double head = hash(i * 7 + 5) * Math.PI * 2.0D + age * speed * sign;
-        Vec3[] path = new Vec3[points + 1];
-        for (int j = 0; j <= points; j++) {
-            double angle = head - sign * span * (1.0D - j / (double) points);
-            double kink = 1.0D + 0.1D * (hash(i * 19 + j * 5 + jump * 3) - 0.5D);
-            path[j] = a.scale(Math.cos(angle) * size * kink).add(b.scale(Math.sin(angle) * size * kink * flatten));
+    private static void yarn(VertexConsumer vc, Matrix4f matrix, float radius, float age, int jump, int lines, float halfWidth, float alpha) {
+        double turn = age * 0.06D;
+        double cos = Math.cos(turn);
+        double sin = Math.sin(turn);
+        for (int i = 0; i < lines; i++) {
+            Vec3 normal = randomDirection(i * 3 + 50);
+            Vec3 a = normal.cross(new Vec3(0.0D, 1.0D, 0.0D));
+            a = a.lengthSqr() < 1.0E-4D ? new Vec3(1.0D, 0.0D, 0.0D) : a.normalize();
+            Vec3 b = normal.cross(a).normalize();
+            double start = hash(i * 3 + 51) * Math.PI * 2.0D;
+            double span = 0.7D + 1.1D * hash(i * 3 + 52);
+            int points = 6;
+            Vec3[] path = new Vec3[points + 1];
+            for (int j = 0; j <= points; j++) {
+                double angle = start + span * j / points;
+                // A little knocked out of line, and a little different from time to time
+                double kink = 1.0D + 0.04D * (hash(i * 23 + j * 5 + jump) - 0.5D);
+                Vec3 point = a.scale(Math.cos(angle)).add(b.scale(Math.sin(angle))).scale(radius * kink);
+                // The tangle turns round the up axis
+                path[j] = new Vec3(point.x * cos - point.z * sin, point.y, point.x * sin + point.z * cos);
+            }
+            bolt(vc, matrix, path, halfWidth, alpha);
         }
-        bolt(vc, matrix, path, halfWidth, alpha);
     }
 
     /**
@@ -291,8 +279,8 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
      * the ball looks cut from blocks. {@code seed} decides the shades.
      */
     private static void facetSphere(VertexConsumer vc, Matrix4f matrix, float radius, float r, float g, float b, float alpha, int seed) {
-        int segments = 8;
-        int rings = 5;
+        int segments = 10;
+        int rings = 7;
         Vec3[][] grid = new Vec3[rings + 1][segments + 1];
         for (int j = 0; j <= rings; j++) {
             double lat = Math.PI * (j / (double) rings - 0.5D);
