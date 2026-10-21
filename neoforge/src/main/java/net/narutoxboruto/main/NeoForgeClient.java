@@ -4,6 +4,7 @@ import net.minecraft.client.renderer.entity.EntityRenderers;
 import net.minecraft.client.renderer.entity.player.PlayerRenderer;
 import net.narutoxboruto.client.gui.JutsuStorageScreen;
 import net.narutoxboruto.client.renderer.DojutsuEyeLayer;
+import net.narutoxboruto.client.renderer.RasenganHandLayer;
 import net.narutoxboruto.client.renderer.shinobi.AbstractShinobiRender;
 import net.narutoxboruto.client.renderer.entity.*;
 import net.narutoxboruto.client.renderer.throwables.*;
@@ -48,6 +49,7 @@ public class NeoForgeClient {
             PlayerRenderer renderer = event.getSkin(skin);
             if (renderer != null) {
                 renderer.addLayer(new DojutsuEyeLayer(renderer));
+                renderer.addLayer(new RasenganHandLayer(renderer));
             }
         }
     }

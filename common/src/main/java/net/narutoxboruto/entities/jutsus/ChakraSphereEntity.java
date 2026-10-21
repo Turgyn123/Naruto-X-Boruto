@@ -51,11 +51,6 @@ public class ChakraSphereEntity extends Entity {
     public static final int ACTIVE = 1;
     public static final int IMPACT = 2;
 
-    /** The start-up sound lasts about 19 ticks, then the 0.7 second spinning sound (12 ticks, with its fades overlapping) repeats (longer at the lower pitch of the Rasenshuriken). */
-    private static final int SPIN_START_TICKS = 19;
-    private static final int SPIN_LOOP_TICKS = 12;
-    private static final int SHURIKEN_SPIN_START_TICKS = 27;
-    private static final int SHURIKEN_SPIN_LOOP_TICKS = 17;
     /** How long the sphere is charged for, in ticks, before it can be used. */
     public static final int RASENGAN_CHARGE_TICKS = 16;
     public static final int RASENSHURIKEN_CHARGE_TICKS = 30;
@@ -149,6 +144,16 @@ public class ChakraSphereEntity extends Entity {
         for (ChakraSphereEntity sphere : level.getEntitiesOfClass(ChakraSphereEntity.class,
                 new AABB(caster.blockPosition()).inflate(8.0D),
                 e -> e.getKind() == kind && caster.getUUID().equals(e.owner) && e.phase == CHARGING)) {
+            return sphere;
+        }
+        return null;
+    }
+
+    /** The Rasengan that {@code owner} is holding, as seen on the client, or null. */
+    public static ChakraSphereEntity findHeldClient(Entity owner) {
+        for (ChakraSphereEntity sphere : owner.level().getEntitiesOfClass(ChakraSphereEntity.class,
+                owner.getBoundingBox().inflate(12.0D),
+                e -> e.getKind() == RASENGAN && e.getOwnerId() == owner.getId() && e.getPhase() == CHARGING)) {
             return sphere;
         }
         return null;
@@ -308,9 +313,6 @@ public class ChakraSphereEntity extends Entity {
             Vec3 hand = handPosition(caster, RASENGAN, 1.0F);
             setPos(hand.x, hand.y, hand.z);
             setRot(caster.getYRot(), caster.getXRot());
-            if (phaseTicks >= SPIN_START_TICKS && (phaseTicks - SPIN_START_TICKS) % SPIN_LOOP_TICKS == 0) {
-                serverLevel.playSound(null, hand.x, hand.y, hand.z, ModSounds.RASENGAN_SPIN, SoundSource.PLAYERS, 0.6F, 1.0F);
-            }
             useIfPunched(caster);
         } else if (phaseTicks >= RASENGAN_BURST_TICKS) {
             discard();
@@ -334,9 +336,6 @@ public class ChakraSphereEntity extends Entity {
             Vec3 hand = handPosition(ownerEntity, RASENSHURIKEN, 1.0F);
             setPos(hand.x, hand.y, hand.z);
             setRot(ownerEntity.getYRot(), ownerEntity.getXRot());
-            if (phaseTicks >= SHURIKEN_SPIN_START_TICKS && (phaseTicks - SHURIKEN_SPIN_START_TICKS) % SHURIKEN_SPIN_LOOP_TICKS == 0) {
-                serverLevel.playSound(null, hand.x, hand.y, hand.z, ModSounds.RASENGAN_SPIN, SoundSource.PLAYERS, 0.7F, 0.7F);
-            }
             if (ownerEntity instanceof ServerPlayer shooter) useIfPunched(shooter);
         } else if (phase == ACTIVE) {
             Vec3 from = position();

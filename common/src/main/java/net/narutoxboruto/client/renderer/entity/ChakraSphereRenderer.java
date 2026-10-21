@@ -2,6 +2,8 @@ package net.narutoxboruto.client.renderer.entity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderer;
@@ -45,6 +47,8 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
                        MultiBufferSource bufferSource, int packedLight) {
         boolean shuriken = entity.getKind() == ChakraSphereEntity.RASENSHURIKEN;
         int phase = entity.getPhase();
+        // In the hand of a player that can be seen it is drawn by RasenganHandLayer, on the arm itself
+        if (!shuriken && phase == ChakraSphereEntity.CHARGING && drawnOnArm(entity)) return;
         float phaseAge = entity.getPhaseTicks() + partialTick;
         float age = entity.tickCount + partialTick;
 
@@ -72,8 +76,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         boolean blast = false;
         if (!shuriken) {
             if (phase == ChakraSphereEntity.CHARGING) {
-                radius = 0.05F + 0.13F * charge;
-                if (charge >= 1.0F) radius *= 1.0F + 0.07F * Mth.sin(age * 1.3F);
+                radius = heldRadius(charge, age);
             } else if (phase == ChakraSphereEntity.ACTIVE) {
                 radius = 0.18F;
             } else {
@@ -144,8 +147,35 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         poseStack.popPose();
     }
 
+    /** Whether the Rasengan in the hand of a player is drawn by the layer on the player (everyone but the player in first person). */
+    private static boolean drawnOnArm(ChakraSphereEntity entity) {
+        Entity owner = entity.level().getEntity(entity.getOwnerId());
+        if (!(owner instanceof AbstractClientPlayer)) return false;
+        Minecraft minecraft = Minecraft.getInstance();
+        return !(owner == minecraft.player && minecraft.options.getCameraType().isFirstPerson());
+    }
+
+    private static float heldRadius(float charge, float age) {
+        float radius = 0.05F + 0.13F * charge;
+        if (charge >= 1.0F) radius *= 1.0F + 0.07F * Mth.sin(age * 1.3F);
+        return radius;
+    }
+
+    /**
+     * The Rasengan held by a player, drawn from the layer on the player: {@code poseStack} is already at the place on the
+     * arm where it is held, so it moves with the arm like the arm itself.
+     */
+    public static void drawHeld(MultiBufferSource bufferSource, PoseStack poseStack, ChakraSphereEntity sphere, float partialTick) {
+        float age = sphere.tickCount + partialTick;
+        float charge = Mth.clamp((sphere.getPhaseTicks() + partialTick) / ChakraSphereEntity.RASENGAN_CHARGE_TICKS, 0.0F, 1.0F);
+        Vec3 aim = new Vec3(0.0D, 0.0D, -1.0D);
+        Vec3 across = new Vec3(1.0D, 0.0D, 0.0D);
+        Vec3 up = aim.cross(across).normalize();
+        ball(bufferSource, poseStack, poseStack.last().pose(), aim, across, up, heldRadius(charge, age), age, 1.0F, false);
+    }
+
     /** The ball of the Rasengan, and of the Rasenshuriken. */
-    private void ball(MultiBufferSource bufferSource, PoseStack poseStack, Matrix4f matrix, Vec3 aim, Vec3 across, Vec3 up,
+    private static void ball(MultiBufferSource bufferSource, PoseStack poseStack, Matrix4f matrix, Vec3 aim, Vec3 across, Vec3 up,
                       float radius, float age, float alpha, boolean blast) {
         plasmaBall(bufferSource, matrix, aim, across, up, radius, age, alpha, blast);
     }
@@ -163,7 +193,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
      *   <li>The orb breathes: it swells and shrinks a little.</li>
      * </ul>
      */
-    private void plasmaBall(MultiBufferSource bufferSource, Matrix4f matrix, Vec3 aim, Vec3 across, Vec3 up,
+    private static void plasmaBall(MultiBufferSource bufferSource, Matrix4f matrix, Vec3 aim, Vec3 across, Vec3 up,
                             float radius, float age, float alpha, boolean blast) {
         if (alpha < 0.01F) return;
         float breath = 1.0F + 0.04F * Mth.sin(age * 0.8F);

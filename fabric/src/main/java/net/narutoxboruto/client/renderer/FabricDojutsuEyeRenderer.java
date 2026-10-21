@@ -15,6 +15,7 @@ public class FabricDojutsuEyeRenderer {
                 (entityType, entityRenderer, registrationHelper, context) -> {
                     if (entityRenderer instanceof PlayerRenderer playerRenderer) {
                         registrationHelper.register(new DojutsuEyeLayer(playerRenderer));
+                        registrationHelper.register(new RasenganHandLayer(playerRenderer));
                     }
                 });
     }
