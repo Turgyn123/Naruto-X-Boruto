@@ -72,13 +72,13 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         boolean blast = false;
         if (!shuriken) {
             if (phase == ChakraSphereEntity.CHARGING) {
-                radius = 0.07F + 0.21F * charge;
+                radius = 0.05F + 0.13F * charge;
                 if (charge >= 1.0F) radius *= 1.0F + 0.07F * Mth.sin(age * 1.3F);
             } else if (phase == ChakraSphereEntity.ACTIVE) {
-                radius = 0.3F;
+                radius = 0.18F;
             } else {
                 float t = Mth.clamp(phaseAge / ChakraSphereEntity.RASENGAN_BURST_TICKS, 0.0F, 1.0F);
-                radius = 0.3F + 1.7F * t;
+                radius = 0.18F + 1.8F * t;
                 alpha = 1.0F - t;
             }
         } else if (phase == ChakraSphereEntity.CHARGING) {
