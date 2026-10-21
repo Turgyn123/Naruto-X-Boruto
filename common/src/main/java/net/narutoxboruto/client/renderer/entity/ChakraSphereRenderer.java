@@ -15,8 +15,6 @@ import net.narutoxboruto.entities.jutsus.ChakraSphereEntity;
 import net.narutoxboruto.main.Main;
 import org.joml.Matrix4f;
 
-import static java.util.Objects.hash;
-
 /**
  * Draws the {@link ChakraSphereEntity} in the style of the wind of the Giant Fan (see {@code WeaponEffectRenderer}): with
  * the same textures, the white streaks of wind (wind_streak) on ribbons that spiral and scroll, and the white crescent
@@ -217,6 +215,13 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
             Vec3 end = direction.scale(r * 1.02D + length).subtract(side.scale(0.6D));
             bolt(vc, matrix, new Vec3[]{start, middle, end}, 0.018F * scale, 0.9F * alpha);
         }
+    }
+
+    /** A pseudo random number from 0 to 1 for a whole number, always the same for the same number. */
+    private static float hash(int n) {
+        int h = n * 374761393 + 668265263;
+        h = (h ^ (h >>> 13)) * 1274126177;
+        return ((h ^ (h >>> 16)) & 0xFFFF) / 65535.0F;
     }
 
     /** A direction that points anywhere, always the same for the same number. */
