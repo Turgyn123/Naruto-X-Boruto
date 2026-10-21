@@ -57,7 +57,7 @@ public class ChakraSphereEntity extends Entity {
     /** The Rasengan: how long the caster drives it forward, how long the burst is seen, what it does. */
     public static final int RASENGAN_THRUST_TICKS = 10;
     public static final int RASENGAN_BURST_TICKS = 10;
-    private static final float RASENGAN_DAMAGE = 18.0F;
+    private static final float RASENGAN_DAMAGE = 25.0F;
     /** How far a punch reaches, and how far the explosion of the Rasengan reaches. */
     private static final double PUNCH_REACH = 3.0D;
     private static final double RASENGAN_BLAST_RADIUS = 3.5D;

@@ -9,7 +9,7 @@ import net.narutoxboruto.entities.jutsus.ChakraSphereEntity;
 import java.util.List;
 
 /**
- * Rasengan. Rank A, 50 chakra. A sphere of violently spinning chakra is formed in the hand while the button is held.
+ * Rasengan. Rank A, 75 chakra. A sphere of violently spinning chakra is formed in the hand while the button is held.
  * Let go and the caster dashes forward and drives it into the first thing in the way, which it hits hard and throws
  * away. It needs no nature release. It is drawn as a sphere with textures of the mod, there are no particles.
  */
@@ -31,12 +31,12 @@ public class Rasengan extends ChargedSphereJutsu {
 
     @Override
     public int getChakraCost() {
-        return 50;
+        return 75;
     }
 
     @Override
     public int getCooldownTicks() {
-        return 160; // 8 seconds
+        return 300; // 15 seconds
     }
 
     @Override
