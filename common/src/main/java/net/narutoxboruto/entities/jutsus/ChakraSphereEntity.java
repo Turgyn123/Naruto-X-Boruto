@@ -52,11 +52,6 @@ public class ChakraSphereEntity extends Entity {
     public static final int IMPACT = 2;
 
     /** How long the sphere is charged for, in ticks, before it can be used. */
-    /** The start-up sound lasts about 19 ticks and the loop 20 (a bit longer at the lower pitch of the Rasenshuriken). */
-    private static final int SPIN_START_TICKS = 19;
-    private static final int SPIN_LOOP_TICKS = 20;
-    private static final int SHURIKEN_SPIN_START_TICKS = 27;
-    private static final int SHURIKEN_SPIN_LOOP_TICKS = 28;
     public static final int RASENGAN_CHARGE_TICKS = 16;
     public static final int RASENSHURIKEN_CHARGE_TICKS = 30;
     /** The Rasengan: how long the caster drives it forward, how long the burst is seen, what it does. */
@@ -64,7 +59,7 @@ public class ChakraSphereEntity extends Entity {
     public static final int RASENGAN_BURST_TICKS = 10;
     private static final float RASENGAN_DAMAGE = 18.0F;
     /** How far a punch reaches, and how far the explosion of the Rasengan reaches. */
-    private static final double PUNCH_REACH = 4.0D;
+    private static final double PUNCH_REACH = 3.0D;
     private static final double RASENGAN_BLAST_RADIUS = 3.5D;
     /** The Rasenshuriken: how fast and how far it flies, and the sphere of blades it becomes. */
     private static final double SHURIKEN_SPEED = 1.2D;
@@ -308,9 +303,6 @@ public class ChakraSphereEntity extends Entity {
             Vec3 hand = handPosition(caster, RASENGAN, 1.0F);
             setPos(hand.x, hand.y, hand.z);
             setRot(caster.getYRot(), caster.getXRot());
-            if (phaseTicks >= SPIN_START_TICKS && (phaseTicks - SPIN_START_TICKS) % SPIN_LOOP_TICKS == 0) {
-                serverLevel.playSound(null, hand.x, hand.y, hand.z, ModSounds.RASENGAN_SPIN, SoundSource.PLAYERS, 0.6F, 1.0F);
-            }
             useIfPunched(caster);
         } else if (phaseTicks >= RASENGAN_BURST_TICKS) {
             discard();
@@ -334,9 +326,6 @@ public class ChakraSphereEntity extends Entity {
             Vec3 hand = handPosition(ownerEntity, RASENSHURIKEN, 1.0F);
             setPos(hand.x, hand.y, hand.z);
             setRot(ownerEntity.getYRot(), ownerEntity.getXRot());
-            if (phaseTicks >= SHURIKEN_SPIN_START_TICKS && (phaseTicks - SHURIKEN_SPIN_START_TICKS) % SHURIKEN_SPIN_LOOP_TICKS == 0) {
-                serverLevel.playSound(null, hand.x, hand.y, hand.z, ModSounds.RASENGAN_SPIN, SoundSource.PLAYERS, 0.7F, 0.7F);
-            }
             if (ownerEntity instanceof ServerPlayer shooter) useIfPunched(shooter);
         } else if (phase == ACTIVE) {
             Vec3 from = position();
