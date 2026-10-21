@@ -197,35 +197,97 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
             Vec3 sideA = firsts[k];
             Vec3 sideB = axes[k].cross(sideA).normalize();
             float spin = age * (0.35F + 0.1F * k) * (k == 1 ? -1.0F : 1.0F);
-            windBlades(bufferSource.getBuffer(RenderType.lightning()), matrix, sideA, sideB, inner, reach, spin, alpha, blast);
+            windBlades(bufferSource.getBuffer(RenderType.lightning()), matrix, sideA, sideB, inner, reach, spin, age, alpha, blast);
         }
     }
 
-    /** Four curved crescent blades in the plane of {@code sideA} and {@code sideB}, from {@code inner} out to {@code reach}. */
+    /**
+     * The shuriken of the Rasenshuriken in the plane of {@code sideA} and {@code sideB}: four curved blades that sweep out
+     * of the middle like the points of a ninja star, each one a soft glowing band that is white in the middle and fades
+     * to blue at its edges, with a thin glowing line along it, and a few rings of wind that ripple round the star.
+     */
     private static void windBlades(VertexConsumer vc, Matrix4f matrix, Vec3 sideA, Vec3 sideB, float inner, float reach,
-                                   float spin, float alpha, boolean blast) {
+                                   float spin, float age, float alpha, boolean blast) {
         if (alpha < 0.01F || reach < 0.01F) return;
-        int steps = 14;
-        int arms = 7;
+        int steps = 16;
         float scale = Math.max(0.5F, reach / 1.25F);
+        // Across a blade: from the sharp (outer) edge to the back, how far out from the middle line (times the half width)
+        // and how strongly it glows
+        double[] offset = {0.8D, 0.4D, 0.0D, -0.25D, -0.5D};
+        float[] glow = {0.04F, 0.3F, 0.7F, 0.3F, 0.04F};
         for (int blade = 0; blade < 4; blade++) {
             double base = spin + blade * (Math.PI / 2.0D);
-            for (int arm = 0; arm < arms; arm++) {
-                // From the back of the blade (-0.3) to its sharp edge (1.0): they all meet at the tips
-                double offset = -0.3D + 1.3D * arm / (arms - 1);
-                Vec3[] path = new Vec3[steps + 1];
-                for (int j = 0; j <= steps; j++) {
-                    double t = j / (double) steps;
-                    double angle = base + 1.2D * t;
-                    double radius = inner + (reach - inner) * t;
-                    Vec3 radial = sideA.scale(Math.cos(angle)).add(sideB.scale(Math.sin(angle)));
-                    Vec3 tangent = sideA.scale(-Math.sin(angle)).add(sideB.scale(Math.cos(angle)));
-                    double width = reach * 0.26D * Math.pow(Math.sin(Math.PI * t), 0.8D);
-                    path[j] = radial.scale(radius).add(tangent.scale(offset * width));
+            Vec3[][] rail = new Vec3[offset.length][steps + 1];
+            Vec3[] centreLine = new Vec3[steps + 1];
+            float[] strength = new float[steps + 1];
+            for (int j = 0; j <= steps; j++) {
+                double t = j / (double) steps;
+                double angle = base + 1.0D * t;
+                double radius = 0.3D * inner + (reach - 0.3D * inner) * t;
+                Vec3 radial = sideA.scale(Math.cos(angle)).add(sideB.scale(Math.sin(angle)));
+                Vec3 tangent = sideA.scale(-Math.sin(angle)).add(sideB.scale(Math.cos(angle)));
+                // Wide near the middle, then thinner to a point
+                double width = reach * 0.3D * Math.min(1.0D, 0.4D + 2.4D * t) * Math.pow(1.0D - t, 0.7D);
+                Vec3 centre = radial.scale(radius);
+                for (int k = 0; k < offset.length; k++) rail[k][j] = centre.add(tangent.scale(offset[k] * width));
+                centreLine[j] = centre;
+                strength[j] = (float) (1.0D - 0.35D * t);
+            }
+            for (int j = 0; j < steps; j++) {
+                for (int k = 0; k < offset.length - 1; k++) {
+                    gradientQuad(vc, matrix, rail[k][j], rail[k + 1][j], rail[k + 1][j + 1], rail[k][j + 1],
+                            glow[k] * strength[j] * alpha, glow[k + 1] * strength[j] * alpha,
+                            glow[k + 1] * strength[j + 1] * alpha, glow[k] * strength[j + 1] * alpha);
                 }
-                bolt(vc, matrix, path, 0.016F * scale, alpha * (blast ? 0.5F : 0.75F));
+            }
+            bolt(vc, matrix, centreLine, 0.012F * scale, alpha * (blast ? 0.4F : 0.6F));
+        }
+
+        // Rings of wind round the star, in the same plane just under it, broken into arcs that flow round
+        if (blast) return;
+        Vec3 axis = sideA.cross(sideB).normalize();
+        for (int ring = 0; ring < 3; ring++) {
+            double radius = reach * (0.9D + 0.4D * ring) + reach * 0.08D * Math.sin(age * 0.2D + ring * 2.0D);
+            double halfWidth = 0.022D * scale;
+            int segments = 40;
+            for (int j = 0; j < segments; j++) {
+                double a0 = Math.PI * 2.0D * j / segments;
+                double a1 = Math.PI * 2.0D * (j + 1) / segments;
+                float g0 = ringGlow(a0, age, ring);
+                float g1 = ringGlow(a1, age, ring);
+                Vec3 d0 = sideA.scale(Math.cos(a0)).add(sideB.scale(Math.sin(a0)));
+                Vec3 d1 = sideA.scale(Math.cos(a1)).add(sideB.scale(Math.sin(a1)));
+                Vec3 under = axis.scale(-0.04D * scale);
+                gradientQuad(vc, matrix, d0.scale(radius + halfWidth).add(under), d0.scale(radius).add(under),
+                        d1.scale(radius).add(under), d1.scale(radius + halfWidth).add(under), 0.0F, 0.3F * g0 * alpha, 0.3F * g1 * alpha, 0.0F);
+                gradientQuad(vc, matrix, d0.scale(radius).add(under), d0.scale(radius - halfWidth).add(under),
+                        d1.scale(radius - halfWidth).add(under), d1.scale(radius).add(under), 0.3F * g0 * alpha, 0.0F, 0.0F, 0.3F * g1 * alpha);
             }
         }
+    }
+
+    /** How much a ring glows at an angle: it comes and goes round the ring, and turns. */
+    private static float ringGlow(double angle, float age, int ring) {
+        double wave = 0.5D + 0.5D * Math.cos(angle * 2.0D - age * (0.25D + 0.05D * ring) * (ring % 2 == 0 ? 1.0D : -1.0D) + ring);
+        return (float) (0.25D + 0.75D * wave);
+    }
+
+    /**
+     * A quad of pale blue light whose glow is different at its four corners (the corners go round, in the order p0 to p3),
+     * brighter and whiter where it glows more, drawn from both sides.
+     */
+    private static void gradientQuad(VertexConsumer vc, Matrix4f matrix, Vec3 p0, Vec3 p1, Vec3 p2, Vec3 p3,
+                                     float a0, float a1, float a2, float a3) {
+        Vec3[] corner = {p0, p1, p2, p3};
+        float[] glow = {a0, a1, a2, a3};
+        for (int c = 0; c < 4; c++) glowVertex(vc, matrix, corner[c], glow[c]);
+        for (int c = 3; c >= 0; c--) glowVertex(vc, matrix, corner[c], glow[c]);
+    }
+
+    private static void glowVertex(VertexConsumer vc, Matrix4f matrix, Vec3 p, float glow) {
+        float white = Mth.clamp(glow * 1.2F, 0.0F, 1.0F);
+        vc.addVertex(matrix, (float) p.x, (float) p.y, (float) p.z)
+                .setColor(0.45F + 0.5F * white, 0.72F + 0.25F * white, 1.0F, Mth.clamp(glow, 0.0F, 1.0F));
     }
 
     /** The ball of the Rasengan, and of the Rasenshuriken. */

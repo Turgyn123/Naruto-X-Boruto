@@ -65,9 +65,9 @@ public class ChakraSphereEntity extends Entity {
     private static final double SHURIKEN_SPEED = 1.2D;
     public static final int SHURIKEN_FLIGHT_TICKS = 40;
     public static final int SHURIKEN_GROW_TICKS = 10;
-    public static final int SHURIKEN_BLAST_TICKS = 50;
+    public static final int SHURIKEN_BLAST_TICKS = 100;
     public static final double SHURIKEN_RADIUS = 6.0D;
-    private static final float SHURIKEN_TICK_DAMAGE = 3.5F;
+    private static final float SHURIKEN_TICK_DAMAGE = 2.5F;
     private static final float SHURIKEN_FINAL_DAMAGE = 10.0F;
 
     private static final EntityDataAccessor<Integer> KIND = SynchedEntityData.defineId(ChakraSphereEntity.class, EntityDataSerializers.INT);
@@ -356,7 +356,7 @@ public class ChakraSphereEntity extends Entity {
         } else {
             float grown = Math.min(1.0F, phaseTicks / (float) SHURIKEN_GROW_TICKS);
             double radius = SHURIKEN_RADIUS * grown;
-            if (phaseTicks % 4 == 0 && phaseTicks <= SHURIKEN_BLAST_TICKS - 4) {
+            if (phaseTicks % 5 == 0 && phaseTicks <= SHURIKEN_BLAST_TICKS - 5) {
                 for (LivingEntity inside : serverLevel.getEntitiesOfClass(LivingEntity.class,
                         new AABB(position(), position()).inflate(radius), e -> e != ownerEntity && e.isAlive() && !e.isSpectator())) {
                     if (inside.position().add(0.0D, inside.getBbHeight() * 0.5D, 0.0D).distanceToSqr(position()) > radius * radius) continue;
@@ -370,7 +370,7 @@ public class ChakraSphereEntity extends Entity {
                         inside.hurtMarked = true;
                     }
                 }
-                serverLevel.playSound(null, getX(), getY(), getZ(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, 1.5F, 0.6F);
+                if (phaseTicks % 20 == 0) serverLevel.playSound(null, getX(), getY(), getZ(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, 1.5F, 0.6F);
             }
             if (phaseTicks == SHURIKEN_BLAST_TICKS - 2) {
                 for (LivingEntity inside : serverLevel.getEntitiesOfClass(LivingEntity.class,
