@@ -28,7 +28,7 @@ public class RasenganHandLayer extends RenderLayer<AbstractClientPlayer, PlayerM
         poseStack.pushPose();
         getParentModel().translateToHand(HumanoidArm.RIGHT, poseStack);
         // The arm hangs along +y from the shoulder and the front is -z: in the middle of the end of the hand
-        poseStack.translate(0.0F, 0.66F, -0.02F);
+        poseStack.translate(-0.03F, 0.8F, -0.02F);
         ChakraSphereRenderer.drawHeld(bufferSource, poseStack, sphere, partialTick);
         poseStack.popPose();
     }
