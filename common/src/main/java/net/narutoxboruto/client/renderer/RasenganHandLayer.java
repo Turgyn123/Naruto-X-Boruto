@@ -11,7 +11,7 @@ import net.narutoxboruto.client.renderer.entity.ChakraSphereRenderer;
 import net.narutoxboruto.entities.jutsus.ChakraSphereEntity;
 
 /**
- * Draws the Rasengan in the right hand of a player, on the arm itself, so it swings with the arm when the player walks
+ * Draws the Rasengan or Rasenshuriken in the right hand of a player, on the arm itself, so it swings with the arm when the player walks
  * and turns with the body. Drawn like an item in the hand, on the end of the hand.
  */
 public class RasenganHandLayer extends RenderLayer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> {
@@ -23,12 +23,22 @@ public class RasenganHandLayer extends RenderLayer<AbstractClientPlayer, PlayerM
     @Override
     public void render(PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, AbstractClientPlayer player,
                        float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks, float netHeadYaw, float headPitch) {
-        ChakraSphereEntity sphere = ChakraSphereEntity.findHeldClient(player);
+        ChakraSphereEntity sphere = ChakraSphereEntity.findHeldClient(player, ChakraSphereEntity.RASENGAN);
+        boolean shuriken = false;
+        if (sphere == null) {
+            sphere = ChakraSphereEntity.findHeldClient(player, ChakraSphereEntity.RASENSHURIKEN);
+            shuriken = true;
+        }
         if (sphere == null) return;
         poseStack.pushPose();
         getParentModel().translateToHand(HumanoidArm.RIGHT, poseStack);
-        // The arm hangs along +y from the shoulder and the front is -z: in the middle of the end of the hand
-        poseStack.translate(-0.03F, 0.8F, -0.02F);
+        // The arm hangs along +y from the shoulder and the front is -z: the Rasengan is on the end of the hand, and the
+        // Rasenshuriken is above the hand of the raised arm (see RaisedArmPose)
+        if (shuriken) {
+            poseStack.translate(0.0F, 1.3F, 0.0F);
+        } else {
+            poseStack.translate(-0.03F, 0.8F, -0.02F);
+        }
         ChakraSphereRenderer.drawHeld(bufferSource, poseStack, sphere, partialTick);
         poseStack.popPose();
     }

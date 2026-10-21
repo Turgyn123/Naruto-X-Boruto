@@ -109,14 +109,14 @@ public class ChakraSphereEntity extends Entity {
 
     /**
      * Where the sphere is held. The Rasengan: in the right hand of the caster.
-     * The Rasenshuriken: above the head of the caster, like a hand held up high.
+     * The Rasenshuriken: above the right hand of the caster, which is held up high.
      */
     public static Vec3 handPosition(Entity caster, int kind, float partialTick) {
-        Vec3 look = caster.getViewVector(partialTick);
         if (kind == RASENSHURIKEN) {
-            Vec3 flat = new Vec3(look.x, 0.0D, look.z);
-            flat = flat.lengthSqr() < 1.0E-4D ? Vec3.ZERO : flat.normalize().scale(0.3D);
-            return caster.getEyePosition(partialTick).add(0.0D, 1.0D, 0.0D).add(flat);
+            // Above the right hand, which is raised
+            double raisedYaw = Math.toRadians(caster instanceof LivingEntity raised ? Mth.rotLerp(partialTick, raised.yBodyRotO, raised.yBodyRot) : caster.getYRot());
+            Vec3 sideways = new Vec3(-Math.cos(raisedYaw), 0.0D, -Math.sin(raisedYaw));
+            return caster.getPosition(partialTick).add(sideways.scale(0.45D)).add(0.0D, 2.6D, 0.0D);
         }
         // The Rasengan is in the right hand of the body, a little in front of it, wherever the caster looks
         double yaw = Math.toRadians(caster instanceof LivingEntity living ? Mth.rotLerp(partialTick, living.yBodyRotO, living.yBodyRot) : caster.getYRot());
@@ -149,11 +149,11 @@ public class ChakraSphereEntity extends Entity {
         return null;
     }
 
-    /** The Rasengan that {@code owner} is holding, as seen on the client, or null. */
-    public static ChakraSphereEntity findHeldClient(Entity owner) {
+    /** The sphere of {@code kind} that {@code owner} is holding, as seen on the client, or null. */
+    public static ChakraSphereEntity findHeldClient(Entity owner, int kind) {
         for (ChakraSphereEntity sphere : owner.level().getEntitiesOfClass(ChakraSphereEntity.class,
                 owner.getBoundingBox().inflate(12.0D),
-                e -> e.getKind() == RASENGAN && e.getOwnerId() == owner.getId() && e.getPhase() == CHARGING)) {
+                e -> e.getKind() == kind && e.getOwnerId() == owner.getId() && e.getPhase() == CHARGING)) {
             return sphere;
         }
         return null;

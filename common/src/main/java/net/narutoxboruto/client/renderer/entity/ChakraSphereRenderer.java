@@ -48,7 +48,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         boolean shuriken = entity.getKind() == ChakraSphereEntity.RASENSHURIKEN;
         int phase = entity.getPhase();
         // In the hand of a player that can be seen it is drawn by RasenganHandLayer, on the arm itself
-        if (!shuriken && phase == ChakraSphereEntity.CHARGING && drawnOnArm(entity)) return;
+        if (phase == ChakraSphereEntity.CHARGING && drawnOnArm(entity)) return;
         float phaseAge = entity.getPhaseTicks() + partialTick;
         float age = entity.tickCount + partialTick;
 
@@ -130,24 +130,14 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
             }
         }
 
-        // The four big crescent blades of the Rasenshuriken, across the way it is aimed
+        // The four blades of the Rasenshuriken, lying flat and turning round the ball
         if (shuriken) {
-            VertexConsumer crescent = bufferSource.getBuffer(RenderType.entityTranslucent(CRESCENT_TEXTURE));
-            int sets = blast ? 3 : 1;
-            for (int k = 0; k < sets; k++) {
-                Vec3 axis = k == 0 ? aim : (k == 1 ? across : up);
-                Vec3 sideA = k == 0 ? across : (k == 1 ? up : aim);
-                Vec3 sideB = axis.cross(sideA).normalize();
-                float spin = age * (0.35F + 0.1F * k) * (k == 1 ? -1.0F : 1.0F);
-                for (int blade = 0; blade < 4; blade++) {
-                    crescentBlade(crescent, matrix, axis, sideA, sideB, reach, spin + blade * (float) (Math.PI / 2.0D), alpha * (blast ? 0.7F : 0.95F));
-                }
-            }
+            shurikenBlades(bufferSource, matrix, 0.8F * radius, reach, age, alpha * (blast ? 0.7F : 0.95F), blast);
         }
         poseStack.popPose();
     }
 
-    /** Whether the Rasengan in the hand of a player is drawn by the layer on the player (everyone but the player in first person). */
+    /** Whether the Rasengan or Rasenshuriken in the hand of a player is drawn by the layer on the player (everyone but the player in first person). */
     private static boolean drawnOnArm(ChakraSphereEntity entity) {
         Entity owner = entity.level().getEntity(entity.getOwnerId());
         if (!(owner instanceof AbstractClientPlayer)) return false;
@@ -162,16 +152,80 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
     }
 
     /**
-     * The Rasengan held by a player, drawn from the layer on the player: {@code poseStack} is already at the place on the
-     * arm where it is held, so it moves with the arm like the arm itself.
+     * The Rasengan or Rasenshuriken held by a player, drawn from the layer on the player: {@code poseStack} is already at
+     * the place on the arm where it is held, so it moves with the arm like the arm itself. The Rasenshuriken is above the
+     * raised hand and its blades lie in the plane across the arm.
      */
     public static void drawHeld(MultiBufferSource bufferSource, PoseStack poseStack, ChakraSphereEntity sphere, float partialTick) {
         float age = sphere.tickCount + partialTick;
-        float charge = Mth.clamp((sphere.getPhaseTicks() + partialTick) / ChakraSphereEntity.RASENGAN_CHARGE_TICKS, 0.0F, 1.0F);
-        Vec3 aim = new Vec3(0.0D, 0.0D, -1.0D);
+        Matrix4f matrix = poseStack.last().pose();
+        if (sphere.getKind() == ChakraSphereEntity.RASENGAN) {
+            float charge = Mth.clamp((sphere.getPhaseTicks() + partialTick) / ChakraSphereEntity.RASENGAN_CHARGE_TICKS, 0.0F, 1.0F);
+            Vec3 aim = new Vec3(0.0D, 0.0D, -1.0D);
+            Vec3 across = new Vec3(1.0D, 0.0D, 0.0D);
+            Vec3 up = aim.cross(across).normalize();
+            ball(bufferSource, poseStack, matrix, aim, across, up, heldRadius(charge, age), age, 1.0F, false);
+            return;
+        }
+        float charge = Mth.clamp((sphere.getPhaseTicks() + partialTick) / ChakraSphereEntity.RASENSHURIKEN_CHARGE_TICKS, 0.0F, 1.0F);
+        float radius = 0.08F + 0.2F * charge;
+        float reach = 0.25F + 1.0F * charge;
+        if (charge >= 1.0F) {
+            float pulse = 1.0F + 0.07F * Mth.sin(age * 1.3F);
+            radius *= pulse;
+            reach *= pulse;
+        }
+        // The arm points along +y here, so +y is the way up
+        Vec3 aim = new Vec3(0.0D, 1.0D, 0.0D);
         Vec3 across = new Vec3(1.0D, 0.0D, 0.0D);
         Vec3 up = aim.cross(across).normalize();
-        ball(bufferSource, poseStack, poseStack.last().pose(), aim, across, up, heldRadius(charge, age), age, 1.0F, false);
+        ball(bufferSource, poseStack, matrix, aim, across, up, radius, age, 1.0F, false);
+        shurikenBlades(bufferSource, matrix, 0.8F * radius, reach, age, 0.95F, false);
+    }
+
+    /**
+     * The blades of the Rasenshuriken: four curved blades that lie flat, in the plane across the way up (and three such
+     * sets in the three planes while it bursts), turning round the ball. Every blade is a crescent made of a handful of
+     * glowing arms side by side, drawn like the arms of the Rasengan, with a white core and a blue glow.
+     */
+    private static void shurikenBlades(MultiBufferSource bufferSource, Matrix4f matrix, float inner, float reach, float age,
+                                       float alpha, boolean blast) {
+        int sets = blast ? 3 : 1;
+        Vec3[] axes = {new Vec3(0.0D, 1.0D, 0.0D), new Vec3(1.0D, 0.0D, 0.0D), new Vec3(0.0D, 0.0D, 1.0D)};
+        Vec3[] firsts = {new Vec3(1.0D, 0.0D, 0.0D), new Vec3(0.0D, 0.0D, 1.0D), new Vec3(0.0D, 1.0D, 0.0D)};
+        for (int k = 0; k < sets; k++) {
+            Vec3 sideA = firsts[k];
+            Vec3 sideB = axes[k].cross(sideA).normalize();
+            float spin = age * (0.35F + 0.1F * k) * (k == 1 ? -1.0F : 1.0F);
+            windBlades(bufferSource.getBuffer(RenderType.lightning()), matrix, sideA, sideB, inner, reach, spin, alpha, blast);
+        }
+    }
+
+    /** Four curved crescent blades in the plane of {@code sideA} and {@code sideB}, from {@code inner} out to {@code reach}. */
+    private static void windBlades(VertexConsumer vc, Matrix4f matrix, Vec3 sideA, Vec3 sideB, float inner, float reach,
+                                   float spin, float alpha, boolean blast) {
+        if (alpha < 0.01F || reach < 0.01F) return;
+        int steps = 14;
+        int arms = 7;
+        float scale = Math.max(0.5F, reach / 1.25F);
+        for (int blade = 0; blade < 4; blade++) {
+            double base = spin + blade * (Math.PI / 2.0D);
+            for (int arm = 0; arm < arms; arm++) {
+                // From the back of the blade (-0.3) to its sharp edge (1.0): they all meet at the tips
+                double offset = -0.3D + 1.3D * arm / (arms - 1);
+                Vec3[] path = new Vec3[steps + 1];
+                for (int j = 0; j <= steps; j++) {
+                    double t = j / (double) steps;
+                    double angle = base + 1.2D * t;
+                    double radius = inner + (reach - inner) * t;
+                    Vec3 radial = sideA.scale(Math.cos(angle)).add(sideB.scale(Math.sin(angle)));
+                    Vec3 tangent = sideA.scale(-Math.sin(angle)).add(sideB.scale(Math.cos(angle)));
+                    double width = reach * 0.26D * Math.pow(Math.sin(Math.PI * t), 0.8D);
+                    path[j] = radial.scale(radius).add(tangent.scale(offset * width));
+                }
+                bolt(vc, matrix, path, 0.016F * scale, alpha * (blast ? 0.5F : 0.75F));
+            }
+        }
     }
 
     /** The ball of the Rasengan, and of the Rasenshuriken. */

@@ -5,6 +5,7 @@ import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.narutoxboruto.client.RaisedArmPose;
 import net.narutoxboruto.client.WallFrame;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -28,6 +29,13 @@ public abstract class MixinPlayerModel <T extends LivingEntity> extends Humanoid
         if (pEntity instanceof Player player && WallFrame.appliesTo(player)) {
             // The local player walking on a wall: the head follows the sideways look and the limbs swing
             WallFrame.poseModel(head, rightArm, leftArm, rightLeg, leftLeg, pAgeInTicks);
+        }
+
+        if (pEntity instanceof Player player && RaisedArmPose.applies(player)) {
+            // Charging a Rasenshuriken: the right arm straight up, a little outward
+            rightArm.xRot = -3.0F;
+            rightArm.yRot = 0.0F;
+            rightArm.zRot = 0.15F;
         }
 
         hat.copyFrom(head);
