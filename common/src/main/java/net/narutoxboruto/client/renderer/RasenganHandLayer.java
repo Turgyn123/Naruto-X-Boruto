@@ -38,7 +38,7 @@ public class RasenganHandLayer extends RenderLayer<AbstractClientPlayer, PlayerM
         if (shuriken) {
             // Past the end of the hand, and from there straight up (in the frame of the arm that way is turned by its tilt)
             double tilt = RaisedArmPose.ARM_TILT;
-            poseStack.translate((float) (-Math.sin(tilt) * 0.55D), (float) (0.8D - Math.cos(tilt) * 0.55D), 0.0F);
+            poseStack.translate((float) (-Math.sin(tilt) * 1.1D), (float) (0.8D - Math.cos(tilt) * 1.1D), 0.0F);
         } else {
             poseStack.translate(-0.03F, 0.8F, -0.02F);
         }

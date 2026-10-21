@@ -116,7 +116,7 @@ public class ChakraSphereEntity extends Entity {
             // Above the right hand, which is raised out to the side
             double raisedYaw = Math.toRadians(caster instanceof LivingEntity raised ? Mth.rotLerp(partialTick, raised.yBodyRotO, raised.yBodyRot) : caster.getYRot());
             Vec3 sideways = new Vec3(-Math.cos(raisedYaw), 0.0D, -Math.sin(raisedYaw));
-            return caster.getPosition(partialTick).add(sideways.scale(0.95D)).add(0.0D, 2.45D, 0.0D);
+            return caster.getPosition(partialTick).add(sideways.scale(0.85D)).add(0.0D, 2.9D, 0.0D);
         }
         // The Rasengan is in the right hand of the body, a little in front of it, wherever the caster looks
         double yaw = Math.toRadians(caster instanceof LivingEntity living ? Mth.rotLerp(partialTick, living.yBodyRotO, living.yBodyRot) : caster.getYRot());

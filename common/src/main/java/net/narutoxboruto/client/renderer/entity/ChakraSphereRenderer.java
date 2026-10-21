@@ -14,6 +14,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 import net.narutoxboruto.client.RaisedArmPose;
+import net.narutoxboruto.client.renderer.GlowRenderType;
 import net.narutoxboruto.entities.jutsus.ChakraSphereEntity;
 import net.narutoxboruto.main.Main;
 import org.joml.Matrix4f;
@@ -204,14 +205,14 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
             Vec3 sideA = firsts[k];
             Vec3 sideB = axes[k].cross(sideA).normalize();
             float spin = age * (0.35F + 0.1F * k) * (k == 1 ? -1.0F : 1.0F);
-            windBlades(bufferSource.getBuffer(RenderType.lightning()), matrix, sideA, sideB, inner, reach, spin, age, alpha, blast);
+            windBlades(bufferSource.getBuffer(GlowRenderType.GLOW), matrix, sideA, sideB, inner, reach, spin, age, alpha, blast);
         }
     }
 
     /**
      * The shuriken of the Rasenshuriken in the plane of {@code sideA} and {@code sideB}: four curved blades that sweep out
      * of the middle like the points of a ninja star, each one a soft glowing band that is white in the middle and fades
-     * to blue at its edges, with a thin glowing line along it, and a few rings of wind that ripple round the star.
+     * to blue at its edges, with a thin glowing line along it.
      */
     private static void windBlades(VertexConsumer vc, Matrix4f matrix, Vec3 sideA, Vec3 sideB, float inner, float reach,
                                    float spin, float age, float alpha, boolean blast) {
@@ -249,34 +250,6 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
             }
             bolt(vc, matrix, centreLine, 0.012F * scale, alpha * (blast ? 0.4F : 0.6F));
         }
-
-        // Rings of wind round the star, in the same plane just under it, broken into arcs that flow round
-        if (blast) return;
-        Vec3 axis = sideA.cross(sideB).normalize();
-        for (int ring = 0; ring < 3; ring++) {
-            double radius = reach * (0.9D + 0.4D * ring) + reach * 0.08D * Math.sin(age * 0.2D + ring * 2.0D);
-            double halfWidth = 0.022D * scale;
-            int segments = 40;
-            for (int j = 0; j < segments; j++) {
-                double a0 = Math.PI * 2.0D * j / segments;
-                double a1 = Math.PI * 2.0D * (j + 1) / segments;
-                float g0 = ringGlow(a0, age, ring);
-                float g1 = ringGlow(a1, age, ring);
-                Vec3 d0 = sideA.scale(Math.cos(a0)).add(sideB.scale(Math.sin(a0)));
-                Vec3 d1 = sideA.scale(Math.cos(a1)).add(sideB.scale(Math.sin(a1)));
-                Vec3 under = axis.scale(-0.04D * scale);
-                gradientQuad(vc, matrix, d0.scale(radius + halfWidth).add(under), d0.scale(radius).add(under),
-                        d1.scale(radius).add(under), d1.scale(radius + halfWidth).add(under), 0.0F, 0.3F * g0 * alpha, 0.3F * g1 * alpha, 0.0F);
-                gradientQuad(vc, matrix, d0.scale(radius).add(under), d0.scale(radius - halfWidth).add(under),
-                        d1.scale(radius - halfWidth).add(under), d1.scale(radius).add(under), 0.3F * g0 * alpha, 0.0F, 0.0F, 0.3F * g1 * alpha);
-            }
-        }
-    }
-
-    /** How much a ring glows at an angle: it comes and goes round the ring, and turns. */
-    private static float ringGlow(double angle, float age, int ring) {
-        double wave = 0.5D + 0.5D * Math.cos(angle * 2.0D - age * (0.25D + 0.05D * ring) * (ring % 2 == 0 ? 1.0D : -1.0D) + ring);
-        return (float) (0.25D + 0.75D * wave);
     }
 
     /**
