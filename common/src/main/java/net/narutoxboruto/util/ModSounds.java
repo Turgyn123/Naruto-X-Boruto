@@ -12,7 +12,7 @@ public class ModSounds {
 
     /** The Rasengan takes shape in the hand. */
     public static final SoundEvent RASENGAN_FORM = create("rasengan_form");
-    /** The Rasengan keeps spinning in the hand: 1.25 seconds, faded in and out, that is played again every 23 ticks. */
+    /** The Rasengan keeps spinning in the hand: 1 second, faded in and out, that is played again every 18 ticks. */
     public static final SoundEvent RASENGAN_SPIN = create("rasengan_spin");
     /** The Rasengan explodes. */
     public static final SoundEvent RASENGAN_HIT = create("rasengan_hit");

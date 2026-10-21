@@ -51,11 +51,11 @@ public class ChakraSphereEntity extends Entity {
     public static final int ACTIVE = 1;
     public static final int IMPACT = 2;
 
-    /** The start-up sound lasts about 19 ticks, then the 1.25 second spinning sound (23 ticks, with its fades overlapping) repeats (longer at the lower pitch of the Rasenshuriken). */
+    /** The start-up sound lasts about 19 ticks, then the 1 second spinning sound (18 ticks, with its fades overlapping) repeats (longer at the lower pitch of the Rasenshuriken). */
     private static final int SPIN_START_TICKS = 19;
-    private static final int SPIN_LOOP_TICKS = 23;
+    private static final int SPIN_LOOP_TICKS = 18;
     private static final int SHURIKEN_SPIN_START_TICKS = 27;
-    private static final int SHURIKEN_SPIN_LOOP_TICKS = 33;
+    private static final int SHURIKEN_SPIN_LOOP_TICKS = 26;
     /** How long the sphere is charged for, in ticks, before it can be used. */
     public static final int RASENGAN_CHARGE_TICKS = 16;
     public static final int RASENSHURIKEN_CHARGE_TICKS = 30;
