@@ -15,6 +15,8 @@ import net.narutoxboruto.entities.jutsus.ChakraSphereEntity;
 import net.narutoxboruto.main.Main;
 import org.joml.Matrix4f;
 
+import static java.util.Objects.hash;
+
 /**
  * Draws the {@link ChakraSphereEntity} in the style of the wind of the Giant Fan (see {@code WeaponEffectRenderer}): with
  * the same textures, the white streaks of wind (wind_streak) on ribbons that spiral and scroll, and the white crescent
