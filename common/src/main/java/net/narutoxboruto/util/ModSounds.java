@@ -12,7 +12,8 @@ public class ModSounds {
 
     /** The Rasengan takes shape in the hand. */
     public static final SoundEvent RASENGAN_FORM = create("rasengan_form");
-    /** The whirr of the Rasengan, 0.5 seconds that can be played over and over. */
+    /** The Rasengan keeps spinning in the hand: 1.75 seconds that can be played over and over. */
+    public static final SoundEvent RASENGAN_SPIN = create("rasengan_spin");
     /** The Rasengan explodes. */
     public static final SoundEvent RASENGAN_HIT = create("rasengan_hit");
 
