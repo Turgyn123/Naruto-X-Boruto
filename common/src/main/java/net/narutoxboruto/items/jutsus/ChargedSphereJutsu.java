@@ -5,6 +5,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -65,6 +66,16 @@ public abstract class ChargedSphereJutsu extends AbstractJutsuItem {
 
         ChakraSphereEntity.spawn(serverLevel, serverPlayer, sphereKind());
         return InteractionResultHolder.consume(stack);
+    }
+
+    /** A punch with the item that lands on a living thing uses the sphere there, see {@link ChakraSphereEntity#punchInto}. */
+    @Override
+    public boolean hurtEnemy(ItemStack stack, LivingEntity target, LivingEntity attacker) {
+        if (attacker instanceof ServerPlayer player && attacker.level() instanceof ServerLevel serverLevel) {
+            ChakraSphereEntity sphere = ChakraSphereEntity.findHeld(serverLevel, player, sphereKind());
+            if (sphere != null) sphere.punchInto(player, target);
+        }
+        return super.hurtEnemy(stack, target, attacker);
     }
 
     /** The caster punched with a sphere that has grown: it is used, and costs chakra, and the jutsu rests. */

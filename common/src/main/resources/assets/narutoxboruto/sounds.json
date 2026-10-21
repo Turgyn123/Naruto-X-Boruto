@@ -1,0 +1,5 @@
+{
+  "rasengan_form": { "sounds": ["narutoxboruto:rasengan_form"], "subtitle": "subtitles.narutoxboruto.rasengan_form" },
+  "rasengan_spin": { "sounds": ["narutoxboruto:rasengan_spin"], "subtitle": "subtitles.narutoxboruto.rasengan_spin" },
+  "rasengan_hit": { "sounds": ["narutoxboruto:rasengan_hit"], "subtitle": "subtitles.narutoxboruto.rasengan_hit" }
+}
