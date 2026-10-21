@@ -127,7 +127,7 @@ public class ChakraSphereEntity extends Entity {
         double yaw = Math.toRadians(caster instanceof LivingEntity living ? Mth.rotLerp(partialTick, living.yBodyRotO, living.yBodyRot) : caster.getYRot());
         Vec3 forward = new Vec3(-Math.sin(yaw), 0.0D, Math.cos(yaw));
         Vec3 right = new Vec3(-Math.cos(yaw), 0.0D, -Math.sin(yaw));
-        return caster.getPosition(partialTick).add(right.scale(0.4D)).add(forward.scale(0.55D)).add(0.0D, caster.getBbHeight() * 0.38D, 0.0D);
+        return caster.getPosition(partialTick).add(right.scale(0.42D)).add(forward.scale(0.3D)).add(0.0D, caster.getBbHeight() * 0.31D, 0.0D);
     }
 
     /** A sphere of {@code kind} charging in the hand of {@code caster}. */
