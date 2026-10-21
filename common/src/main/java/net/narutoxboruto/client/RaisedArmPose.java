@@ -6,8 +6,11 @@ import net.minecraft.world.item.ItemStack;
 import net.narutoxboruto.entities.jutsus.ChakraSphereEntity;
 import net.narutoxboruto.items.jutsus.ChargedSphereJutsu;
 
-/** The right arm of a player held straight up while a Rasenshuriken is charged above the hand. */
+/** The right arm of a player held out to the side and up while a Rasenshuriken is charged above the hand. */
 public final class RaisedArmPose {
+
+    /** How far the right arm is turned out from hanging down, in radians: out to the side and up, 42 degrees above straight out. */
+    public static final float ARM_TILT = 2.3F;
 
     private RaisedArmPose() {
     }

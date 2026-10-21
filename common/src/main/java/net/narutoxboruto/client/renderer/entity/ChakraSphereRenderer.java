@@ -13,6 +13,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
+import net.narutoxboruto.client.RaisedArmPose;
 import net.narutoxboruto.entities.jutsus.ChakraSphereEntity;
 import net.narutoxboruto.main.Main;
 import org.joml.Matrix4f;
@@ -132,7 +133,8 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
 
         // The four blades of the Rasenshuriken, lying flat and turning round the ball
         if (shuriken) {
-            shurikenBlades(bufferSource, matrix, 0.8F * radius, reach, age, alpha * (blast ? 0.7F : 0.95F), blast);
+            shurikenBlades(bufferSource, matrix, new Vec3(0.0D, 1.0D, 0.0D), new Vec3(1.0D, 0.0D, 0.0D), 0.8F * radius, reach, age,
+                    alpha * (blast ? 0.7F : 0.95F), blast);
         }
         poseStack.popPose();
     }
@@ -175,12 +177,14 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
             radius *= pulse;
             reach *= pulse;
         }
-        // The arm points along +y here, so +y is the way up
-        Vec3 aim = new Vec3(0.0D, 1.0D, 0.0D);
-        Vec3 across = new Vec3(1.0D, 0.0D, 0.0D);
+        // The right arm is raised outward and up (see RaisedArmPose): in the frame of the arm, straight up is this way, and
+        // 'across' is a way along the flat disc
+        double tilt = RaisedArmPose.ARM_TILT;
+        Vec3 aim = new Vec3(-Math.sin(tilt), -Math.cos(tilt), 0.0D);
+        Vec3 across = new Vec3(Math.cos(tilt), -Math.sin(tilt), 0.0D);
         Vec3 up = aim.cross(across).normalize();
         ball(bufferSource, poseStack, matrix, aim, across, up, radius, age, 1.0F, false);
-        shurikenBlades(bufferSource, matrix, 0.8F * radius, reach, age, 0.95F, false);
+        shurikenBlades(bufferSource, matrix, aim, across, 0.8F * radius, reach, age, 0.95F, false);
     }
 
     /**
@@ -188,11 +192,14 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
      * sets in the three planes while it bursts), turning round the ball. Every blade is a crescent made of a handful of
      * glowing arms side by side, drawn like the arms of the Rasengan, with a white core and a blue glow.
      */
-    private static void shurikenBlades(MultiBufferSource bufferSource, Matrix4f matrix, float inner, float reach, float age,
-                                       float alpha, boolean blast) {
+    private static void shurikenBlades(MultiBufferSource bufferSource, Matrix4f matrix, Vec3 up, Vec3 side, float inner,
+                                       float reach, float age, float alpha, boolean blast) {
         int sets = blast ? 3 : 1;
-        Vec3[] axes = {new Vec3(0.0D, 1.0D, 0.0D), new Vec3(1.0D, 0.0D, 0.0D), new Vec3(0.0D, 0.0D, 1.0D)};
-        Vec3[] firsts = {new Vec3(1.0D, 0.0D, 0.0D), new Vec3(0.0D, 0.0D, 1.0D), new Vec3(0.0D, 1.0D, 0.0D)};
+        // Three directions across each other: the flat disc lies across the first, and in the burst there is one more
+        // across each of the others
+        Vec3 third = up.cross(side).normalize();
+        Vec3[] axes = {up, side, third};
+        Vec3[] firsts = {side, third, up};
         for (int k = 0; k < sets; k++) {
             Vec3 sideA = firsts[k];
             Vec3 sideB = axes[k].cross(sideA).normalize();
@@ -214,7 +221,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         // Across a blade: from the sharp (outer) edge to the back, how far out from the middle line (times the half width)
         // and how strongly it glows
         double[] offset = {0.8D, 0.4D, 0.0D, -0.25D, -0.5D};
-        float[] glow = {0.04F, 0.3F, 0.7F, 0.3F, 0.04F};
+        float[] glow = {0.06F, 0.45F, 0.9F, 0.45F, 0.06F};
         for (int blade = 0; blade < 4; blade++) {
             double base = spin + blade * (Math.PI / 2.0D);
             Vec3[][] rail = new Vec3[offset.length][steps + 1];
@@ -227,7 +234,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
                 Vec3 radial = sideA.scale(Math.cos(angle)).add(sideB.scale(Math.sin(angle)));
                 Vec3 tangent = sideA.scale(-Math.sin(angle)).add(sideB.scale(Math.cos(angle)));
                 // Wide near the middle, then thinner to a point
-                double width = reach * 0.3D * Math.min(1.0D, 0.4D + 2.4D * t) * Math.pow(1.0D - t, 0.7D);
+                double width = reach * 0.34D * Math.min(1.0D, 0.4D + 2.4D * t) * Math.pow(1.0D - t, 0.7D);
                 Vec3 centre = radial.scale(radius);
                 for (int k = 0; k < offset.length; k++) rail[k][j] = centre.add(tangent.scale(offset[k] * width));
                 centreLine[j] = centre;

@@ -32,10 +32,10 @@ public abstract class MixinPlayerModel <T extends LivingEntity> extends Humanoid
         }
 
         if (pEntity instanceof Player player && RaisedArmPose.applies(player)) {
-            // Charging a Rasenshuriken: the right arm straight up
-            rightArm.xRot = -(float) Math.PI;
+            // Charging a Rasenshuriken: the right arm out to the side and up
+            rightArm.xRot = 0.0F;
             rightArm.yRot = 0.0F;
-            rightArm.zRot = 0.0F;
+            rightArm.zRot = RaisedArmPose.ARM_TILT;
         }
 
         hat.copyFrom(head);

@@ -7,6 +7,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.world.entity.HumanoidArm;
+import net.narutoxboruto.client.RaisedArmPose;
 import net.narutoxboruto.client.renderer.entity.ChakraSphereRenderer;
 import net.narutoxboruto.entities.jutsus.ChakraSphereEntity;
 
@@ -35,7 +36,9 @@ public class RasenganHandLayer extends RenderLayer<AbstractClientPlayer, PlayerM
         // The arm hangs along +y from the shoulder and the front is -z: the Rasengan is on the end of the hand, and the
         // Rasenshuriken is above the hand of the raised arm (see RaisedArmPose)
         if (shuriken) {
-            poseStack.translate(0.0F, 1.3F, 0.0F);
+            // Past the end of the hand, and from there straight up (in the frame of the arm that way is turned by its tilt)
+            double tilt = RaisedArmPose.ARM_TILT;
+            poseStack.translate((float) (-Math.sin(tilt) * 0.55D), (float) (0.8D - Math.cos(tilt) * 0.55D), 0.0F);
         } else {
             poseStack.translate(-0.03F, 0.8F, -0.02F);
         }
