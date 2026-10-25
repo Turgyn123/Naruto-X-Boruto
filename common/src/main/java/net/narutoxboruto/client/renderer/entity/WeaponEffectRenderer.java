@@ -407,95 +407,54 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
     }
 
     /**
-     * Wind Release: Great Breakthrough: a roaring blast of wind that opens out from the mouth like a trumpet.
-     * <ul>
-     *   <li>A soft pale shell of wind in the shape of the cone, with a brighter wave of pressure running in it just behind
-     *       the front of the blast.</li>
-     *   <li>Wide soft bands of wind that spiral along the cone and rush out of the mouth, over and over.</li>
-     *   <li>A few thin streaks of speed.</li>
-     * </ul>
-     * The local z axis is the way it blows. The server adds clouds of dust at the front.
+     * Wind Release: Great Breakthrough: a roaring blast of wind that opens out from the mouth like a trumpet, drawn the
+     * way the wind of the Giant Fan is: long white ribbons with the streaks of wind on them that sweep out along the cone and
+     * curl round it, thin near the mouth and wide further out, and scroll as they go. Half of them lie round the cone, half
+     * stand out from it like fins, so the blast has depth from every side. The local z axis is the way it blows.
      */
     private void renderGreatBreakthrough(WeaponEffectEntity entity, float age, float fade, PoseStack poseStack, MultiBufferSource bufferSource) {
-        Matrix4f matrix = poseStack.last().pose();
-        VertexConsumer vc = bufferSource.getBuffer(GlowRenderType.GLOW);
         double tan = Math.tan(WeaponEffectEntity.BREAKTHROUGH_ANGLE);
         double front = Math.min(WeaponEffectEntity.BREAKTHROUGH_RANGE, age * 3.0D);
         if (front < 1.0D) return;
-
-        // The shell of the cone
-        int around = 28;
-        int steps = 12;
-        for (int s = 0; s < steps; s++) {
-            double z0 = front * s / steps;
-            double z1 = front * (s + 1) / steps;
-            float a0 = shellGlow(z0, front) * fade;
-            float a1 = shellGlow(z1, front) * fade;
-            for (int k = 0; k < around; k++) {
-                double t0 = Math.PI * 2.0D * k / around;
-                double t1 = Math.PI * 2.0D * (k + 1) / around;
-                ChakraSphereRenderer.gradientQuad(vc, matrix,
-                        new Vec3(Math.cos(t0) * z0 * tan, Math.sin(t0) * z0 * tan, z0), new Vec3(Math.cos(t1) * z0 * tan, Math.sin(t1) * z0 * tan, z0),
-                        new Vec3(Math.cos(t1) * z1 * tan, Math.sin(t1) * z1 * tan, z1), new Vec3(Math.cos(t0) * z1 * tan, Math.sin(t0) * z1 * tan, z1),
-                        a0, a0, a1, a1);
-            }
-        }
-
-        // Wide bands of wind spiralling along the cone, rushing out of the mouth
-        int bands = 14;
-        for (int band = 0; band < bands; band++) {
-            double head = (hash(band * 5 + 1) + age * 0.05D * (0.8D + 0.5D * hash(band * 5 + 2))) % 1.0D;
-            double base = band * (Math.PI * 2.0D / bands) + hash(band * 5 + 3) * 0.5D;
-            int pieces = 10;
-            Vec3[][] rail = new Vec3[3][pieces + 1];
-            float[] glow = new float[pieces + 1];
-            for (int j = 0; j <= pieces; j++) {
-                double sPos = Math.max(0.0D, head - 0.32D * (1.0D - j / (double) pieces));
-                double z = sPos * front;
-                double angle = base + z * 0.07D - age * 0.3D;
-                double radius = z * tan * 0.8D;
-                double halfWidth = 0.15D + 0.05D * z;
-                Vec3 centre = new Vec3(Math.cos(angle) * radius, Math.sin(angle) * radius, z);
-                Vec3 tangent = new Vec3(-Math.sin(angle), Math.cos(angle), 0.0D);
-                rail[0][j] = centre.subtract(tangent.scale(halfWidth));
-                rail[1][j] = centre;
-                rail[2][j] = centre.add(tangent.scale(halfWidth));
-                // faint at both ends of the band
-                double along = j / (double) pieces;
-                glow[j] = (float) (0.5D * Math.min(1.0D, Math.min(along * 4.0D, (1.0D - along) * 2.5D)) * Math.min(1.0D, z / 2.0D)) * fade;
-            }
-            for (int j = 0; j < pieces; j++) {
-                for (int side = 0; side < 2; side++) {
-                    float edge0 = side == 0 ? 0.0F : glow[j];
-                    float edge1 = side == 0 ? glow[j] : 0.0F;
-                    float edge2 = side == 0 ? glow[j + 1] : 0.0F;
-                    float edge3 = side == 0 ? 0.0F : glow[j + 1];
-                    ChakraSphereRenderer.gradientQuad(vc, matrix, rail[side][j], rail[side + 1][j], rail[side + 1][j + 1], rail[side][j + 1],
-                            edge0, edge1, edge2, edge3);
+        VertexConsumer vc = bufferSource.getBuffer(RenderType.entityTranslucent(WIND_TEXTURE));
+        Matrix4f matrix = poseStack.last().pose();
+        int ribbons = 26;
+        int segments = 16;
+        for (int ribbon = 0; ribbon < ribbons; ribbon++) {
+            double length = 14.0D + 12.0D * hash(ribbon * 7 + 1);
+            double head = (hash(ribbon * 7 + 2) * 80.0D + age * (3.0D + 2.0D * hash(ribbon * 7 + 3))) % (front + length * 0.5D);
+            double base = hash(ribbon * 7 + 4) * Math.PI * 2.0D;
+            double fraction = 0.25D + 0.7D * hash(ribbon * 7 + 5);
+            double turn = (hash(ribbon * 7 + 6) - 0.5D) * 0.16D;
+            boolean fin = ribbon % 2 == 1;
+            double[] previous = null;
+            for (int s = 0; s <= segments; s++) {
+                double t = s / (double) segments;
+                double z = head - length * (1.0D - t);
+                if (z < 0.3D || z > front) {
+                    previous = null;
+                    continue;
                 }
-            }
-        }
-
-        // A few thin streaks of speed
-        for (int i = 0; i < 36; i++) {
-            double theta = hash(i * 3 + 101) * Math.PI * 2.0D;
-            double fraction = 0.1D + 0.9D * Math.sqrt(hash(i * 3 + 102));
-            double length = 3.0D + 5.0D * hash(i * 3 + 103);
-            double head = (hash(i * 11 + 104) * 60.0D + age * (2.2D + 2.0D * hash(i * 7 + 105))) % front;
-            Vec3[] path = new Vec3[4];
-            for (int j = 0; j < path.length; j++) {
-                double z = Math.max(0.2D, head - length * (1.0D - j / (path.length - 1.0D)));
+                double angle = base + z * turn + age * 0.05D;
                 double radius = z * tan * fraction;
-                path[j] = new Vec3(Math.cos(theta + z * 0.04D) * radius, Math.sin(theta + z * 0.04D) * radius, z);
+                double cx = Math.cos(angle) * radius;
+                double cy = Math.sin(angle) * radius;
+                double half = 0.2D + 0.07D * z;
+                // Across the ribbon: round the cone, or outwards from the cone
+                double ax = fin ? Math.cos(angle) : -Math.sin(angle);
+                double ay = fin ? Math.sin(angle) : Math.cos(angle);
+                float alpha = (float) (0.75D * Math.min(1.0D, Math.min(t * 5.0D, (1.0D - t) * 3.0D)) * Math.min(1.0D, z / 3.0D)) * fade;
+                float u = (float) (t * 2.5D - age * 0.2D + ribbon * 0.37D);
+                double[] now = {cx - ax * half, cy - ay * half, z, cx + ax * half, cy + ay * half, z, u, alpha};
+                if (previous != null) {
+                    vertex(vc, matrix, (float) previous[0], (float) previous[1], (float) previous[2], (float) previous[6], 0.0F, 0.94F, 0.97F, 1.0F, (float) previous[7]);
+                    vertex(vc, matrix, (float) previous[3], (float) previous[4], (float) previous[5], (float) previous[6], 1.0F, 0.94F, 0.97F, 1.0F, (float) previous[7]);
+                    vertex(vc, matrix, (float) now[3], (float) now[4], (float) now[5], (float) now[6], 1.0F, 0.94F, 0.97F, 1.0F, (float) now[7]);
+                    vertex(vc, matrix, (float) now[0], (float) now[1], (float) now[2], (float) now[6], 0.0F, 0.94F, 0.97F, 1.0F, (float) now[7]);
+                }
+                previous = now;
             }
-            ChakraSphereRenderer.bolt(vc, matrix, path, 0.012F, 0.5F * fade);
         }
-    }
-
-    /** How much the shell of the blast glows at {@code z} meters when its front is at {@code front}. */
-    private static float shellGlow(double z, double front) {
-        double wave = Math.exp(-Math.pow((front - z) / 4.0D, 2.0D));
-        return (float) (Math.min(1.0D, z / 3.0D) * (0.05D + 0.14D * wave));
     }
 
     private void renderWind(WeaponEffectEntity entity, float age, float fade, PoseStack poseStack, MultiBufferSource bufferSource) {
