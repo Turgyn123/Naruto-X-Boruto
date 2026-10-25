@@ -1,27 +1,20 @@
 package net.narutoxboruto.client.renderer.entity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.client.model.IronGolemModel;
-import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.resources.ResourceLocation;
+import net.narutoxboruto.client.model.GolemModel;
 import net.narutoxboruto.entities.jutsus.GolemEntity;
 import net.narutoxboruto.main.Main;
 
-/** Draws the Golem as a big humanoid of tan rock: the iron golem's body, in the stone of the technique and a third bigger. */
-public class GolemRenderer extends MobRenderer<GolemEntity, IronGolemModel<GolemEntity>> {
+/** Draws the Golem with its own model (see {@link GolemModel}): a hunched giant built of tan boulders. */
+public class GolemRenderer extends MobRenderer<GolemEntity, GolemModel> {
 
     private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/golem.png");
-    private static final float SCALE = 1.3F;
 
     public GolemRenderer(EntityRendererProvider.Context context) {
-        super(context, new IronGolemModel<>(context.bakeLayer(ModelLayers.IRON_GOLEM)), 1.0F);
-    }
-
-    @Override
-    protected void scale(GolemEntity golem, PoseStack poseStack, float partialTick) {
-        poseStack.scale(SCALE, SCALE, SCALE);
+        super(context, new GolemModel(context.bakeLayer(GolemModel.LAYER_LOCATION)), 1.4F);
     }
 
     @Override

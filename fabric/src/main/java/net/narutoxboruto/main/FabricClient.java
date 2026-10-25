@@ -51,6 +51,7 @@ public class FabricClient implements ClientModInitializer {
 
         // Register model layers
         EntityModelLayerRegistry.registerModelLayer(FireBallModel.LAYER_LOCATION, FireBallModel::createBodyLayer);
+        EntityModelLayerRegistry.registerModelLayer(net.narutoxboruto.client.model.GolemModel.LAYER_LOCATION, net.narutoxboruto.client.model.GolemModel::createBodyLayer);
 
         // Throwable renderers
         EntityRendererRegistry.register(FabricEntities.SHURIKEN, ShurikenRenderer::new);

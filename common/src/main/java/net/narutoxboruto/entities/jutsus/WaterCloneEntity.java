@@ -24,6 +24,8 @@ import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.TargetGoal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.level.pathfinder.PathType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 import net.narutoxboruto.capabilities.info.Chakra;
@@ -54,6 +56,13 @@ public class WaterCloneEntity extends PathfinderMob {
 
     public WaterCloneEntity(EntityType<? extends PathfinderMob> type, Level level) {
         super(type, level);
+        // Made of water: it walks on the surface of water (see MixinLiquidBlock) and paths across it
+        this.setPathfindingMalus(PathType.WATER, 0.0F);
+    }
+
+    @Override
+    public boolean canStandOnFluid(FluidState fluid) {
+        return fluid.is(FluidTags.WATER) && this.fallDistance < 3.0F && !this.isInWater();
     }
 
     public static AttributeSupplier.Builder createAttributes() {

@@ -25,6 +25,7 @@ public class ForgeClient {
     @SubscribeEvent
     static void onRegisterLayerDefinitions(EntityRenderersEvent.RegisterLayerDefinitions event) {
         event.registerLayerDefinition(FireBallModel.LAYER_LOCATION, FireBallModel::createBodyLayer);
+        event.registerLayerDefinition(net.narutoxboruto.client.model.GolemModel.LAYER_LOCATION, net.narutoxboruto.client.model.GolemModel::createBodyLayer);
     }
 
     @SubscribeEvent
