@@ -49,6 +49,7 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
     private static final ResourceLocation FLAME_BLOB_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/flame_blob.png");
     private static final ResourceLocation FIRE_PUFF_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/fire_puff.png");
     private static final ResourceLocation ASH_PUFF_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/ash_puff.png");
+    private static final ResourceLocation MUD_TEXTURE = ResourceLocation.withDefaultNamespace("textures/block/mud.png");
     private static final int FULL_BRIGHT = 0xF000F0;
 
     public WeaponEffectRenderer(EntityRendererProvider.Context context) {
@@ -80,6 +81,21 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
             return;
         }
 
+        if (kind == WeaponEffectEntity.EARTH_DRAGON) {
+            poseStack.pushPose();
+            renderEarthDragon(entity, age, partialTick, poseStack, bufferSource, packedLight);
+            poseStack.popPose();
+            return;
+        }
+        if (kind == WeaponEffectEntity.MUD_BULLET) {
+            poseStack.pushPose();
+            poseStack.mulPose(Axis.YP.rotationDegrees(-Mth.lerp(partialTick, entity.yRotO, entity.getYRot())));
+            poseStack.mulPose(Axis.XP.rotationDegrees(Mth.lerp(partialTick, entity.xRotO, entity.getXRot())));
+            renderMudBullet(age, poseStack, bufferSource, packedLight);
+            poseStack.popPose();
+            return;
+        }
+
         poseStack.pushPose();
         if (kind == WeaponEffectEntity.THREAD) {
             renderThread(entity, age, partialTick, poseStack, bufferSource);
@@ -94,6 +110,140 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
             else renderCrescent(entity, age, fade, poseStack, bufferSource);
         }
         poseStack.popPose();
+    }
+
+    // ---------------------------------------------------------------- earth jutsu
+
+    /**
+     * Earth Release: Earth Dragon Bullet: a dragon head made of mud (the texture of mud blocks) that rises out of the ground on a
+     * neck, with horns, a long snout with teeth, a lower jaw that snaps open for every shot, and glowing yellow eyes. The entity
+     * stands on the ground: the neck is drawn turned to where it faces, and the head turns up and down from the top of the neck.
+     */
+    private void renderEarthDragon(WeaponEffectEntity entity, float age, float partialTick, PoseStack poseStack,
+                                   MultiBufferSource bufferSource, int light) {
+        float rise = Mth.clamp(age / WeaponEffectEntity.DRAGON_RISE_TICKS, 0.0F, 1.0F);
+        float sink = Mth.clamp((entity.getMaxLife() - age) / WeaponEffectEntity.DRAGON_SINK_TICKS, 0.0F, 1.0F);
+        float out = Math.min(rise, sink);
+        out = 1.0F - (1.0F - out) * (1.0F - out);
+        poseStack.translate(0.0D, -2.4D * (1.0D - out), 0.0D);
+        poseStack.mulPose(Axis.YP.rotationDegrees(-Mth.lerp(partialTick, entity.yRotO, entity.getYRot())));
+        VertexConsumer vc = bufferSource.getBuffer(RenderType.entityCutoutNoCull(MUD_TEXTURE));
+        int seed = entity.getId() * 17;
+
+        // The mound at the foot and the neck, which bends back and up to the head
+        Matrix4f m = poseStack.last().pose();
+        mudBox(vc, m, -0.95F, -0.3F, -1.05F, 0.95F, 0.35F, 0.55F, 0.75F, light);
+        mudBox(vc, m, -0.7F, 0.3F, -0.95F, 0.7F, 0.95F, 0.25F, 0.85F, light);
+        mudBox(vc, m, -0.6F, 0.9F, -0.8F, 0.6F, 1.45F, 0.15F, 0.95F, light);
+        for (int i = 0; i < 4; i++) {
+            // Spikes down the back of the neck
+            float y = 0.4F + i * 0.34F;
+            float z = -0.95F + (i == 3 ? 0.15F : 0.0F) - (i == 0 ? 0.1F : 0.0F);
+            mudBox(vc, m, -0.07F, y, z - 0.3F, 0.07F, y + 0.3F, z, 0.7F, light);
+        }
+
+        // The head, from the top of the neck
+        poseStack.translate(0.0D, WeaponEffectEntity.DRAGON_PIVOT_HEIGHT, 0.0D);
+        poseStack.mulPose(Axis.XP.rotationDegrees(Mth.lerp(partialTick, entity.xRotO, entity.getXRot())));
+        m = poseStack.last().pose();
+        mudBox(vc, m, -0.5F, -0.4F, -0.5F, 0.5F, 0.5F, 0.55F, 1.0F, light);          // skull
+        mudBox(vc, m, -0.34F, -0.02F, 0.55F, 0.34F, 0.38F, 1.55F, 0.95F, light);      // snout
+        mudBox(vc, m, -0.24F, 0.03F, 1.55F, 0.24F, 0.3F, 2.1F, 0.9F, light);          // tip of the snout
+        mudBox(vc, m, -0.42F, 0.4F, 0.1F, 0.42F, 0.62F, 0.5F, 0.8F, light);           // brow ridge
+        // Horns: swept back and up
+        for (int side = -1; side <= 1; side += 2) {
+            poseStack.pushPose();
+            poseStack.translate(side * 0.34D, 0.45D, -0.35D);
+            poseStack.mulPose(Axis.XP.rotationDegrees(-55.0F));
+            poseStack.mulPose(Axis.ZP.rotationDegrees(side * 12.0F));
+            mudBox(vc, poseStack.last().pose(), -0.09F, -0.09F, -0.9F, 0.09F, 0.09F, 0.0F, 0.7F, light);
+            poseStack.popPose();
+        }
+        // Teeth under the upper jaw
+        for (int side = -1; side <= 1; side += 2) {
+            for (int i = 0; i < 4; i++) {
+                float z = 0.75F + i * 0.36F;
+                mudBox(vc, m, side * 0.24F - 0.03F, -0.17F, z, side * 0.24F + 0.03F, -0.02F, z + 0.07F, 1.6F, light);
+            }
+        }
+        // The lower jaw, hinged under the skull: it is open a little, and snaps wide open for a shot
+        int ago = entity.getTargetId();
+        float open = ago < 0 ? 0.0F : Mth.clamp(1.0F - (ago + partialTick) / 6.0F, 0.0F, 1.0F);
+        poseStack.pushPose();
+        poseStack.translate(0.0D, -0.28D, 0.45D);
+        poseStack.mulPose(Axis.XP.rotationDegrees(10.0F + 24.0F * open));
+        Matrix4f jaw = poseStack.last().pose();
+        mudBox(vc, jaw, -0.27F, -0.2F, 0.0F, 0.27F, 0.0F, 1.55F, 0.8F, light);
+        for (int side = -1; side <= 1; side += 2) {
+            for (int i = 0; i < 3; i++) {
+                float z = 0.55F + i * 0.4F;
+                mudBox(vc, jaw, side * 0.2F - 0.03F, 0.0F, z, side * 0.2F + 0.03F, 0.13F, z + 0.07F, 1.6F, light);
+            }
+        }
+        poseStack.popPose();
+        // Glowing eyes
+        VertexConsumer eyes = bufferSource.getBuffer(RenderType.entityCutoutNoCull(WHITE_TEXTURE));
+        for (int side = -1; side <= 1; side += 2) {
+            mudBox(eyes, m, side * 0.5F - 0.02F, 0.2F, 0.18F, side * 0.5F + 0.04F, 0.36F, 0.4F, 1.0F, FULL_BRIGHT, 1.0F, 0.75F, 0.1F);
+        }
+    }
+
+    /** One ball of mud: a rough lump (cubes of the mud texture turning round each other) with smaller lumps flying after it. */
+    private void renderMudBullet(float age, PoseStack poseStack, MultiBufferSource bufferSource, int light) {
+        VertexConsumer vc = bufferSource.getBuffer(RenderType.entityCutoutNoCull(MUD_TEXTURE));
+        for (int i = 0; i < 5; i++) {
+            float size = i == 0 ? 0.3F : 0.24F - i * 0.03F;
+            float back = i == 0 ? 0.0F : i * 0.42F;
+            float wobble = i == 0 ? 0.0F : 0.12F * Mth.sin(age * 0.9F + i * 2.1F);
+            poseStack.pushPose();
+            poseStack.translate(wobble, wobble * 0.7F, -back);
+            poseStack.mulPose(Axis.YP.rotationDegrees(age * 33.0F + i * 40.0F));
+            poseStack.mulPose(Axis.XP.rotationDegrees(age * 47.0F + i * 25.0F));
+            mudBox(vc, poseStack.last().pose(), -size, -size, -size, size, size, size, 0.9F, light);
+            poseStack.popPose();
+        }
+        // A second lump turning across the first so it is not a plain cube
+        poseStack.pushPose();
+        poseStack.mulPose(Axis.YP.rotationDegrees(45.0F + age * 21.0F));
+        mudBox(vc, poseStack.last().pose(), -0.26F, -0.26F, -0.26F, 0.26F, 0.26F, 0.26F, 1.0F, light);
+        poseStack.popPose();
+    }
+
+    private static void mudBox(VertexConsumer vc, Matrix4f m, float x0, float y0, float z0, float x1, float y1, float z1, float shade, int light) {
+        mudBox(vc, m, x0, y0, z0, x1, y1, z1, shade, light, 1.0F, 1.0F, 1.0F);
+    }
+
+    /** The six faces of a box, textured, tinted and lit differently per face so that it reads as a solid. */
+    private static void mudBox(VertexConsumer vc, Matrix4f m, float x0, float y0, float z0, float x1, float y1, float z1,
+                               float shade, int light, float r, float g, float b) {
+        float top = Math.min(shade, 1.0F);
+        float side = top * 0.82F;
+        float bottom = top * 0.55F;
+        face(vc, m, x0, y0, z0, x1, y0, z0, x1, y0, z1, x0, y0, z1, bottom * r, bottom * g, bottom * b, light, 0.0F, -1.0F, 0.0F);
+        face(vc, m, x0, y1, z0, x0, y1, z1, x1, y1, z1, x1, y1, z0, top * r, top * g, top * b, light, 0.0F, 1.0F, 0.0F);
+        face(vc, m, x0, y0, z0, x0, y1, z0, x1, y1, z0, x1, y0, z0, side * r, side * g, side * b, light, 0.0F, 0.0F, -1.0F);
+        face(vc, m, x0, y0, z1, x1, y0, z1, x1, y1, z1, x0, y1, z1, side * r, side * g, side * b, light, 0.0F, 0.0F, 1.0F);
+        face(vc, m, x0, y0, z0, x0, y0, z1, x0, y1, z1, x0, y1, z0, side * r, side * g, side * b, light, -1.0F, 0.0F, 0.0F);
+        face(vc, m, x1, y0, z0, x1, y1, z0, x1, y1, z1, x1, y0, z1, side * r, side * g, side * b, light, 1.0F, 0.0F, 0.0F);
+    }
+
+    private static void face(VertexConsumer vc, Matrix4f m, float ax, float ay, float az, float bx, float by, float bz,
+                             float cx, float cy, float cz, float dx, float dy, float dz,
+                             float r, float g, float b, int light, float nx, float ny, float nz) {
+        solidVertex(vc, m, ax, ay, az, 0.0F, 0.0F, r, g, b, light, nx, ny, nz);
+        solidVertex(vc, m, bx, by, bz, 1.0F, 0.0F, r, g, b, light, nx, ny, nz);
+        solidVertex(vc, m, cx, cy, cz, 1.0F, 1.0F, r, g, b, light, nx, ny, nz);
+        solidVertex(vc, m, dx, dy, dz, 0.0F, 1.0F, r, g, b, light, nx, ny, nz);
+    }
+
+    private static void solidVertex(VertexConsumer vc, Matrix4f m, float x, float y, float z, float u, float v,
+                                    float r, float g, float b, int light, float nx, float ny, float nz) {
+        vc.addVertex(m, x, y, z)
+                .setColor(r, g, b, 1.0F)
+                .setUv(u, v)
+                .setOverlay(OverlayTexture.NO_OVERLAY)
+                .setLight(light)
+                .setNormal(nx, ny, nz);
     }
 
     // ---------------------------------------------------------------- fire jutsu

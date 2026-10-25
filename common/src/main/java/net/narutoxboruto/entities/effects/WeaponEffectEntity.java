@@ -66,6 +66,8 @@ public class WeaponEffectEntity extends Entity {
     public static final int FLAME_BULLET = 5;
     public static final int VACUUM_BULLET = 6;
     public static final int GREAT_BREAKTHROUGH = 7;
+    public static final int EARTH_DRAGON = 8;
+    public static final int MUD_BULLET = 9;
 
     private static final EntityDataAccessor<Integer> KIND = SynchedEntityData.defineId(WeaponEffectEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Float> SIZE = SynchedEntityData.defineId(WeaponEffectEntity.class, EntityDataSerializers.FLOAT);
@@ -469,6 +471,115 @@ public class WeaponEffectEntity extends Entity {
         return this.damageSources().magic();
     }
 
+    /**
+     * Earth Release: Earth Dragon Bullet: a dragon head of mud rises out of the ground in front of the caster and spits
+     * three balls of mud at what they look at. How long it lives, when it shoots, and what each ball does.
+     */
+    public static final int DRAGON_TICKS = 34;
+    public static final int DRAGON_RISE_TICKS = 6;
+    public static final int DRAGON_SINK_TICKS = 6;
+    private static final int[] DRAGON_SHOTS = {9, 15, 21};
+    /** How far in front of the caster it rises, how high the neck pivot is above the ground and how far the mouth is from the pivot. */
+    private static final double DRAGON_DISTANCE = 2.6D;
+    public static final double DRAGON_PIVOT_HEIGHT = 1.5D;
+    public static final double DRAGON_MOUTH = 2.0D;
+    private static final double MUD_SPEED = 1.5D;
+    public static final int MUD_TICKS = 14; // 21 meters
+    private static final float MUD_DAMAGE = 6.0F;
+    private static final int MUD_SLOW_TICKS = 60;
+    private static final double DRAGON_MAX_PITCH = Math.toRadians(30.0D);
+
+    /** Earth Release: Earth Dragon Bullet: the dragon head rises from the ground in front of {@code caster}. */
+    public static void spawnEarthDragon(ServerLevel level, ServerPlayer caster) {
+        Vec3 look = caster.getLookAngle();
+        double horizontal = Math.sqrt(look.x * look.x + look.z * look.z);
+        Vec3 flat = horizontal < 1.0E-3D ? new Vec3(0.0D, 0.0D, 1.0D) : new Vec3(look.x / horizontal, 0.0D, look.z / horizontal);
+        double pitch = Mth.clamp(Math.asin(Mth.clamp(look.y, -1.0D, 1.0D)), -DRAGON_MAX_PITCH, DRAGON_MAX_PITCH);
+        Vec3 direction = new Vec3(flat.x * Math.cos(pitch), Math.sin(pitch), flat.z * Math.cos(pitch));
+        double x = caster.getX() + flat.x * DRAGON_DISTANCE;
+        double z = caster.getZ() + flat.z * DRAGON_DISTANCE;
+        // The ground there: the first block that is solid with room above it, from a little above the caster downwards
+        double y = caster.getY();
+        BlockPos column = BlockPos.containing(x, caster.getY() + 2.0D, z);
+        for (int i = 0; i < 6; i++) {
+            BlockPos at = column.below(i);
+            if (!level.getBlockState(at.below()).getCollisionShape(level, at.below()).isEmpty()
+                    && level.getBlockState(at).getCollisionShape(level, at).isEmpty()) {
+                y = at.getY();
+                break;
+            }
+        }
+        WeaponEffectEntity effect = create(level, EARTH_DRAGON, new Vec3(x, y, z), direction, 1.0F, 0xFFFFFFFF, DRAGON_TICKS);
+        effect.owner = caster.getUUID();
+        level.addFreshEntity(effect);
+        level.playSound(null, x, y, z, SoundEvents.MUD_BREAK, SoundSource.PLAYERS, 1.8F, 0.6F);
+        level.playSound(null, x, y, z, SoundEvents.GRAVEL_BREAK, SoundSource.PLAYERS, 1.5F, 0.5F);
+    }
+
+    /** Spits a ball of mud from the mouth at the shot ticks and tells the clients (in TARGET) how long ago the last one was. */
+    private void tickEarthDragon() {
+        if (!(level() instanceof ServerLevel serverLevel)) return;
+        int age = tickCount;
+        for (int i = 0; i < DRAGON_SHOTS.length; i++) {
+            if (age == DRAGON_SHOTS[i]) {
+                this.entityData.set(TARGET, 0);
+                Vec3 direction = Vec3.directionFromRotation(getXRot(), getYRot()).normalize();
+                Vec3 mouth = position().add(0.0D, DRAGON_PIVOT_HEIGHT, 0.0D).add(direction.scale(DRAGON_MOUTH));
+                WeaponEffectEntity ball = create(serverLevel, MUD_BULLET, mouth, direction, 0.6F, 0xFFFFFFFF, MUD_TICKS);
+                ball.owner = owner;
+                ball.setDeltaMovement(direction.scale(MUD_SPEED));
+                serverLevel.addFreshEntity(ball);
+                serverLevel.playSound(null, mouth.x, mouth.y, mouth.z, SoundEvents.MUD_PLACE, SoundSource.PLAYERS, 1.6F, 0.7F);
+                serverLevel.playSound(null, mouth.x, mouth.y, mouth.z, SoundEvents.SLIME_BLOCK_BREAK, SoundSource.PLAYERS, 1.2F, 0.6F);
+            }
+        }
+        if (this.entityData.get(TARGET) >= 0) {
+            int ago = this.entityData.get(TARGET) + 1;
+            this.entityData.set(TARGET, ago > 6 ? -1 : ago);
+        }
+        if (--life <= 0) discard();
+    }
+
+    /** Flies the ball of mud on: it hits the first living thing (6 damage, slows it) or block in its way and splatters. */
+    private void tickMudBullet() {
+        if (!(level() instanceof ServerLevel serverLevel)) return;
+        Vec3 motion = getDeltaMovement();
+        Vec3 from = position();
+        Vec3 to = from.add(motion);
+        Entity ownerEntity = owner == null ? null : serverLevel.getEntity(owner);
+        HitResult hit = serverLevel.clip(new ClipContext(from, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this));
+        Vec3 end = hit.getType() == HitResult.Type.MISS ? to : hit.getLocation();
+        EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(serverLevel, this, from, end,
+                new AABB(from, end).inflate(1.0D),
+                e -> e instanceof LivingEntity && e.isAlive() && e != ownerEntity && !e.isSpectator());
+        if (entityHit != null) {
+            Entity victim = entityHit.getEntity();
+            victim.invulnerableTime = 0;
+            victim.hurt(earthSource(ownerEntity), MUD_DAMAGE);
+            if (victim instanceof LivingEntity living) {
+                living.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, MUD_SLOW_TICKS, 1));
+            }
+            splatter(serverLevel, entityHit.getLocation());
+        } else if (hit.getType() != HitResult.Type.MISS) {
+            splatter(serverLevel, hit.getLocation());
+        } else {
+            setPos(to.x, to.y, to.z);
+            if (--life <= 0) discard();
+        }
+    }
+
+    private void splatter(ServerLevel serverLevel, Vec3 at) {
+        serverLevel.sendParticles(new net.minecraft.core.particles.BlockParticleOption(ParticleTypes.BLOCK, net.minecraft.world.level.block.Blocks.MUD.defaultBlockState()),
+                at.x, at.y, at.z, 14, 0.25D, 0.25D, 0.25D, 0.1D);
+        serverLevel.playSound(null, at.x, at.y, at.z, SoundEvents.MUD_BREAK, SoundSource.PLAYERS, 1.4F, 0.8F);
+        discard();
+    }
+
+    private DamageSource earthSource(Entity caster) {
+        if (caster instanceof net.minecraft.world.entity.player.Player player) return this.damageSources().playerAttack(player);
+        return this.damageSources().magic();
+    }
+
     /** A cloud of ash hanging in the air around {@code center}. */
     public static void spawnAshCloud(ServerLevel level, ServerPlayer caster, Vec3 center) {
         WeaponEffectEntity effect = create(level, ASH_CLOUD, center, new Vec3(0.0D, 0.0D, 1.0D), 1.0F, 0xFFFFFFFF, CLOUD_TICKS);
@@ -640,6 +751,14 @@ public class WeaponEffectEntity extends Entity {
         }
         if (getKind() == GREAT_BREAKTHROUGH) {
             tickGreatBreakthrough();
+            return;
+        }
+        if (getKind() == EARTH_DRAGON) {
+            tickEarthDragon();
+            return;
+        }
+        if (getKind() == MUD_BULLET) {
+            tickMudBullet();
             return;
         }
 
