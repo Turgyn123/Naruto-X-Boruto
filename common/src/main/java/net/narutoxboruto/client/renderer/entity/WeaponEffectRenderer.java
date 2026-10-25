@@ -18,6 +18,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
+import net.narutoxboruto.client.renderer.GlowRenderType;
 import net.narutoxboruto.entities.effects.WeaponEffectEntity;
 import net.narutoxboruto.items.ModItems;
 import net.narutoxboruto.main.Main;
@@ -87,7 +88,8 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
             poseStack.mulPose(Axis.YP.rotationDegrees(-Mth.lerp(partialTick, entity.yRotO, entity.getYRot())));
             poseStack.mulPose(Axis.XP.rotationDegrees(Mth.lerp(partialTick, entity.xRotO, entity.getXRot())));
             float fade = Mth.clamp((entity.getMaxLife() - age) / 4.0F, 0.0F, 1.0F) * Mth.clamp(age / 2.0F, 0.0F, 1.0F);
-            if (kind == WeaponEffectEntity.WIND || kind == WeaponEffectEntity.VACUUM_BULLET) renderWind(entity, age, fade, poseStack, bufferSource);
+            if (kind == WeaponEffectEntity.WIND) renderWind(entity, age, fade, poseStack, bufferSource);
+            else if (kind == WeaponEffectEntity.VACUUM_BULLET) renderVacuumBullet(age, fade, poseStack, bufferSource);
             else renderCrescent(entity, age, fade, poseStack, bufferSource);
         }
         poseStack.popPose();
@@ -374,6 +376,34 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
     }
 
     // ---------------------------------------------------------------- wind
+
+    /**
+     * Wind Release: Vacuum Sphere: one bullet of compressed air. A small bright white ball with a pale blue halo, and thin
+     * streaks of air that turn round each other behind it and get thinner and fainter, like the trail of a bullet. The local z
+     * axis points the way it flies.
+     */
+    private void renderVacuumBullet(float age, float fade, PoseStack poseStack, MultiBufferSource bufferSource) {
+        Matrix4f matrix = poseStack.last().pose();
+        VertexConsumer vc = bufferSource.getBuffer(GlowRenderType.GLOW);
+        ChakraSphereRenderer.smoothBall(vc, matrix, 0.07F, 1.0F, 1.0F, 1.0F, 0.8F * fade);
+        ChakraSphereRenderer.smoothBall(vc, matrix, 0.13F, 0.8F, 0.9F, 1.0F, 0.3F * fade);
+        ChakraSphereRenderer.smoothBall(vc, matrix, 0.2F, 0.6F, 0.8F, 1.0F, 0.1F * fade);
+        for (int streak = 0; streak < 4; streak++) {
+            double base = streak * (Math.PI / 2.0D) + age * 0.7D;
+            Vec3[] path = new Vec3[8];
+            // From the tail (thin) to the head, since the streak gets wider along its path
+            for (int j = 0; j < path.length; j++) {
+                double t = 1.0D - j / (path.length - 1.0D);
+                double angle = base + t * 2.2D;
+                double radius = 0.09D + 0.11D * t;
+                path[j] = new Vec3(Math.cos(angle) * radius, Math.sin(angle) * radius, -t * 1.5D);
+            }
+            ChakraSphereRenderer.bolt(vc, matrix, path, 0.012F, 0.6F * fade);
+        }
+        // One straight thin line down the middle of the trail
+        ChakraSphereRenderer.bolt(vc, matrix, new Vec3[]{new Vec3(0.0D, 0.0D, -1.8D), new Vec3(0.0D, 0.0D, -0.9D), new Vec3(0.0D, 0.0D, -0.05D)},
+                0.015F, 0.7F * fade);
+    }
 
     private void renderWind(WeaponEffectEntity entity, float age, float fade, PoseStack poseStack, MultiBufferSource bufferSource) {
         float size = entity.getSize();

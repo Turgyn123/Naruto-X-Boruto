@@ -358,7 +358,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
      * A glowing streak along {@code path}, thin at its start and wide at its end, in the three layers of the lightning.
      * Every layer is two ribbons across each other, turned by the angle of its layer so no two lie in one plane.
      */
-    private static void bolt(VertexConsumer vc, Matrix4f matrix, Vec3[] path, float halfWidth, float alpha) {
+    static void bolt(VertexConsumer vc, Matrix4f matrix, Vec3[] path, float halfWidth, float alpha) {
         int n = path.length - 1;
         for (int layer = 2; layer >= 0; layer--) {
             float[] rgb = LAYER_RGB[layer];
@@ -383,7 +383,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
     }
 
     /** A smooth ball of one colour of glowing light, seen from outside and inside. */
-    private static void smoothBall(VertexConsumer vc, Matrix4f matrix, float radius, float r, float g, float b, float alpha) {
+    static void smoothBall(VertexConsumer vc, Matrix4f matrix, float radius, float r, float g, float b, float alpha) {
         int segments = 20;
         int rings = 12;
         for (int j = 0; j < rings; j++) {
