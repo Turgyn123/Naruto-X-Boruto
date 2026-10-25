@@ -225,17 +225,12 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
                 centreLine[j] = centre;
                 strength[j] = (float) (1.0D - 0.35D * t);
             }
-            // Three thin layers one above the other, so the blades have some thickness and are not lost seen from the side
-            Vec3 axis = sideA.cross(sideB).normalize();
-            for (int layer = -1; layer <= 1; layer++) {
-                Vec3 lift = axis.scale(layer * 0.04D * scale);
-                float layerGlow = layer == 0 ? 0.55F : 0.3F;
-                for (int j = 0; j < steps; j++) {
-                    for (int k = 0; k < offset.length - 1; k++) {
-                        gradientQuad(vc, matrix, rail[k][j].add(lift), rail[k + 1][j].add(lift), rail[k + 1][j + 1].add(lift), rail[k][j + 1].add(lift),
-                                glow[k] * strength[j] * alpha * layerGlow, glow[k + 1] * strength[j] * alpha * layerGlow,
-                                glow[k + 1] * strength[j + 1] * alpha * layerGlow, glow[k] * strength[j + 1] * alpha * layerGlow);
-                    }
+            // One flat layer, so seen from the side the blades are one line and not several
+            for (int j = 0; j < steps; j++) {
+                for (int k = 0; k < offset.length - 1; k++) {
+                    gradientQuad(vc, matrix, rail[k][j], rail[k + 1][j], rail[k + 1][j + 1], rail[k][j + 1],
+                            glow[k] * strength[j] * alpha, glow[k + 1] * strength[j] * alpha,
+                            glow[k + 1] * strength[j + 1] * alpha, glow[k] * strength[j + 1] * alpha);
                 }
             }
         }
