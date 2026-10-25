@@ -119,6 +119,12 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
 
         Matrix4f matrix = poseStack.last().pose();
 
+        // Where the Rasenshuriken has burst, the flat shurikens that cut inside the ball are drawn first: what is drawn after
+        // them is drawn over them, and the ball would hide them if it came first
+        if (blast) {
+            shurikenBlades(bufferSource, matrix, new Vec3(0.0D, 1.0D, 0.0D), new Vec3(1.0D, 0.0D, 0.0D), 0.0F, reach, age, alpha, true);
+        }
+
         // The ball, the same for both jutsus, and where the Rasenshuriken has burst, a ball of wind
         if (blast) {
             // Where the Rasenshuriken has burst it is drawn exactly like the burst of the Rasengan, but huge
@@ -185,7 +191,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
                 Matrix4f lifted = new Matrix4f(matrix).translate((float) (up.x * levels[i] * reach),
                         (float) (up.y * levels[i] * reach), (float) (up.z * levels[i] * reach));
                 float spin = age * (0.45F + 0.05F * i) * (i % 2 == 0 ? 1.0F : -1.0F) + i * 0.9F;
-                windBlades(bufferSource.getBuffer(GlowRenderType.GLOW), lifted, side, sideB, 0.05F * r, r, spin, age, alpha * 0.8F, true);
+                windBlades(bufferSource.getBuffer(GlowRenderType.GLOW), lifted, side, sideB, 0.05F * r, r, spin, age, alpha, true);
             }
             return;
         }
