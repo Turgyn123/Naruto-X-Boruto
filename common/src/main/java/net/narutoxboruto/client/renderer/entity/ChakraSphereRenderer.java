@@ -36,6 +36,8 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
 
     private static final ResourceLocation WIND_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/wind_streak.png");
     private static final ResourceLocation CRESCENT_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/crescent.png");
+    /** How far the flat disc of the Rasenshuriken is leaned back, so it is not seen edge on, in radians (30 degrees). */
+    private static final double DISC_LEAN = Math.toRadians(30.0D);
     private static final int FULL_BRIGHT = 0xF000F0;
     /** The colour of the wind of the Giant Fan: white with a touch of blue. */
     private static final float[] WIND = {0.94F, 0.96F, 1.0F};
@@ -88,7 +90,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
             }
         } else if (phase == ChakraSphereEntity.CHARGING) {
             radius = 0.08F + 0.2F * charge;
-            reach = 0.25F + 1.0F * charge;
+            reach = 0.4F + 1.5F * charge;
             if (charge >= 1.0F) {
                 float pulse = 1.0F + 0.07F * Mth.sin(age * 1.3F);
                 radius *= pulse;
@@ -96,7 +98,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
             }
         } else if (phase == ChakraSphereEntity.ACTIVE) {
             radius = 0.42F;
-            reach = 2.0F;
+            reach = 2.6F;
         } else {
             blast = true;
             float grown = Mth.clamp(phaseAge / ChakraSphereEntity.SHURIKEN_GROW_TICKS, 0.0F, 1.0F);
@@ -122,15 +124,23 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
 
         // The ball, the same for both jutsus, and where the Rasenshuriken has burst, a ball of wind
         if (blast) {
-            blastBall(bufferSource, matrix, aim, across, up, radius, age, alpha);
+            blastBall(bufferSource, matrix, new Vec3(0.0D, 1.0D, 0.0D), new Vec3(1.0D, 0.0D, 0.0D), new Vec3(0.0D, 0.0D, 1.0D), radius, age, alpha);
         } else {
             ball(bufferSource, poseStack, matrix, aim, across, up, radius, age, alpha, false);
         }
 
         // The four blades of the Rasenshuriken, lying flat and turning round the ball
         if (shuriken) {
-            shurikenBlades(bufferSource, matrix, new Vec3(0.0D, 1.0D, 0.0D), new Vec3(1.0D, 0.0D, 0.0D), 0.8F * radius, reach, age,
-                    alpha * (blast ? 0.7F : 0.95F), blast);
+            Vec3 discUp = new Vec3(0.0D, 1.0D, 0.0D);
+            Vec3 discSide = new Vec3(1.0D, 0.0D, 0.0D);
+            if (!blast) {
+                // Leaned back from the way it is aimed
+                Vec3 flat = new Vec3(aim.x, 0.0D, aim.z);
+                flat = flat.lengthSqr() < 1.0E-4D ? new Vec3(0.0D, 0.0D, 1.0D) : flat.normalize();
+                discUp = new Vec3(0.0D, Math.cos(DISC_LEAN), 0.0D).subtract(flat.scale(Math.sin(DISC_LEAN)));
+                discSide = new Vec3(0.0D, 1.0D, 0.0D).cross(flat).normalize();
+            }
+            shurikenBlades(bufferSource, matrix, discUp, discSide, 0.8F * radius, reach, age, alpha * (blast ? 0.7F : 0.95F), blast);
         }
         poseStack.popPose();
     }
@@ -167,7 +177,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         }
         float charge = Mth.clamp((sphere.getPhaseTicks() + partialTick) / ChakraSphereEntity.RASENSHURIKEN_CHARGE_TICKS, 0.0F, 1.0F);
         float radius = 0.08F + 0.2F * charge;
-        float reach = 0.25F + 1.0F * charge;
+        float reach = 0.4F + 1.5F * charge;
         if (charge >= 1.0F) {
             float pulse = 1.0F + 0.07F * Mth.sin(age * 1.3F);
             radius *= pulse;
@@ -175,8 +185,10 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         }
         // The right arm is raised outward and up (see RaisedArmPose): in the frame of the arm, straight up is this way, and
         // 'across' is a way along the flat disc
+        // The disc is leaned back a little (towards the back of the player) so it is not seen edge on from behind
         double tilt = RaisedArmPose.ARM_TILT;
-        Vec3 aim = new Vec3(-Math.sin(tilt), -Math.cos(tilt), 0.0D);
+        double lean = DISC_LEAN;
+        Vec3 aim = new Vec3(-Math.cos(lean) * Math.sin(tilt), -Math.cos(lean) * Math.cos(tilt), Math.sin(lean));
         Vec3 across = new Vec3(Math.cos(tilt), -Math.sin(tilt), 0.0D);
         Vec3 up = aim.cross(across).normalize();
         ball(bufferSource, poseStack, matrix, aim, across, up, radius, age, 1.0F, false);
@@ -230,7 +242,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
                 Vec3 radial = sideA.scale(Math.cos(angle)).add(sideB.scale(Math.sin(angle)));
                 Vec3 tangent = sideA.scale(-Math.sin(angle)).add(sideB.scale(Math.cos(angle)));
                 // Wide near the middle, then thinner to a point
-                double width = reach * 0.34D * Math.min(1.0D, 0.4D + 2.4D * t) * Math.pow(1.0D - t, 0.7D);
+                double width = reach * 0.42D * Math.min(1.0D, 0.4D + 2.4D * t) * Math.pow(1.0D - t, 0.7D);
                 Vec3 centre = radial.scale(radius);
                 for (int k = 0; k < offset.length; k++) rail[k][j] = centre.add(tangent.scale(offset[k] * width));
                 centreLine[j] = centre;
@@ -267,17 +279,34 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
 
     /**
      * Where the Rasenshuriken has burst: a big ball of wind that cuts everything inside it. A soft glow with a bright
-     * heart, two layers of white ribbons of wind spiralling round it the other way each, like the wind of the Giant Fan,
-     * and the flat blades turning inside it (see {@link #shurikenBlades}). No lightning.
+     * heart, and thin white streaks of wind that whirl round it in bands, each band the other way, turning at their own
+     * speed. The flat blades turn inside it (see {@link #shurikenBlades}). No lightning and no textures.
      */
     private static void blastBall(MultiBufferSource bufferSource, Matrix4f matrix, Vec3 aim, Vec3 across, Vec3 up,
                                   float radius, float age, float alpha) {
         VertexConsumer glow = bufferSource.getBuffer(GlowRenderType.GLOW);
         smoothBall(glow, matrix, radius * 0.3F, 0.9F, 0.95F, 1.0F, 0.2F * alpha);
-        smoothBall(glow, matrix, radius, 0.55F, 0.75F, 0.95F, 0.06F * alpha);
-        VertexConsumer wind = bufferSource.getBuffer(RenderType.entityTranslucent(WIND_TEXTURE));
-        windBall(wind, matrix, aim, across, up, radius * 0.98F, age, 14, 2.2F, 0.9F * alpha);
-        windBall(wind, matrix, aim, across, up, radius * 0.7F, age, 9, -3.0F, 0.7F * alpha);
+        smoothBall(glow, matrix, radius * 0.7F, 0.6F, 0.8F, 1.0F, 0.04F * alpha);
+        smoothBall(glow, matrix, radius, 0.55F, 0.75F, 0.95F, 0.07F * alpha);
+        float scale = radius / 1.25F;
+        int bands = 16;
+        for (int band = 0; band < bands; band++) {
+            double latitude = Math.PI * ((band + 0.5D) / bands - 0.5D) * 0.92D;
+            double ring = radius * Math.cos(latitude) * 1.01D;
+            double height = radius * Math.sin(latitude);
+            double speed = (band % 2 == 0 ? 1.0D : -1.0D) * (0.22D + 0.04D * (band % 5));
+            for (int arc = 0; arc < 3; arc++) {
+                double start = arc * (Math.PI * 2.0D / 3.0D) + age * speed + band * 0.9D;
+                double span = 1.3D + 0.5D * hash(band * 3 + arc);
+                Vec3[] path = new Vec3[13];
+                for (int k = 0; k < path.length; k++) {
+                    double angle = start + span * k / (path.length - 1.0D);
+                    double wobble = 0.03D * radius * Math.sin(angle * 3.0D + band);
+                    path[k] = across.scale(Math.cos(angle) * ring).add(up.scale(Math.sin(angle) * ring)).add(aim.scale(height + wobble));
+                }
+                bolt(glow, matrix, path, 0.011F * scale, 0.8F * alpha);
+            }
+        }
     }
 
     /** The ball of the Rasengan, and of the Rasenshuriken. */
