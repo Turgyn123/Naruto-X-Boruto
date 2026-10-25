@@ -7,8 +7,10 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.world.entity.HumanoidArm;
+import net.minecraft.world.item.ItemStack;
 import net.narutoxboruto.client.renderer.entity.ChakraSphereRenderer;
 import net.narutoxboruto.entities.jutsus.ChakraSphereEntity;
+import net.narutoxboruto.items.jutsus.ChargedSphereJutsu;
 
 /**
  * Draws the Rasengan in the right hand of a player, on the arm itself, so it swings with the arm when the player walks
@@ -23,6 +25,8 @@ public class RasenganHandLayer extends RenderLayer<AbstractClientPlayer, PlayerM
     @Override
     public void render(PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, AbstractClientPlayer player,
                        float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks, float netHeadYaw, float headPitch) {
+        // Only while the Rasengan itself is in the hand: never a ball at the hand while a Rasenshuriken is held
+        if (!holdsRasengan(player.getMainHandItem()) && !holdsRasengan(player.getOffhandItem())) return;
         ChakraSphereEntity sphere = ChakraSphereEntity.findHeldClient(player, ChakraSphereEntity.RASENGAN);
         if (sphere == null) return;
         poseStack.pushPose();
@@ -31,5 +35,9 @@ public class RasenganHandLayer extends RenderLayer<AbstractClientPlayer, PlayerM
         poseStack.translate(-0.03F, 0.8F, -0.02F);
         ChakraSphereRenderer.drawHeld(bufferSource, poseStack, sphere, partialTick);
         poseStack.popPose();
+    }
+
+    private static boolean holdsRasengan(ItemStack stack) {
+        return stack.getItem() instanceof ChargedSphereJutsu jutsu && jutsu.sphereKind() == ChakraSphereEntity.RASENGAN;
     }
 }
