@@ -200,7 +200,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         // Across a blade: from the sharp (outer) edge to the back, how far out from the middle line (times the half width)
         // and how strongly it glows
         double[] offset = {1.15D, 0.8D, 0.4D, 0.0D, -0.25D, -0.5D, -0.7D};
-        float[] glow = {0.0F, 0.1F, 0.4F, 0.75F, 0.4F, 0.1F, 0.0F};
+        float[] glow = {0.0F, 0.12F, 0.45F, 0.8F, 0.45F, 0.12F, 0.0F};
         for (int blade = 0; blade < 4; blade++) {
             double base = spin + blade * (Math.PI / 2.0D);
             Vec3[][] rail = new Vec3[offset.length][steps + 1];
@@ -223,7 +223,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
             Vec3 axis = sideA.cross(sideB).normalize();
             for (int layer = -1; layer <= 1; layer++) {
                 Vec3 lift = axis.scale(layer * 0.04D * scale);
-                float layerGlow = layer == 0 ? 0.4F : 0.22F;
+                float layerGlow = layer == 0 ? 0.85F : 0.45F;
                 for (int j = 0; j < steps; j++) {
                     for (int k = 0; k < offset.length - 1; k++) {
                         gradientQuad(vc, matrix, rail[k][j].add(lift), rail[k + 1][j].add(lift), rail[k + 1][j + 1].add(lift), rail[k][j + 1].add(lift),
@@ -232,15 +232,8 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
                     }
                 }
             }
-            // A few thin pale streaks along the blade, like the light turning inside it
-            for (int streak = 0; streak < 3; streak++) {
-                Vec3[] line = new Vec3[steps + 1];
-                double across = streak == 0 ? 0.5D : (streak == 1 ? 0.0D : -0.35D);
-                for (int j = 0; j <= steps; j++) {
-                    line[j] = rail[3][j].add(rail[2][j].subtract(rail[3][j]).scale(across * 2.0D));
-                }
-                bolt(vc, matrix, line, 0.007F * scale, alpha * (blast ? 0.2F : 0.3F));
-            }
+            // Just a faint bright line along the middle, so the blade has a spine
+            bolt(vc, matrix, centreLine, 0.008F * scale, alpha * (blast ? 0.15F : 0.22F));
         }
     }
 
