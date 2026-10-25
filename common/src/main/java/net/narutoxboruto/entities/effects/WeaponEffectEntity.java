@@ -27,7 +27,10 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.narutoxboruto.entities.ModEntities;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -282,6 +285,12 @@ public class WeaponEffectEntity extends Entity {
     private static final double VACUUM_SPREAD = Math.tan(Math.toRadians(12.0D));
     /** Who this bullet has hit already: it goes through them, but hurts each one only once. */
     private final Set<Integer> hitIds = new HashSet<>();
+    /** The thing this bullet flies at (-1: none, it flies straight), and how sharply it turns to it every tick. */
+    private int lockedId = -1;
+    private static final double VACUUM_TURN = 0.3D;
+    /** What can be locked on: in front of the caster, within 40 degrees of where they look, in sight, and in range. */
+    private static final double VACUUM_LOCK_COS = Math.cos(Math.toRadians(40.0D));
+    private static final int VACUUM_LOCK_TARGETS = 3;
 
     /** Wind Release: Vacuum Sphere: a spray of bullets of wind from the mouth of {@code caster}, spread over a wide cone. */
     public static void spawnVacuumSphere(ServerLevel level, ServerPlayer caster) {
@@ -290,6 +299,15 @@ public class WeaponEffectEntity extends Entity {
         Vec3 right = look.cross(new Vec3(0.0D, 1.0D, 0.0D));
         right = right.lengthSqr() < 1.0E-4D ? new Vec3(1.0D, 0.0D, 0.0D) : right.normalize();
         Vec3 up = right.cross(look).normalize();
+        // Who the bullets lock on to: the ones nearest to the middle of where the caster looks
+        Vec3 eye = caster.getEyePosition();
+        List<LivingEntity> targets = new ArrayList<>(level.getEntitiesOfClass(LivingEntity.class,
+                caster.getBoundingBox().inflate(VACUUM_TICKS * VACUUM_SPEED),
+                e -> e != caster && e.isAlive() && !e.isSpectator() && caster.hasLineOfSight(e)
+                        && e.getBoundingBox().getCenter().distanceToSqr(eye) <= (VACUUM_TICKS * VACUUM_SPEED) * (VACUUM_TICKS * VACUUM_SPEED)
+                        && e.getBoundingBox().getCenter().subtract(eye).normalize().dot(look) >= VACUUM_LOCK_COS));
+        targets.sort(Comparator.comparingDouble((LivingEntity e) -> -e.getBoundingBox().getCenter().subtract(eye).normalize().dot(look)));
+        if (targets.size() > VACUUM_LOCK_TARGETS) targets = new ArrayList<>(targets.subList(0, VACUUM_LOCK_TARGETS));
         for (int i = 0; i < VACUUM_BULLETS; i++) {
             // Spread evenly over the cone (a sunflower pattern), with a little chance in it
             double angle = i * 2.399963D + level.random.nextDouble() * 0.6D;
@@ -298,6 +316,7 @@ public class WeaponEffectEntity extends Entity {
             WeaponEffectEntity bullet = create(level, VACUUM_BULLET, start, direction, 0.3F, 0xFFE6F2FF, VACUUM_TICKS);
             bullet.owner = caster.getUUID();
             bullet.setDeltaMovement(direction.scale(VACUUM_SPEED));
+            if (!targets.isEmpty()) bullet.lockedId = targets.get(i % targets.size()).getId();
             level.addFreshEntity(bullet);
         }
     }
@@ -306,7 +325,24 @@ public class WeaponEffectEntity extends Entity {
     private void tickVacuumBullet() {
         if (!(level() instanceof ServerLevel serverLevel)) return;
         Vec3 from = position();
-        Vec3 to = from.add(getDeltaMovement());
+        Vec3 motion = getDeltaMovement();
+        // Turn towards what it is locked on to, until it has gone through it
+        if (lockedId >= 0) {
+            Entity target = serverLevel.getEntity(lockedId);
+            if (target == null || !target.isAlive() || hitIds.contains(lockedId)) {
+                lockedId = -1;
+            } else {
+                Vec3 want = target.getBoundingBox().getCenter().subtract(from);
+                if (want.lengthSqr() > 1.0E-4D && motion.lengthSqr() > 1.0E-4D) {
+                    Vec3 direction = motion.normalize().scale(1.0D - VACUUM_TURN).add(want.normalize().scale(VACUUM_TURN)).normalize();
+                    motion = direction.scale(VACUUM_SPEED);
+                    setDeltaMovement(motion);
+                    setYRot((float) (Mth.atan2(-direction.x, direction.z) * (180.0D / Math.PI)));
+                    setXRot((float) (-Mth.atan2(direction.y, Math.sqrt(direction.x * direction.x + direction.z * direction.z)) * (180.0D / Math.PI)));
+                }
+            }
+        }
+        Vec3 to = from.add(motion);
         Entity ownerEntity = owner == null ? null : serverLevel.getEntity(owner);
         HitResult hit = serverLevel.clip(new ClipContext(from, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this));
         Vec3 end = hit.getType() == HitResult.Type.MISS ? to : hit.getLocation();

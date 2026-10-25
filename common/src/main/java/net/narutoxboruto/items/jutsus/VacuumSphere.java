@@ -60,6 +60,6 @@ public class VacuumSphere extends AbstractJutsuItem {
         super.appendHoverText(stack, context, tooltip, flag);
         tooltip.add(Component.literal("Rank: B").withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.literal("Range: 50 meters").withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.literal("20 bullets of wind that go through what they hit").withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.literal("20 bullets of wind that lock on to targets and go through them").withStyle(ChatFormatting.GRAY));
     }
 }
