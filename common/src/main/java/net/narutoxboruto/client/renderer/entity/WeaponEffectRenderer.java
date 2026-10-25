@@ -49,7 +49,7 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
     private static final ResourceLocation FLAME_BLOB_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/flame_blob.png");
     private static final ResourceLocation FIRE_PUFF_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/fire_puff.png");
     private static final ResourceLocation ASH_PUFF_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/ash_puff.png");
-    private static final ResourceLocation MUD_TEXTURE = ResourceLocation.withDefaultNamespace("textures/block/mud.png");
+    private static final ResourceLocation MUD_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/mud.png");
     private static final int FULL_BRIGHT = 0xF000F0;
 
     public WeaponEffectRenderer(EntityRendererProvider.Context context) {
@@ -120,7 +120,8 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
      * stands on the ground: the neck is drawn turned to where it faces, and the head turns up and down from the top of the neck.
      */
     private void renderEarthDragon(WeaponEffectEntity entity, float age, float partialTick, PoseStack poseStack,
-                                   MultiBufferSource bufferSource, int light) {
+                                   MultiBufferSource bufferSource, int packedLight) {
+        int light = readable(packedLight);
         float rise = Mth.clamp(age / WeaponEffectEntity.DRAGON_RISE_TICKS, 0.0F, 1.0F);
         float sink = Mth.clamp((entity.getMaxLife() - age) / WeaponEffectEntity.DRAGON_SINK_TICKS, 0.0F, 1.0F);
         float out = Math.min(rise, sink);
@@ -189,7 +190,8 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
     }
 
     /** One ball of mud: a rough lump (cubes of the mud texture turning round each other) with smaller lumps flying after it. */
-    private void renderMudBullet(float age, PoseStack poseStack, MultiBufferSource bufferSource, int light) {
+    private void renderMudBullet(float age, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight) {
+        int light = readable(packedLight);
         VertexConsumer vc = bufferSource.getBuffer(RenderType.entityCutoutNoCull(MUD_TEXTURE));
         for (int i = 0; i < 5; i++) {
             float size = i == 0 ? 0.3F : 0.24F - i * 0.03F;
@@ -207,6 +209,11 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
         poseStack.mulPose(Axis.YP.rotationDegrees(45.0F + age * 21.0F));
         mudBox(vc, poseStack.last().pose(), -0.26F, -0.26F, -0.26F, 0.26F, 0.26F, 0.26F, 1.0F, light);
         poseStack.popPose();
+    }
+
+    /** The light of the spot, but never darker than dusk: the mud must stay readable at night and where the base stands in the ground. */
+    private static int readable(int packedLight) {
+        return LightTexture.pack(Math.max(LightTexture.block(packedLight), 9), Math.max(LightTexture.sky(packedLight), 9));
     }
 
     private static void mudBox(VertexConsumer vc, Matrix4f m, float x0, float y0, float z0, float x1, float y1, float z1, float shade, int light) {
