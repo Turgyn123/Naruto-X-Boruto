@@ -1,6 +1,5 @@
 package net.narutoxboruto.entities.effects;
 
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -62,7 +61,6 @@ public class WeaponEffectEntity extends Entity {
     public static final int ASH_CLOUD = 4;
     public static final int FLAME_BULLET = 5;
     public static final int VACUUM_BULLET = 6;
-    public static final int SHADOW_CLONE = 7;
 
     private static final EntityDataAccessor<Integer> KIND = SynchedEntityData.defineId(WeaponEffectEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Float> SIZE = SynchedEntityData.defineId(WeaponEffectEntity.class, EntityDataSerializers.FLOAT);
@@ -276,47 +274,6 @@ public class WeaponEffectEntity extends Entity {
         igniteTicks = 0;
         this.entityData.set(TARGET, 0);
         level().playSound(null, at.x, at.y, at.z, SoundEvents.GENERIC_BURN, SoundSource.PLAYERS, 0.8F, 1.2F);
-    }
-
-    /** The Boruto Stream: how fast the caster is launched, and for how long, so how far (20 meters). */
-    private static final double CLONE_SPEED = 2.0D;
-    /** How far behind the caster the clone stands: at the feet of the caster, who lies flat. */
-    private static final double CLONE_BEHIND = 1.8D;
-    public static final int CLONE_TICKS = 10;
-    /** The way the clone pushes the caster, set when it is made. */
-    private Vec3 pushDirection = Vec3.ZERO;
-
-    /**
-     * Wind Release: Boruto Stream: a shadow clone of {@code caster} appears under their feet, behind them, and propels them
-     * forward, the way they look, for half a second. It is drawn on the clients as a copy of the caster (TARGET is who).
-     */
-    public static void spawnShadowClone(ServerLevel level, ServerPlayer caster) {
-        Vec3 flat = new Vec3(caster.getLookAngle().x, 0.0D, caster.getLookAngle().z);
-        flat = flat.lengthSqr() < 1.0E-4D ? new Vec3(0.0D, 0.0D, 1.0D) : flat.normalize();
-        WeaponEffectEntity clone = create(level, SHADOW_CLONE, caster.position().subtract(flat.scale(CLONE_BEHIND)), flat, 1.0F, 0xFFFFFFFF, CLONE_TICKS);
-        clone.owner = caster.getUUID();
-        clone.entityData.set(TARGET, caster.getId());
-        clone.pushDirection = flat.scale(CLONE_SPEED);
-        level.addFreshEntity(clone);
-        level.sendParticles(ParticleTypes.POOF, clone.getX(), clone.getY() + 0.5D, clone.getZ(), 12, 0.3D, 0.4D, 0.3D, 0.02D);
-    }
-
-    /** The clone pushes the caster on every tick, follows them, and goes up in smoke when it is done. */
-    private void tickShadowClone() {
-        if (!(level() instanceof ServerLevel serverLevel)) return;
-        Entity pushed = owner == null ? null : serverLevel.getEntity(owner);
-        if (pushed != null && pushed.isAlive()) {
-            double lift = life == CLONE_TICKS ? 0.2D : Math.max(pushed.getDeltaMovement().y, -0.1D);
-            pushed.setDeltaMovement(pushDirection.x, lift, pushDirection.z);
-            pushed.hurtMarked = true;
-            pushed.fallDistance = 0.0F;
-            Vec3 behind = pushed.position().subtract(pushDirection.normalize().scale(CLONE_BEHIND));
-            setPos(behind.x, behind.y, behind.z);
-        }
-        if (--life <= 0) {
-            serverLevel.sendParticles(ParticleTypes.POOF, getX(), getY() + 0.5D, getZ(), 12, 0.3D, 0.4D, 0.3D, 0.02D);
-            discard();
-        }
     }
 
     /** The Vacuum Sphere: 20 small bullets of wind, how fast they fly, how far, and what each one does. */
@@ -577,10 +534,6 @@ public class WeaponEffectEntity extends Entity {
         }
         if (getKind() == VACUUM_BULLET) {
             tickVacuumBullet();
-            return;
-        }
-        if (getKind() == SHADOW_CLONE) {
-            tickShadowClone();
             return;
         }
 

@@ -100,7 +100,6 @@ public class NeoForgeTab {
                 output.accept(FIRE_BALL_JUTSU.get());
                 output.accept(RASENGAN_JUTSU.get());
                 output.accept(RASENSHURIKEN_JUTSU.get());
-                output.accept(BORUTO_STREAM_JUTSU.get());
                 output.accept(VACUUM_SPHERE_JUTSU.get());
                 output.accept(FLAME_BULLET_JUTSU.get());
                 output.accept(GREAT_FIRE_ANNIHILATION_JUTSU.get());

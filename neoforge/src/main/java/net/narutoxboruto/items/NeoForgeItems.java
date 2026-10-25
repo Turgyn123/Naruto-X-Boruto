@@ -70,7 +70,6 @@ public class NeoForgeItems {
     public static final DeferredItem<Item> FLAME_BULLET_JUTSU = ITEMS.register("flame_bullet_jutsu", () -> new FlameBullet(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<Item> RASENGAN_JUTSU = ITEMS.register("rasengan_jutsu", () -> new Rasengan(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<Item> RASENSHURIKEN_JUTSU = ITEMS.register("rasenshuriken_jutsu", () -> new Rasenshuriken(new Item.Properties().stacksTo(1)));
-    public static final DeferredItem<Item> BORUTO_STREAM_JUTSU = ITEMS.register("boruto_stream_jutsu", () -> new BorutoStream(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<Item> VACUUM_SPHERE_JUTSU = ITEMS.register("vacuum_sphere_jutsu", () -> new VacuumSphere(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<Item> GREAT_FIRE_ANNIHILATION_JUTSU = ITEMS.register("great_fire_annihilation_jutsu", () -> new GreatFireAnnihilation(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<Item> ASH_PILE_BURNING_JUTSU = ITEMS.register("ash_pile_burning_jutsu", () -> new AshPileBurning(new Item.Properties().stacksTo(1)));

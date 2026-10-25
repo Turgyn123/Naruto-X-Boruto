@@ -121,7 +121,6 @@ public class FabricTab {
                         output.accept(FabricItems.FIRE_BALL_JUTSU);
                         output.accept(FabricItems.RASENGAN_JUTSU);
                         output.accept(FabricItems.RASENSHURIKEN_JUTSU);
-                        output.accept(FabricItems.BORUTO_STREAM_JUTSU);
                         output.accept(FabricItems.VACUUM_SPHERE_JUTSU);
                         output.accept(FabricItems.FLAME_BULLET_JUTSU);
                         output.accept(FabricItems.GREAT_FIRE_ANNIHILATION_JUTSU);
