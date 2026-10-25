@@ -5,6 +5,7 @@ import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.narutoxboruto.client.BorutoDash;
 import net.narutoxboruto.client.RaisedArmPose;
 import net.narutoxboruto.client.WallFrame;
 import org.spongepowered.asm.mixin.Final;
@@ -36,6 +37,16 @@ public abstract class MixinPlayerModel <T extends LivingEntity> extends Humanoid
             rightArm.xRot = 0.0F;
             rightArm.yRot = 0.0F;
             rightArm.zRot = RaisedArmPose.ARM_TILT;
+        }
+
+        if (pEntity instanceof Player player && BorutoDash.applies(player)) {
+            // Launched by the shadow clone: both arms stretched out in front, legs together
+            rightArm.xRot = -(float) Math.PI;
+            leftArm.xRot = -(float) Math.PI;
+            rightArm.zRot = 0.0F;
+            leftArm.zRot = 0.0F;
+            rightLeg.xRot = 0.0F;
+            leftLeg.xRot = 0.0F;
         }
 
         hat.copyFrom(head);

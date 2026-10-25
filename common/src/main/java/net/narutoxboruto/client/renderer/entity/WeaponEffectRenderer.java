@@ -411,16 +411,34 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
     }
 
     /**
-     * Wind Release: Boruto Stream: the shadow clone, drawn as a copy of the player it came from (TARGET is who), bent
-     * forward over its hands, the way it pushes the caster on.
+     * Wind Release: Boruto Stream: the shadow clone, drawn as a copy of the player it came from (TARGET is who), standing
+     * behind them, leaning forward with its hands on their feet, and the white curls of wind between its hands and the feet.
      */
     private void renderShadowClone(WeaponEffectEntity entity, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight) {
         Entity source = entity.level().getEntity(entity.getTargetId());
         if (!(source instanceof net.minecraft.client.player.AbstractClientPlayer)) return;
         float yaw = Mth.lerp(partialTick, entity.yRotO, entity.getYRot());
+        float age = entity.tickCount + partialTick;
         poseStack.pushPose();
         poseStack.mulPose(Axis.YP.rotationDegrees(-yaw));
-        poseStack.mulPose(Axis.XP.rotationDegrees(70.0F));
+
+        // Curls of wind where the hands of the clone are on the feet of the caster
+        VertexConsumer vc = bufferSource.getBuffer(GlowRenderType.GLOW);
+        Matrix4f matrix = poseStack.last().pose();
+        for (int curl = 0; curl < 4; curl++) {
+            Vec3[] path = new Vec3[9];
+            double base = curl * (Math.PI / 2.0D) + age * 0.9D;
+            for (int j = 0; j < path.length; j++) {
+                double t = 1.0D - j / (path.length - 1.0D);
+                double angle = base + t * 2.6D;
+                double radius = 0.12D + 0.3D * t;
+                path[j] = new Vec3(Math.cos(angle) * radius, 0.85D + Math.sin(angle) * radius, 0.75D + t * 0.7D);
+            }
+            ChakraSphereRenderer.bolt(vc, matrix, path, 0.014F, 0.8F);
+        }
+
+        // The clone, bent a little forward over its hands
+        poseStack.mulPose(Axis.XP.rotationDegrees(20.0F));
         poseStack.mulPose(Axis.YP.rotationDegrees(yaw));
         this.entityRenderDispatcher.render(source, 0.0D, 0.0D, 0.0D, source.getYRot(), partialTick, poseStack, bufferSource, packedLight);
         poseStack.popPose();

@@ -280,6 +280,8 @@ public class WeaponEffectEntity extends Entity {
 
     /** The Boruto Stream: how fast the caster is launched, and for how long, so how far (20 meters). */
     private static final double CLONE_SPEED = 2.0D;
+    /** How far behind the caster the clone stands: at the feet of the caster, who lies flat. */
+    private static final double CLONE_BEHIND = 1.8D;
     public static final int CLONE_TICKS = 10;
     /** The way the clone pushes the caster, set when it is made. */
     private Vec3 pushDirection = Vec3.ZERO;
@@ -291,7 +293,7 @@ public class WeaponEffectEntity extends Entity {
     public static void spawnShadowClone(ServerLevel level, ServerPlayer caster) {
         Vec3 flat = new Vec3(caster.getLookAngle().x, 0.0D, caster.getLookAngle().z);
         flat = flat.lengthSqr() < 1.0E-4D ? new Vec3(0.0D, 0.0D, 1.0D) : flat.normalize();
-        WeaponEffectEntity clone = create(level, SHADOW_CLONE, caster.position().subtract(flat.scale(0.9D)), flat, 1.0F, 0xFFFFFFFF, CLONE_TICKS);
+        WeaponEffectEntity clone = create(level, SHADOW_CLONE, caster.position().subtract(flat.scale(CLONE_BEHIND)), flat, 1.0F, 0xFFFFFFFF, CLONE_TICKS);
         clone.owner = caster.getUUID();
         clone.entityData.set(TARGET, caster.getId());
         clone.pushDirection = flat.scale(CLONE_SPEED);
@@ -308,7 +310,7 @@ public class WeaponEffectEntity extends Entity {
             pushed.setDeltaMovement(pushDirection.x, lift, pushDirection.z);
             pushed.hurtMarked = true;
             pushed.fallDistance = 0.0F;
-            Vec3 behind = pushed.position().subtract(pushDirection.normalize().scale(0.9D));
+            Vec3 behind = pushed.position().subtract(pushDirection.normalize().scale(CLONE_BEHIND));
             setPos(behind.x, behind.y, behind.z);
         }
         if (--life <= 0) {
