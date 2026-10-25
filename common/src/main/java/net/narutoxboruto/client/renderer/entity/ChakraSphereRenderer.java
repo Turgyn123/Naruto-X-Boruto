@@ -121,14 +121,16 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
 
         // The ball, the same for both jutsus, and where the Rasenshuriken has burst, a ball of wind
         if (blast) {
-            blastBall(bufferSource, matrix, radius, alpha);
+            // Where the Rasenshuriken has burst it is the Rasengan again, but huge
+            ball(bufferSource, poseStack, matrix, new Vec3(0.0D, 1.0D, 0.0D), new Vec3(1.0D, 0.0D, 0.0D), new Vec3(0.0D, 0.0D, 1.0D),
+                    radius, age, alpha, true);
         } else {
             // The Rasenshuriken ball is dimmer, so the blades round it can be seen
             ball(bufferSource, poseStack, matrix, aim, across, up, radius, age, shuriken ? alpha * 0.45F : alpha, false);
         }
 
         // The four blades of the Rasenshuriken, lying flat and turning round the ball
-        if (shuriken) {
+        if (shuriken && !blast) {
             // Always flat: across the way that is up
             Vec3 discUp = new Vec3(0.0D, 1.0D, 0.0D);
             Vec3 discSide = new Vec3(1.0D, 0.0D, 0.0D);
@@ -254,17 +256,6 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
                 .setColor(0.45F + 0.5F * white, 0.72F + 0.25F * white, 1.0F, Mth.clamp(glow, 0.0F, 1.0F));
     }
 
-    /**
-     * Where the Rasenshuriken has burst: a big soft dome of pale blue light with a bright heart. What cuts inside it is the
-     * stack of flat shurikens (see {@link #shurikenBlades}), not lines or lightning.
-     */
-    private static void blastBall(MultiBufferSource bufferSource, Matrix4f matrix, float radius, float alpha) {
-        VertexConsumer glow = bufferSource.getBuffer(GlowRenderType.GLOW);
-        smoothBall(glow, matrix, radius * 0.25F, 0.9F, 0.95F, 1.0F, 0.18F * alpha);
-        smoothBall(glow, matrix, radius * 0.6F, 0.6F, 0.8F, 1.0F, 0.04F * alpha);
-        smoothBall(glow, matrix, radius, 0.5F, 0.72F, 0.95F, 0.08F * alpha);
-    }
-
     /** The ball of the Rasengan, and of the Rasenshuriken. */
     private static void ball(MultiBufferSource bufferSource, PoseStack poseStack, Matrix4f matrix, Vec3 aim, Vec3 across, Vec3 up,
                       float radius, float age, float alpha, boolean blast) {
@@ -289,21 +280,23 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         if (alpha < 0.01F) return;
         float breath = 1.0F + 0.04F * Mth.sin(age * 0.8F);
         float r = radius * (blast ? 1.0F : breath);
-        VertexConsumer vc = bufferSource.getBuffer(RenderType.lightning());
+        // The huge ball of the burst is drawn without writing depth (see GlowRenderType), so it does not cut holes in the water
+        VertexConsumer vc = bufferSource.getBuffer(blast ? GlowRenderType.GLOW : RenderType.lightning());
         // The balls go from the inside to the outside: this render type keeps what it has drawn in front, so the heart is
         // drawn first and the bigger balls then glow over it
         // Soft grey blue light, like air, and not too much of it: the layers add up in the middle, and too much of them
         // makes a white blob that hides the arms
-        float[][] shells = blast
-                ? new float[][]{{0.50F, 0.7F, 0.85F, 0.95F, 0.1F}, {1.00F, 0.5F, 0.7F, 0.9F, 0.08F}}
-                : new float[][]{
-                        {0.20F, 0.9F, 0.95F, 1.0F, 0.4F}, {0.45F, 0.65F, 0.82F, 0.95F, 0.2F}, {0.75F, 0.55F, 0.75F, 0.9F, 0.18F},
-                        {1.00F, 0.5F, 0.7F, 0.88F, 0.2F}, {1.05F, 0.6F, 0.78F, 0.92F, 0.12F}};
+        float[][] shells = new float[][]{
+                {0.20F, 0.9F, 0.95F, 1.0F, 0.4F}, {0.45F, 0.65F, 0.82F, 0.95F, 0.2F}, {0.75F, 0.55F, 0.75F, 0.9F, 0.18F},
+                {1.00F, 0.5F, 0.7F, 0.88F, 0.2F}, {1.05F, 0.6F, 0.78F, 0.92F, 0.12F}};
+        // Without the depth the back of a ball adds to its front, so it is dimmer
+        float shellStrength = blast ? 0.5F : 1.0F;
         for (float[] shell : shells) {
-            smoothBall(vc, matrix, r * shell[0], shell[1], shell[2], shell[3], shell[4] * alpha);
+            smoothBall(vc, matrix, r * shell[0], shell[1], shell[2], shell[3], shell[4] * alpha * shellStrength);
         }
 
-        float scale = r / 0.35F;
+        // The arms get thicker with the ball, but not without end
+        float scale = Math.min(r / 0.35F, 6.0F);
         // The arms spiral from pole to pole and turn fast: three thick ones for the plasma orb, nine thin ones, some turning
         // each way, for the tangle, and three thin ones for the gyroscope
         int arms = 9;
@@ -321,12 +314,12 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
                         .add(up.scale(Math.sin(polar) * Math.sin(azimuth) * bulge));
             }
             float width = 0.028F;
-            bolt(vc, matrix, path, width * scale, alpha * (blast ? 0.6F : 1.0F));
+            bolt(vc, matrix, path, width * scale, alpha);
         }
 
         // Sparks that leap off the surface and jump about ten times a second
         int jump = (int) (age * 0.5F);
-        int sparks = blast ? 24 : 0;
+        int sparks = 0;
         for (int i = 0; i < sparks; i++) {
             Vec3 direction = randomDirection(i * 11 + jump * 5);
             double length = r * (0.35D + 0.45D * hash(i * 13 + jump * 3));
