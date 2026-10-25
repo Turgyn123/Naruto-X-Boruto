@@ -121,9 +121,9 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
 
         // The ball, the same for both jutsus, and where the Rasenshuriken has burst, a ball of wind
         if (blast) {
-            // Where the Rasenshuriken has burst it is the Rasengan again, but huge
+            // Where the Rasenshuriken has burst it is drawn exactly like the burst of the Rasengan, but huge
             ball(bufferSource, poseStack, matrix, new Vec3(0.0D, 1.0D, 0.0D), new Vec3(1.0D, 0.0D, 0.0D), new Vec3(0.0D, 0.0D, 1.0D),
-                    radius, age, alpha, true);
+                    radius, age, alpha, false);
         } else {
             // The Rasenshuriken ball is dimmer, so the blades round it can be seen
             ball(bufferSource, poseStack, matrix, aim, across, up, radius, age, shuriken ? alpha * 0.35F : alpha, false);
