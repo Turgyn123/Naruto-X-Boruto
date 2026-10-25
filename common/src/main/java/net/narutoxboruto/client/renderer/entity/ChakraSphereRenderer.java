@@ -122,6 +122,8 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         // The ball, the same for both jutsus, and where the Rasenshuriken has burst, a ball of wind
         if (blast) {
             blastBall(bufferSource, matrix, new Vec3(0.0D, 1.0D, 0.0D), new Vec3(1.0D, 0.0D, 0.0D), new Vec3(0.0D, 0.0D, 1.0D), radius, age, alpha);
+        } else if (shuriken) {
+            cleanBall(bufferSource, matrix, radius, age, alpha);
         } else {
             ball(bufferSource, poseStack, matrix, aim, across, up, radius, age, alpha, false);
         }
@@ -178,7 +180,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         Vec3 aim = new Vec3(0.0D, -1.0D, 0.0D);
         Vec3 across = new Vec3(1.0D, 0.0D, 0.0D);
         Vec3 up = aim.cross(across).normalize();
-        ball(bufferSource, poseStack, matrix, aim, across, up, radius, age, 1.0F, false);
+        cleanBall(bufferSource, matrix, radius, age, 1.0F);
         shurikenBlades(bufferSource, matrix, aim, across, 0.8F * radius, reach, age, 0.95F, false);
     }
 
@@ -200,11 +202,6 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
             Vec3 sideB = axes[k].cross(sideA).normalize();
             float spin = age * (0.35F + 0.1F * k) * (k == 1 ? -1.0F : 1.0F);
             windBlades(bufferSource.getBuffer(GlowRenderType.GLOW), matrix, sideA, sideB, inner, reach, spin, age, alpha, blast);
-            if (!blast) {
-                // A smaller set between the big blades, turning the other way
-                windBlades(bufferSource.getBuffer(GlowRenderType.GLOW), matrix, sideA, sideB, inner, reach * 0.6F,
-                        -spin * 1.4F + (float) (Math.PI / 4.0D), age, alpha * 0.8F, false);
-            }
         }
     }
 
@@ -304,6 +301,20 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
                 }
                 bolt(glow, matrix, path, 0.011F * scale, 0.8F * alpha);
             }
+        }
+    }
+
+    /**
+     * The ball in the middle of the Rasenshuriken: a plain round ball of glowing light, white in the middle and pale blue at
+     * the edge, without arms or sparks, so the flat blades round it are what is seen.
+     */
+    private static void cleanBall(MultiBufferSource bufferSource, Matrix4f matrix, float radius, float age, float alpha) {
+        float r = radius * (1.0F + 0.04F * Mth.sin(age * 0.8F));
+        VertexConsumer vc = bufferSource.getBuffer(GlowRenderType.GLOW);
+        float[][] shells = {{0.35F, 1.0F, 1.0F, 1.0F, 0.35F}, {0.6F, 0.85F, 0.95F, 1.0F, 0.18F}, {0.85F, 0.6F, 0.82F, 1.0F, 0.12F},
+                {1.0F, 0.5F, 0.75F, 1.0F, 0.16F}};
+        for (float[] shell : shells) {
+            smoothBall(vc, matrix, r * shell[0], shell[1], shell[2], shell[3], shell[4] * alpha);
         }
     }
 
