@@ -73,6 +73,11 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
             return;
         }
 
+        if (kind == WeaponEffectEntity.SHADOW_CLONE) {
+            renderShadowClone(entity, partialTick, poseStack, bufferSource, packedLight);
+            return;
+        }
+
         if (kind == WeaponEffectEntity.FLAME_BULLET) {
             poseStack.pushPose();
             renderFlameBullet(entity, age, partialTick, poseStack, bufferSource);
@@ -403,6 +408,22 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
         // One straight thin line down the middle of the trail
         ChakraSphereRenderer.bolt(vc, matrix, new Vec3[]{new Vec3(0.0D, 0.0D, -1.8D), new Vec3(0.0D, 0.0D, -0.9D), new Vec3(0.0D, 0.0D, -0.05D)},
                 0.015F, 0.7F * fade);
+    }
+
+    /**
+     * Wind Release: Boruto Stream: the shadow clone, drawn as a copy of the player it came from (TARGET is who), bent
+     * forward over its hands, the way it pushes the caster on.
+     */
+    private void renderShadowClone(WeaponEffectEntity entity, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight) {
+        Entity source = entity.level().getEntity(entity.getTargetId());
+        if (!(source instanceof net.minecraft.client.player.AbstractClientPlayer)) return;
+        float yaw = Mth.lerp(partialTick, entity.yRotO, entity.getYRot());
+        poseStack.pushPose();
+        poseStack.mulPose(Axis.YP.rotationDegrees(-yaw));
+        poseStack.mulPose(Axis.XP.rotationDegrees(70.0F));
+        poseStack.mulPose(Axis.YP.rotationDegrees(yaw));
+        this.entityRenderDispatcher.render(source, 0.0D, 0.0D, 0.0D, source.getYRot(), partialTick, poseStack, bufferSource, packedLight);
+        poseStack.popPose();
     }
 
     private void renderWind(WeaponEffectEntity entity, float age, float fade, PoseStack poseStack, MultiBufferSource bufferSource) {
