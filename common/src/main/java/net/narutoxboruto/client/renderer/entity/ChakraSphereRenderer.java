@@ -123,7 +123,8 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         if (blast) {
             blastBall(bufferSource, matrix, new Vec3(0.0D, 1.0D, 0.0D), new Vec3(1.0D, 0.0D, 0.0D), new Vec3(0.0D, 0.0D, 1.0D), radius, age, alpha);
         } else {
-            ball(bufferSource, poseStack, matrix, aim, across, up, radius, age, alpha, false);
+            // The Rasenshuriken ball is dimmer, so the blades round it can be seen
+            ball(bufferSource, poseStack, matrix, aim, across, up, radius, age, shuriken ? alpha * 0.55F : alpha, false);
         }
 
         // The four blades of the Rasenshuriken, lying flat and turning round the ball
@@ -136,8 +137,10 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         poseStack.popPose();
     }
 
-    /** Whether the Rasengan or Rasenshuriken in the hand of a player is drawn by the layer on the player (everyone but the player in first person). */
+    /** Whether the Rasengan in the hand of a player is drawn by the layer on the player (everyone but the player in first person). */
     private static boolean drawnOnArm(ChakraSphereEntity entity) {
+        // Only the Rasengan: the Rasenshuriken is drawn here, in the frame of the world, so its blades are always flat
+        if (entity.getKind() != ChakraSphereEntity.RASENGAN) return false;
         Entity owner = entity.level().getEntity(entity.getOwnerId());
         if (!(owner instanceof AbstractClientPlayer)) return false;
         Minecraft minecraft = Minecraft.getInstance();
@@ -151,35 +154,16 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
     }
 
     /**
-     * The Rasengan or Rasenshuriken held by a player, drawn from the layer on the player: {@code poseStack} is already at
-     * the place on the arm where it is held, so it moves with the arm like the arm itself. The Rasenshuriken is above the
-     * raised hand and its blades lie in the plane across the arm.
+     * The Rasengan held by a player, drawn from the layer on the player: {@code poseStack} is already at the place on the
+     * arm where it is held, so it moves with the arm like the arm itself.
      */
     public static void drawHeld(MultiBufferSource bufferSource, PoseStack poseStack, ChakraSphereEntity sphere, float partialTick) {
         float age = sphere.tickCount + partialTick;
-        Matrix4f matrix = poseStack.last().pose();
-        if (sphere.getKind() == ChakraSphereEntity.RASENGAN) {
-            float charge = Mth.clamp((sphere.getPhaseTicks() + partialTick) / ChakraSphereEntity.RASENGAN_CHARGE_TICKS, 0.0F, 1.0F);
-            Vec3 aim = new Vec3(0.0D, 0.0D, -1.0D);
-            Vec3 across = new Vec3(1.0D, 0.0D, 0.0D);
-            Vec3 up = aim.cross(across).normalize();
-            ball(bufferSource, poseStack, matrix, aim, across, up, heldRadius(charge, age), age, 1.0F, false);
-            return;
-        }
-        float charge = Mth.clamp((sphere.getPhaseTicks() + partialTick) / ChakraSphereEntity.RASENSHURIKEN_CHARGE_TICKS, 0.0F, 1.0F);
-        float radius = 0.08F + 0.2F * charge;
-        float reach = 0.4F + 1.5F * charge;
-        if (charge >= 1.0F) {
-            float pulse = 1.0F + 0.07F * Mth.sin(age * 1.3F);
-            radius *= pulse;
-            reach *= pulse;
-        }
-        // Drawn in the frame of the body (see RasenganHandLayer), where up is -y, so the disc is always flat
-        Vec3 aim = new Vec3(0.0D, -1.0D, 0.0D);
+        float charge = Mth.clamp((sphere.getPhaseTicks() + partialTick) / ChakraSphereEntity.RASENGAN_CHARGE_TICKS, 0.0F, 1.0F);
+        Vec3 aim = new Vec3(0.0D, 0.0D, -1.0D);
         Vec3 across = new Vec3(1.0D, 0.0D, 0.0D);
         Vec3 up = aim.cross(across).normalize();
-        ball(bufferSource, poseStack, matrix, aim, across, up, radius, age, 1.0F, false);
-        shurikenBlades(bufferSource, matrix, aim, across, 0.8F * radius, reach, age, 0.95F, false);
+        ball(bufferSource, poseStack, poseStack.last().pose(), aim, across, up, heldRadius(charge, age), age, 1.0F, false);
     }
 
     /**
@@ -239,7 +223,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
             Vec3 axis = sideA.cross(sideB).normalize();
             for (int layer = -2; layer <= 2; layer++) {
                 Vec3 lift = axis.scale(layer * 0.03D * scale);
-                float layerGlow = layer == 0 ? 0.55F : 0.3F;
+                float layerGlow = layer == 0 ? 0.3F : 0.14F;
                 for (int j = 0; j < steps; j++) {
                     for (int k = 0; k < offset.length - 1; k++) {
                         gradientQuad(vc, matrix, rail[k][j].add(lift), rail[k + 1][j].add(lift), rail[k + 1][j + 1].add(lift), rail[k][j + 1].add(lift),
@@ -248,7 +232,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
                     }
                 }
             }
-            bolt(vc, matrix, centreLine, 0.012F * scale, alpha * (blast ? 0.4F : 0.6F));
+            bolt(vc, matrix, centreLine, 0.012F * scale, alpha * (blast ? 0.4F : 0.45F));
         }
     }
 

@@ -113,10 +113,11 @@ public class ChakraSphereEntity extends Entity {
      */
     public static Vec3 handPosition(Entity caster, int kind, float partialTick) {
         if (kind == RASENSHURIKEN) {
-            // Above the right hand, which is raised out to the side
+            // Above the right hand, which is raised out to the side (the shoulder is 0.31 out and 1.4 up, the arm goes on 0.45 out
+            // and 0.6 up, and the ball is 1.3 above the hand)
             double raisedYaw = Math.toRadians(caster instanceof LivingEntity raised ? Mth.rotLerp(partialTick, raised.yBodyRotO, raised.yBodyRot) : caster.getYRot());
             Vec3 sideways = new Vec3(-Math.cos(raisedYaw), 0.0D, -Math.sin(raisedYaw));
-            return caster.getPosition(partialTick).add(sideways.scale(0.85D)).add(0.0D, 2.9D, 0.0D);
+            return caster.getPosition(partialTick).add(sideways.scale(0.76D)).add(0.0D, 3.2D, 0.0D);
         }
         // The Rasengan is in the right hand of the body, a little in front of it, wherever the caster looks
         double yaw = Math.toRadians(caster instanceof LivingEntity living ? Mth.rotLerp(partialTick, living.yBodyRotO, living.yBodyRot) : caster.getYRot());
