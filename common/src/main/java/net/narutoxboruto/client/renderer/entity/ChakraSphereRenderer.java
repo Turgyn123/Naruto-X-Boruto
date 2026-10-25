@@ -199,8 +199,10 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         float scale = Math.max(0.5F, reach / 1.25F);
         // Across a blade: from the sharp (outer) edge to the back, how far out from the middle line (times the half width)
         // and how strongly it glows
-        double[] offset = {1.15D, 0.8D, 0.4D, 0.0D, -0.25D, -0.5D, -0.7D};
-        float[] glow = {0.0F, 0.12F, 0.45F, 0.8F, 0.45F, 0.12F, 0.0F};
+        // The glow is about the same over the middle of the blade and only fades at the edges, so it is seen as a shape and
+        // not as one bright line
+        double[] offset = {1.15D, 0.85D, 0.5D, 0.15D, -0.2D, -0.5D, -0.7D};
+        float[] glow = {0.0F, 0.25F, 0.55F, 0.6F, 0.55F, 0.25F, 0.0F};
         for (int blade = 0; blade < 4; blade++) {
             double base = spin + blade * (Math.PI / 2.0D);
             Vec3[][] rail = new Vec3[offset.length][steps + 1];
@@ -232,8 +234,6 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
                     }
                 }
             }
-            // Just a faint bright line along the middle, so the blade has a spine
-            bolt(vc, matrix, centreLine, 0.008F * scale, alpha * (blast ? 0.15F : 0.22F));
         }
     }
 
