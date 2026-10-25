@@ -1,5 +1,6 @@
 package net.narutoxboruto.entities.effects;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -20,6 +21,8 @@ import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.LiquidBlock;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -61,6 +64,7 @@ public class WeaponEffectEntity extends Entity {
     public static final int ASH_CLOUD = 4;
     public static final int FLAME_BULLET = 5;
     public static final int VACUUM_BULLET = 6;
+    public static final int GREAT_BREAKTHROUGH = 7;
 
     private static final EntityDataAccessor<Integer> KIND = SynchedEntityData.defineId(WeaponEffectEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Float> SIZE = SynchedEntityData.defineId(WeaponEffectEntity.class, EntityDataSerializers.FLOAT);
@@ -274,6 +278,90 @@ public class WeaponEffectEntity extends Entity {
         igniteTicks = 0;
         this.entityData.set(TARGET, 0);
         level().playSound(null, at.x, at.y, at.z, SoundEvents.GENERIC_BURN, SoundSource.PLAYERS, 0.8F, 1.2F);
+    }
+
+    /** The Great Breakthrough: how far it blows, how wide, how fast the front moves, and what it does. */
+    public static final double BREAKTHROUGH_RANGE = 50.0D;
+    public static final double BREAKTHROUGH_ANGLE = Math.toRadians(25.0D);
+    private static final double BREAKTHROUGH_FRONT_SPEED = 3.0D;
+    /** The blast is a slice of this thickness behind its front: whatever is in it is blown away. */
+    private static final double BREAKTHROUGH_SLICE = 6.0D;
+    public static final int BREAKTHROUGH_TICKS = 30;
+    private static final float BREAKTHROUGH_DAMAGE = 4.0F;
+    private static final double BREAKTHROUGH_BLOCK_RANGE = 20.0D;
+    /** The way the blast goes, set when it is made. */
+    private Vec3 blastDirection = new Vec3(0.0D, 0.0D, 1.0D);
+
+    /** Wind Release: Great Breakthrough: a blast of wind from the mouth of {@code caster}, in the cone in front of them. */
+    public static void spawnGreatBreakthrough(ServerLevel level, ServerPlayer caster) {
+        Vec3 look = caster.getLookAngle().normalize();
+        Vec3 start = caster.getEyePosition().add(look.scale(0.6D)).add(0.0D, -0.25D, 0.0D);
+        WeaponEffectEntity blast = create(level, GREAT_BREAKTHROUGH, start, look, 1.0F, 0xFFE6F2FF, BREAKTHROUGH_TICKS);
+        blast.owner = caster.getUUID();
+        blast.blastDirection = look;
+        level.addFreshEntity(blast);
+    }
+
+    /**
+     * The front of the blast runs out at 3 blocks a tick, to 50 meters. Every living thing in the cone, in the slice just
+     * behind the front, is thrown on, and hurt once. Soft things (leaves, grass, flowers and the like) within 20 meters of
+     * the caster are blown away. It goes on for a short while after the front is at its end, so it fades.
+     */
+    private void tickGreatBreakthrough() {
+        if (!(level() instanceof ServerLevel serverLevel)) return;
+        int age = getMaxLife() - life;
+        double front = Math.min(BREAKTHROUGH_RANGE, (age + 1) * BREAKTHROUGH_FRONT_SPEED);
+        double back = Math.max(0.0D, front - BREAKTHROUGH_SLICE);
+        Entity ownerEntity = owner == null ? null : serverLevel.getEntity(owner);
+        Vec3 origin = position();
+        Vec3 direction = blastDirection;
+        double tan = Math.tan(BREAKTHROUGH_ANGLE);
+
+        if (front < BREAKTHROUGH_RANGE || age < BREAKTHROUGH_TICKS) {
+            for (LivingEntity target : serverLevel.getEntitiesOfClass(LivingEntity.class,
+                    new AABB(origin, origin.add(direction.scale(front))).inflate(front * tan + 2.0D),
+                    e -> e != ownerEntity && e.isAlive() && !e.isSpectator())) {
+                Vec3 to = target.getBoundingBox().getCenter().subtract(origin);
+                double along = to.dot(direction);
+                if (along < back || along > front) continue;
+                double across = Math.sqrt(Math.max(0.0D, to.lengthSqr() - along * along));
+                if (across > Math.max(1.5D, along * tan)) continue;
+                target.setDeltaMovement(target.getDeltaMovement().scale(0.3D).add(direction.scale(1.6D)).add(0.0D, 0.25D, 0.0D));
+                target.hurtMarked = true;
+                if (hitIds.add(target.getId())) {
+                    target.invulnerableTime = 0;
+                    target.hurt(windSource(ownerEntity), BREAKTHROUGH_DAMAGE);
+                }
+            }
+        }
+        blowAwaySoftBlocks(serverLevel, origin, direction, back, Math.min(front, BREAKTHROUGH_BLOCK_RANGE), ownerEntity);
+        if (--life <= 0) discard();
+    }
+
+    /** Leaves, grass, flowers and the like in the cone between {@code from} and {@code to} meters are broken, with no drops. */
+    private void blowAwaySoftBlocks(ServerLevel serverLevel, Vec3 origin, Vec3 direction, double from, double to, Entity breaker) {
+        if (to <= from) return;
+        Vec3 right = direction.cross(new Vec3(0.0D, 1.0D, 0.0D));
+        right = right.lengthSqr() < 1.0E-4D ? new Vec3(1.0D, 0.0D, 0.0D) : right.normalize();
+        Vec3 up = right.cross(direction).normalize();
+        double tan = Math.tan(BREAKTHROUGH_ANGLE);
+        int broken = 0;
+        for (double d = from; d <= to; d += 1.0D) {
+            int reach = (int) Math.ceil(Math.max(1.5D, d * tan));
+            for (int i = -reach; i <= reach; i++) {
+                for (int j = -reach; j <= reach; j++) {
+                    if (i * i + j * j > reach * reach) continue;
+                    Vec3 at = origin.add(direction.scale(d)).add(right.scale(i)).add(up.scale(j));
+                    BlockPos pos = BlockPos.containing(at);
+                    BlockState state = serverLevel.getBlockState(pos);
+                    if (state.isAir() || state.getBlock() instanceof LiquidBlock || state.hasBlockEntity()) continue;
+                    float hardness = state.getDestroySpeed(serverLevel, pos);
+                    if (hardness < 0.0F || hardness > 0.2F) continue;
+                    serverLevel.destroyBlock(pos, false, breaker);
+                    if (++broken >= 120) return;
+                }
+            }
+        }
     }
 
     /** The Vacuum Sphere: 20 small bullets of wind, how fast they fly, how far, and what each one does. */
@@ -534,6 +622,10 @@ public class WeaponEffectEntity extends Entity {
         }
         if (getKind() == VACUUM_BULLET) {
             tickVacuumBullet();
+            return;
+        }
+        if (getKind() == GREAT_BREAKTHROUGH) {
+            tickGreatBreakthrough();
             return;
         }
 

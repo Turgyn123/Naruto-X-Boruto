@@ -90,6 +90,7 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
             float fade = Mth.clamp((entity.getMaxLife() - age) / 4.0F, 0.0F, 1.0F) * Mth.clamp(age / 2.0F, 0.0F, 1.0F);
             if (kind == WeaponEffectEntity.WIND) renderWind(entity, age, fade, poseStack, bufferSource);
             else if (kind == WeaponEffectEntity.VACUUM_BULLET) renderVacuumBullet(age, fade, poseStack, bufferSource);
+            else if (kind == WeaponEffectEntity.GREAT_BREAKTHROUGH) renderGreatBreakthrough(entity, age, fade, poseStack, bufferSource);
             else renderCrescent(entity, age, fade, poseStack, bufferSource);
         }
         poseStack.popPose();
@@ -403,6 +404,50 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
         // One straight thin line down the middle of the trail
         ChakraSphereRenderer.bolt(vc, matrix, new Vec3[]{new Vec3(0.0D, 0.0D, -1.8D), new Vec3(0.0D, 0.0D, -0.9D), new Vec3(0.0D, 0.0D, -0.05D)},
                 0.015F, 0.7F * fade);
+    }
+
+    /**
+     * Wind Release: Great Breakthrough: a roaring blast of wind that opens out from the mouth like a trumpet. Thin streaks
+     * of white wind rush outwards inside the cone, the way the lines of speed in the picture rush out of the dark middle,
+     * and rings of pressure run out in front of them at the front of the blast. The local z axis is the way it blows.
+     */
+    private void renderGreatBreakthrough(WeaponEffectEntity entity, float age, float fade, PoseStack poseStack, MultiBufferSource bufferSource) {
+        Matrix4f matrix = poseStack.last().pose();
+        VertexConsumer vc = bufferSource.getBuffer(GlowRenderType.GLOW);
+        double tan = Math.tan(WeaponEffectEntity.BREAKTHROUGH_ANGLE);
+        double front = Math.min(WeaponEffectEntity.BREAKTHROUGH_RANGE, age * 3.0D);
+        if (front < 1.0D) return;
+        int streaks = 90;
+        for (int i = 0; i < streaks; i++) {
+            double theta = hash(i * 3 + 1) * Math.PI * 2.0D;
+            double fraction = 0.1D + 0.9D * Math.sqrt(hash(i * 3 + 2));
+            double length = 3.0D + 5.0D * hash(i * 3 + 3);
+            double speed = 2.2D + 2.0D * hash(i * 7 + 5);
+            // The head of the streak runs outwards over and over, inside the part of the cone the front has reached
+            double head = (hash(i * 11 + 4) * 60.0D + age * speed) % front;
+            Vec3[] path = new Vec3[5];
+            for (int j = 0; j < path.length; j++) {
+                double z = Math.max(0.2D, head - length * (1.0D - j / (path.length - 1.0D)));
+                double radius = z * tan * fraction;
+                double turn = theta + z * 0.04D;
+                path[j] = new Vec3(Math.cos(turn) * radius, Math.sin(turn) * radius, z);
+            }
+            ChakraSphereRenderer.bolt(vc, matrix, path, 0.012F * (1.0F + (float) head * 0.03F), 0.55F * fade);
+        }
+        // Rings of pressure running out
+        for (int ring = 0; ring < 3; ring++) {
+            double z = front - ring * 3.5D;
+            if (z < 1.0D) continue;
+            double radius = z * tan;
+            int segments = 28;
+            for (int s = 0; s < segments; s++) {
+                double a0 = Math.PI * 2.0D * s / segments;
+                double a1 = Math.PI * 2.0D * (s + 1) / segments;
+                ChakraSphereRenderer.bolt(vc, matrix, new Vec3[]{
+                        new Vec3(Math.cos(a0) * radius, Math.sin(a0) * radius, z),
+                        new Vec3(Math.cos(a1) * radius, Math.sin(a1) * radius, z)}, 0.03F, 0.18F * fade * (1.0F - ring * 0.3F));
+            }
+        }
     }
 
     private void renderWind(WeaponEffectEntity entity, float age, float fade, PoseStack poseStack, MultiBufferSource bufferSource) {

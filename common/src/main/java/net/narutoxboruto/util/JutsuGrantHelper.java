@@ -55,7 +55,8 @@ public class JutsuGrantHelper {
             case "wind":
                 grantMultipleJutsus(serverPlayer, storage,
                         ModItems.RASENSHURIKEN_JUTSU, "Rasenshuriken",
-                        ModItems.VACUUM_SPHERE_JUTSU, "Vacuum Sphere");
+                        ModItems.VACUUM_SPHERE_JUTSU, "Vacuum Sphere",
+                        ModItems.GREAT_BREAKTHROUGH_JUTSU, "Great Breakthrough");
                 break;
         }
     }
@@ -159,6 +160,7 @@ public class JutsuGrantHelper {
         if (playerReleases.toLowerCase().contains("wind")) {
             modified |= restoreIfMissing(serverPlayer, storage, ModItems.RASENSHURIKEN_JUTSU, checkInventory);
             modified |= restoreIfMissing(serverPlayer, storage, ModItems.VACUUM_SPHERE_JUTSU, checkInventory);
+            modified |= restoreIfMissing(serverPlayer, storage, ModItems.GREAT_BREAKTHROUGH_JUTSU, checkInventory);
         }
 
         if (playerReleases.toLowerCase().contains("fire")) {

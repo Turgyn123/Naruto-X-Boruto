@@ -122,6 +122,7 @@ public class FabricTab {
                         output.accept(FabricItems.RASENGAN_JUTSU);
                         output.accept(FabricItems.RASENSHURIKEN_JUTSU);
                         output.accept(FabricItems.VACUUM_SPHERE_JUTSU);
+                        output.accept(FabricItems.GREAT_BREAKTHROUGH_JUTSU);
                         output.accept(FabricItems.FLAME_BULLET_JUTSU);
                         output.accept(FabricItems.GREAT_FIRE_ANNIHILATION_JUTSU);
                         output.accept(FabricItems.ASH_PILE_BURNING_JUTSU);
