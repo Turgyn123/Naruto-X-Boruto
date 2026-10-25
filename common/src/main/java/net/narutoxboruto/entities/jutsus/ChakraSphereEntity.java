@@ -67,7 +67,10 @@ public class ChakraSphereEntity extends Entity {
     public static final int SHURIKEN_GROW_TICKS = 10;
     public static final int SHURIKEN_BLAST_TICKS = 100;
     public static final double SHURIKEN_RADIUS = 6.0D;
-    private static final float SHURIKEN_TICK_DAMAGE = 2.5F;
+    /** What the one it hits takes at once, before the burst starts. */
+    private static final float SHURIKEN_IMPACT_DAMAGE = 30.0F;
+    /** What everything inside the burst takes at every pulse (every 5 ticks). */
+    private static final float SHURIKEN_TICK_DAMAGE = 15.0F;
     private static final float SHURIKEN_FINAL_DAMAGE = 10.0F;
 
     private static final EntityDataAccessor<Integer> KIND = SynchedEntityData.defineId(ChakraSphereEntity.class, EntityDataSerializers.INT);
@@ -347,6 +350,9 @@ public class ChakraSphereEntity extends Entity {
                     new AABB(from, end).inflate(1.0D),
                     e -> e instanceof LivingEntity && e.isAlive() && e != ownerEntity && !e.isSpectator());
             if (entityHit != null) {
+                Entity target = entityHit.getEntity();
+                target.invulnerableTime = 0;
+                target.hurt(sphereSource(ownerEntity), SHURIKEN_IMPACT_DAMAGE);
                 explodeShuriken(entityHit.getLocation());
             } else if (hit.getType() != HitResult.Type.MISS) {
                 explodeShuriken(hit.getLocation());
