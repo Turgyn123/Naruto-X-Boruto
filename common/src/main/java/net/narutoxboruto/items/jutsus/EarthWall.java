@@ -2,8 +2,6 @@ package net.narutoxboruto.items.jutsus;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -28,6 +26,7 @@ public class EarthWall extends AbstractJutsuItem {
     private static final int WALL_WIDTH = 7;   // 7 blocks wide
     private static final int WALL_HEIGHT = 3;  // 3 blocks tall
     private static final int WALL_DEPTH = 2;   // 2 blocks deep
+    private static final int MAX_SUPPORT_DEPTH = 12; // how far down a gap under the wall is filled
 
     public EarthWall(Properties pProperties) {
         super(pProperties);
@@ -81,11 +80,6 @@ public class EarthWall extends AbstractJutsuItem {
         level.playSound(null, serverPlayer.getX(), serverPlayer.getY(), serverPlayer.getZ(),
                 SoundEvents.STONE_PLACE, SoundSource.PLAYERS, 1.5F, 0.5F);
 
-        // Spawn particles (placeholder)
-        if (level instanceof ServerLevel serverLevel) {
-            spawnWallParticles(serverLevel, targetBlock, facing);
-        }
-
         return true;
     }
 
@@ -96,17 +90,25 @@ public class EarthWall extends AbstractJutsuItem {
     private void buildWall(Level level, BlockPos origin, Direction facing) {
         int halfWidth = WALL_WIDTH / 2;
 
-        for (int height = 1; height <= WALL_HEIGHT; height++) {
-            for (int width = -halfWidth; width <= halfWidth; width++) {
-                for (int depth = 0; depth < WALL_DEPTH; depth++) {
-                    BlockPos wallPos = calculateWallBlockPos(origin, facing, width, height, depth);
+        for (int width = -halfWidth; width <= halfWidth; width++) {
+            for (int depth = 0; depth < WALL_DEPTH; depth++) {
+                BlockState blockToPlace = getWallBlockState(level,
+                        getGroundBelowWallPos(calculateWallBlockPos(origin, facing, width, 0, depth), origin, 0), origin);
 
+                for (int height = 1; height <= WALL_HEIGHT; height++) {
+                    BlockPos wallPos = calculateWallBlockPos(origin, facing, width, height, depth);
                     if (canPlaceWallBlock(level, wallPos)) {
-                        // Get the ground position directly below this wall block
-                        BlockPos groundPos = getGroundBelowWallPos(wallPos, origin, height);
-                        BlockState blockToPlace = getWallBlockState(level, groundPos, origin);
                         level.setBlock(wallPos, blockToPlace, 3);
                     }
+                }
+
+                // Fill any gap under the wall so it never floats above a hole or slope
+                for (int down = 0; down < MAX_SUPPORT_DEPTH; down++) {
+                    BlockPos supportPos = calculateWallBlockPos(origin, facing, width, -down, depth);
+                    if (!canPlaceWallBlock(level, supportPos)) {
+                        break;
+                    }
+                    level.setBlock(supportPos, blockToPlace, 3);
                 }
             }
         }
@@ -262,22 +264,6 @@ public class EarthWall extends AbstractJutsuItem {
                state.is(Blocks.BASALT) ||
                state.is(Blocks.BLACKSTONE) ||
                state.is(Blocks.END_STONE);
-    }
-
-    /**
-     * Spawn particle effects for the wall creation.
-     */
-    private void spawnWallParticles(ServerLevel level, BlockPos origin, Direction facing) {
-        int halfWidth = WALL_WIDTH / 2;
-
-        for (int width = -halfWidth; width <= halfWidth; width++) {
-            for (int height = 1; height <= WALL_HEIGHT; height++) {
-                BlockPos particlePos = calculateWallBlockPos(origin, facing, width, height, 0);
-                level.sendParticles(ParticleTypes.CLOUD,
-                        particlePos.getX() + 0.5, particlePos.getY() + 0.5, particlePos.getZ() + 0.5,
-                        3, 0.3, 0.3, 0.3, 0.02);
-            }
-        }
     }
 
     /**
