@@ -32,6 +32,7 @@ public class ForgeEntities {
     public static final RegistryObject<EntityType<SharkBombEntity>> SHARK_BOMB = registerEntity("shark_bomb", SharkBombEntity::new, MobCategory.MISC, 1.0F, 1.0F);
     public static final RegistryObject<EntityType<WaterDragonEntity>> WATER_DRAGON = registerEntity("water_dragon", WaterDragonEntity::new, MobCategory.MISC, 1.5F, 1.5F);
     public static final RegistryObject<EntityType<WaterCloneEntity>> WATER_CLONE = registerEntity("water_clone", WaterCloneEntity::new, MobCategory.MISC, 0.6F, 1.8F);
+    public static final RegistryObject<EntityType<GolemEntity>> GOLEM = registerEntity("golem", GolemEntity::new, MobCategory.MISC, 1.8F, 3.5F);
 
     //Effects
     public static final RegistryObject<EntityType<LightningArcEntity>> LIGHTNING_ARC =

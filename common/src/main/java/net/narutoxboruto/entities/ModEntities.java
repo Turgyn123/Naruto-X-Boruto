@@ -5,6 +5,7 @@ import net.narutoxboruto.entities.effects.LightningArcEntity;
 import net.narutoxboruto.entities.effects.WeaponEffectEntity;
 import net.narutoxboruto.entities.jutsus.ChakraSphereEntity;
 import net.narutoxboruto.entities.jutsus.FireBallEntity;
+import net.narutoxboruto.entities.jutsus.GolemEntity;
 import net.narutoxboruto.entities.jutsus.SharkBombEntity;
 import net.narutoxboruto.entities.jutsus.WaterCloneEntity;
 import net.narutoxboruto.entities.jutsus.WaterDragonEntity;
@@ -32,6 +33,7 @@ public class ModEntities {
     public static EntityType<WaterDragonEntity> WATER_DRAGON;
     public static EntityType<FireBallEntity> FIRE_BALL;
     public static EntityType<WaterCloneEntity> WATER_CLONE;
+    public static EntityType<GolemEntity> GOLEM;
 
     //Effects
     public static EntityType<LightningArcEntity> LIGHTNING_ARC;

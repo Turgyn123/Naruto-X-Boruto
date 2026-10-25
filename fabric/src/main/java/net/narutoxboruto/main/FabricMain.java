@@ -53,6 +53,7 @@ public class FabricMain implements ModInitializer {
         FabricDefaultAttributeRegistry.register(FabricEntities.CHOJURO, Chojuro.setAttribute());
         FabricDefaultAttributeRegistry.register(FabricEntities.ZABUZA_MOMOCHI, ZabuzaMomochi.setAttribute());
         FabricDefaultAttributeRegistry.register(FabricEntities.WATER_CLONE, net.narutoxboruto.entities.jutsus.WaterCloneEntity.setAttribute());
+        FabricDefaultAttributeRegistry.register(FabricEntities.GOLEM, net.narutoxboruto.entities.jutsus.GolemEntity.setAttribute());
 
         // Populate common holder fields
         ModEntities.KUNAI = FabricEntities.KUNAI;
@@ -65,6 +66,7 @@ public class FabricMain implements ModInitializer {
         ModEntities.SHARK_BOMB = FabricEntities.SHARK_BOMB;
         ModEntities.WATER_DRAGON = FabricEntities.WATER_DRAGON;
         ModEntities.WATER_CLONE = FabricEntities.WATER_CLONE;
+        ModEntities.GOLEM = FabricEntities.GOLEM;
         ModEntities.LIGHTNING_ARC = FabricEntities.LIGHTNING_ARC;
         ModEntities.WEAPON_EFFECT = FabricEntities.WEAPON_EFFECT;
         ModEntities.CHAKRA_SPHERE = FabricEntities.CHAKRA_SPHERE;

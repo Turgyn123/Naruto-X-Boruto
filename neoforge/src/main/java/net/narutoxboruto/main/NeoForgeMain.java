@@ -81,6 +81,7 @@ public class NeoForgeMain {
         ModEntities.SHARK_BOMB = NeoForgeEntities.SHARK_BOMB.get();
         ModEntities.WATER_DRAGON = NeoForgeEntities.WATER_DRAGON.get();
         ModEntities.WATER_CLONE = NeoForgeEntities.WATER_CLONE.get();
+        ModEntities.GOLEM = NeoForgeEntities.GOLEM.get();
         ModEntities.LIGHTNING_ARC = NeoForgeEntities.LIGHTNING_ARC.get();
         ModEntities.WEAPON_EFFECT = NeoForgeEntities.WEAPON_EFFECT.get();
         ModEntities.CHAKRA_SPHERE = NeoForgeEntities.CHAKRA_SPHERE.get();
@@ -115,6 +116,7 @@ public class NeoForgeMain {
         event.put(NeoForgeEntities.CHOJURO.get(), Chojuro.setAttribute());
         event.put(NeoForgeEntities.ZABUZA_MOMOCHI.get(), ZabuzaMomochi.setAttribute());
         event.put(NeoForgeEntities.WATER_CLONE.get(), net.narutoxboruto.entities.jutsus.WaterCloneEntity.setAttribute());
+        event.put(NeoForgeEntities.GOLEM.get(), net.narutoxboruto.entities.jutsus.GolemEntity.setAttribute());
     }
 
 }

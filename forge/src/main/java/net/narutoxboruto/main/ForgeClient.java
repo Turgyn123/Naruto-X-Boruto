@@ -52,6 +52,7 @@ public class ForgeClient {
             EntityRenderers.register(SHARK_BOMB.get(), SharkBombRenderer::new);
             EntityRenderers.register(WATER_DRAGON.get(), WaterDragonRenderer::new);
             EntityRenderers.register(WATER_CLONE.get(), WaterCloneRenderer::new);
+            EntityRenderers.register(GOLEM.get(), GolemRenderer::new);
             EntityRenderers.register(LIGHTNING_ARC.get(), LightningArcRenderer::new);
             EntityRenderers.register(WEAPON_EFFECT.get(), WeaponEffectRenderer::new);
             EntityRenderers.register(CHAKRA_SPHERE.get(), ChakraSphereRenderer::new);
