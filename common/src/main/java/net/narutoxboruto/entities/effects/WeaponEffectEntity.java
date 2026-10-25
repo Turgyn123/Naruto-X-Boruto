@@ -1,6 +1,7 @@
 package net.narutoxboruto.entities.effects;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -332,6 +333,19 @@ public class WeaponEffectEntity extends Entity {
                     target.invulnerableTime = 0;
                     target.hurt(windSource(ownerEntity), BREAKTHROUGH_DAMAGE);
                 }
+            }
+        }
+        // Clouds of dust rushing out in front
+        if (age < BREAKTHROUGH_TICKS - 8) {
+            Vec3 right = direction.cross(new Vec3(0.0D, 1.0D, 0.0D));
+            right = right.lengthSqr() < 1.0E-4D ? new Vec3(1.0D, 0.0D, 0.0D) : right.normalize();
+            Vec3 up = right.cross(direction).normalize();
+            for (int i = 0; i < 6; i++) {
+                double angle = serverLevel.random.nextDouble() * Math.PI * 2.0D;
+                double spread = Math.sqrt(serverLevel.random.nextDouble()) * front * tan * 0.9D;
+                double z = Math.max(1.0D, front - serverLevel.random.nextDouble() * BREAKTHROUGH_SLICE);
+                Vec3 at = origin.add(direction.scale(z)).add(right.scale(Math.cos(angle) * spread * z / front)).add(up.scale(Math.sin(angle) * spread * z / front));
+                serverLevel.sendParticles(ParticleTypes.CLOUD, at.x, at.y, at.z, 0, direction.x, direction.y, direction.z, 1.2D);
             }
         }
         blowAwaySoftBlocks(serverLevel, origin, direction, back, Math.min(front, BREAKTHROUGH_BLOCK_RANGE), ownerEntity);

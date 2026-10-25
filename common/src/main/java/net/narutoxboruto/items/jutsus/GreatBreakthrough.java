@@ -50,10 +50,11 @@ public class GreatBreakthrough extends AbstractJutsuItem {
             return false;
         }
         WeaponEffectEntity.spawnGreatBreakthrough(serverLevel, serverPlayer);
+        // Short sounds only: a long one (like the elytra) goes on playing after the blast is gone
         level.playSound(null, serverPlayer.getX(), serverPlayer.getY(), serverPlayer.getZ(),
-                SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, 1.6F, 0.5F);
+                SoundEvents.WIND_CHARGE_THROW, SoundSource.PLAYERS, 1.8F, 0.6F);
         level.playSound(null, serverPlayer.getX(), serverPlayer.getY(), serverPlayer.getZ(),
-                SoundEvents.ELYTRA_FLYING, SoundSource.PLAYERS, 1.2F, 0.6F);
+                SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, 1.4F, 0.5F);
         return true;
     }
 

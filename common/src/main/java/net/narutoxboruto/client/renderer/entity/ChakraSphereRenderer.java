@@ -243,7 +243,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
      * A quad of pale blue light whose glow is different at its four corners (the corners go round, in the order p0 to p3),
      * brighter and whiter where it glows more, drawn from both sides.
      */
-    private static void gradientQuad(VertexConsumer vc, Matrix4f matrix, Vec3 p0, Vec3 p1, Vec3 p2, Vec3 p3,
+    static void gradientQuad(VertexConsumer vc, Matrix4f matrix, Vec3 p0, Vec3 p1, Vec3 p2, Vec3 p3,
                                      float a0, float a1, float a2, float a3) {
         Vec3[] corner = {p0, p1, p2, p3};
         float[] glow = {a0, a1, a2, a3};
