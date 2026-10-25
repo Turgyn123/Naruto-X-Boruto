@@ -12,7 +12,7 @@ import net.narutoxboruto.entities.effects.WeaponEffectEntity;
 import java.util.List;
 
 /**
- * Earth Release: Earth Dragon Bullet. Rank C, 30 chakra, range 20 meters. A dragon head of mud rises out of the ground in
+ * Earth Release: Earth Dragon Bullet. Rank C, 30 chakra and 15 chakra per second while the dragon stands, range 20 meters. A dragon head of mud rises out of the ground in
  * front of the caster and spits three balls of mud at what they look at. Requires Earth release affinity.
  */
 public class EarthDragonBullet extends AbstractJutsuItem {
@@ -55,6 +55,7 @@ public class EarthDragonBullet extends AbstractJutsuItem {
         super.appendHoverText(stack, context, tooltip, flag);
         tooltip.add(Component.literal("Rank: C").withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.literal("Range: 20 meters").withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.literal("Upkeep: 15 chakra per second").withStyle(ChatFormatting.BLUE));
         tooltip.add(Component.literal("A dragon head of mud spits three balls of mud").withStyle(ChatFormatting.GRAY));
     }
 }

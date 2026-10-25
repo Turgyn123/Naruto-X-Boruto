@@ -488,6 +488,9 @@ public class WeaponEffectEntity extends Entity {
     private static final float MUD_DAMAGE = 6.0F;
     private static final int MUD_SLOW_TICKS = 60;
     private static final double DRAGON_MAX_PITCH = Math.toRadians(30.0D);
+    /** Upkeep: 15 chakra per second while the dragon stands, paid every 4 ticks (3 each time). */
+    private static final int DRAGON_UPKEEP_INTERVAL = 4;
+    private static final int DRAGON_UPKEEP_COST = 3;
 
     /** Earth Release: Earth Dragon Bullet: the dragon head rises from the ground in front of {@code caster}. */
     public static void spawnEarthDragon(ServerLevel level, ServerPlayer caster) {
@@ -520,6 +523,16 @@ public class WeaponEffectEntity extends Entity {
     private void tickEarthDragon() {
         if (!(level() instanceof ServerLevel serverLevel)) return;
         int age = tickCount;
+        if (age > 0 && age % DRAGON_UPKEEP_INTERVAL == 0 && owner != null && serverLevel.getEntity(owner) instanceof ServerPlayer caster) {
+            net.narutoxboruto.capabilities.info.Chakra chakra = net.narutoxboruto.main.platform.Services.PLATFORM.getChakra(caster);
+            if (chakra.getValue() < DRAGON_UPKEEP_COST) {
+                // Out of chakra: the dragon crumbles
+                caster.displayClientMessage(Component.translatable("msg.no_chakra"), true);
+                discard();
+                return;
+            }
+            chakra.subValue(DRAGON_UPKEEP_COST, caster);
+        }
         for (int i = 0; i < DRAGON_SHOTS.length; i++) {
             if (age == DRAGON_SHOTS[i]) {
                 this.entityData.set(TARGET, 0);
