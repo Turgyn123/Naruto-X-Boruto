@@ -86,16 +86,16 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
                 alpha = 1.0F - t;
             }
         } else if (phase == ChakraSphereEntity.CHARGING) {
-            radius = 0.08F + 0.2F * charge;
-            reach = 0.4F + 1.5F * charge;
+            radius = 0.07F + 0.15F * charge;
+            reach = 0.3F + 1.0F * charge;
             if (charge >= 1.0F) {
                 float pulse = 1.0F + 0.07F * Mth.sin(age * 1.3F);
                 radius *= pulse;
                 reach *= pulse;
             }
         } else if (phase == ChakraSphereEntity.ACTIVE) {
-            radius = 0.42F;
-            reach = 2.6F;
+            radius = 0.32F;
+            reach = 1.8F;
         } else {
             blast = true;
             float grown = Mth.clamp(phaseAge / ChakraSphereEntity.SHURIKEN_GROW_TICKS, 0.0F, 1.0F);
@@ -124,7 +124,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
             blastBall(bufferSource, matrix, new Vec3(0.0D, 1.0D, 0.0D), new Vec3(1.0D, 0.0D, 0.0D), new Vec3(0.0D, 0.0D, 1.0D), radius, age, alpha);
         } else {
             // The Rasenshuriken ball is dimmer, so the blades round it can be seen
-            ball(bufferSource, poseStack, matrix, aim, across, up, radius, age, shuriken ? alpha * 0.55F : alpha, false);
+            ball(bufferSource, poseStack, matrix, aim, across, up, radius, age, shuriken ? alpha * 0.45F : alpha, false);
         }
 
         // The four blades of the Rasenshuriken, lying flat and turning round the ball
@@ -223,7 +223,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
             Vec3 axis = sideA.cross(sideB).normalize();
             for (int layer = -1; layer <= 1; layer++) {
                 Vec3 lift = axis.scale(layer * 0.04D * scale);
-                float layerGlow = layer == 0 ? 0.85F : 0.45F;
+                float layerGlow = layer == 0 ? 0.55F : 0.3F;
                 for (int j = 0; j < steps; j++) {
                     for (int k = 0; k < offset.length - 1; k++) {
                         gradientQuad(vc, matrix, rail[k][j].add(lift), rail[k + 1][j].add(lift), rail[k + 1][j + 1].add(lift), rail[k][j + 1].add(lift),
