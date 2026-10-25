@@ -407,54 +407,90 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
     }
 
     /**
-     * Wind Release: Great Breakthrough: a roaring blast of wind that opens out from the mouth like a trumpet, drawn the
-     * way the wind of the Giant Fan is: long white ribbons with the streaks of wind on them that sweep out along the cone and
-     * curl round it, thin near the mouth and wide further out, and scroll as they go. Half of them lie round the cone, half
-     * stand out from it like fins, so the blast has depth from every side. The local z axis is the way it blows.
+     * Wind Release: Great Breakthrough, as in the anime: a thick milky cloud of wind that is blown out of the mouth and
+     * opens out into a cone, with thin white crescents of wind that curl round it and rush on with it. It is not glowing: it
+     * is a soft white fog (three layers of the cone, one inside the other, that billow), and the crescents are flat white
+     * arcs that are pointed at both ends. The local z axis is the way it blows. The server adds clouds and specks of dust.
      */
     private void renderGreatBreakthrough(WeaponEffectEntity entity, float age, float fade, PoseStack poseStack, MultiBufferSource bufferSource) {
         double tan = Math.tan(WeaponEffectEntity.BREAKTHROUGH_ANGLE);
         double front = Math.min(WeaponEffectEntity.BREAKTHROUGH_RANGE, age * 3.0D);
         if (front < 1.0D) return;
-        VertexConsumer vc = bufferSource.getBuffer(RenderType.entityTranslucent(WIND_TEXTURE));
+        VertexConsumer vc = bufferSource.getBuffer(RenderType.entityTranslucent(WHITE_TEXTURE));
         Matrix4f matrix = poseStack.last().pose();
-        int ribbons = 26;
-        int segments = 16;
-        for (int ribbon = 0; ribbon < ribbons; ribbon++) {
-            double length = 14.0D + 12.0D * hash(ribbon * 7 + 1);
-            double head = (hash(ribbon * 7 + 2) * 80.0D + age * (3.0D + 2.0D * hash(ribbon * 7 + 3))) % (front + length * 0.5D);
-            double base = hash(ribbon * 7 + 4) * Math.PI * 2.0D;
-            double fraction = 0.25D + 0.7D * hash(ribbon * 7 + 5);
-            double turn = (hash(ribbon * 7 + 6) - 0.5D) * 0.16D;
-            boolean fin = ribbon % 2 == 1;
-            double[] previous = null;
-            for (int s = 0; s <= segments; s++) {
-                double t = s / (double) segments;
-                double z = head - length * (1.0D - t);
-                if (z < 0.3D || z > front) {
-                    previous = null;
-                    continue;
+        float red = 0.93F;
+        float green = 0.93F;
+        float blue = 0.97F;
+
+        // The fog: the cone in three layers, each a bit smaller than the one outside it, thick near the mouth
+        int around = 24;
+        int steps = 14;
+        float[] layerRadius = {1.0F, 0.72F, 0.42F};
+        float[] layerAlpha = {0.16F, 0.2F, 0.26F};
+        for (int layer = 0; layer < layerRadius.length; layer++) {
+            for (int s = 0; s < steps; s++) {
+                double z0 = front * s / steps;
+                double z1 = front * (s + 1) / steps;
+                float a0 = fogAlpha(z0, front) * layerAlpha[layer] * fade;
+                float a1 = fogAlpha(z1, front) * layerAlpha[layer] * fade;
+                for (int k = 0; k < around; k++) {
+                    double t0 = Math.PI * 2.0D * k / around;
+                    double t1 = Math.PI * 2.0D * (k + 1) / around;
+                    double[] p00 = fogPoint(t0, z0, tan * layerRadius[layer], age);
+                    double[] p10 = fogPoint(t1, z0, tan * layerRadius[layer], age);
+                    double[] p11 = fogPoint(t1, z1, tan * layerRadius[layer], age);
+                    double[] p01 = fogPoint(t0, z1, tan * layerRadius[layer], age);
+                    vertex(vc, matrix, (float) p00[0], (float) p00[1], (float) p00[2], 0.5F, 0.5F, red, green, blue, a0);
+                    vertex(vc, matrix, (float) p10[0], (float) p10[1], (float) p10[2], 0.5F, 0.5F, red, green, blue, a0);
+                    vertex(vc, matrix, (float) p11[0], (float) p11[1], (float) p11[2], 0.5F, 0.5F, red, green, blue, a1);
+                    vertex(vc, matrix, (float) p01[0], (float) p01[1], (float) p01[2], 0.5F, 0.5F, red, green, blue, a1);
                 }
-                double angle = base + z * turn + age * 0.05D;
-                double radius = z * tan * fraction;
-                double cx = Math.cos(angle) * radius;
-                double cy = Math.sin(angle) * radius;
-                double half = 0.2D + 0.07D * z;
-                // Across the ribbon: round the cone, or outwards from the cone
-                double ax = fin ? Math.cos(angle) : -Math.sin(angle);
-                double ay = fin ? Math.sin(angle) : Math.cos(angle);
-                float alpha = (float) (0.75D * Math.min(1.0D, Math.min(t * 5.0D, (1.0D - t) * 3.0D)) * Math.min(1.0D, z / 3.0D)) * fade;
-                float u = (float) (t * 2.5D - age * 0.2D + ribbon * 0.37D);
-                double[] now = {cx - ax * half, cy - ay * half, z, cx + ax * half, cy + ay * half, z, u, alpha};
-                if (previous != null) {
-                    vertex(vc, matrix, (float) previous[0], (float) previous[1], (float) previous[2], (float) previous[6], 0.0F, 0.94F, 0.97F, 1.0F, (float) previous[7]);
-                    vertex(vc, matrix, (float) previous[3], (float) previous[4], (float) previous[5], (float) previous[6], 1.0F, 0.94F, 0.97F, 1.0F, (float) previous[7]);
-                    vertex(vc, matrix, (float) now[3], (float) now[4], (float) now[5], (float) now[6], 1.0F, 0.94F, 0.97F, 1.0F, (float) now[7]);
-                    vertex(vc, matrix, (float) now[0], (float) now[1], (float) now[2], (float) now[6], 0.0F, 0.94F, 0.97F, 1.0F, (float) now[7]);
-                }
-                previous = now;
             }
         }
+
+        // Thin white crescents that curl round the fog, flat arcs pointed at both ends, running on with the blast
+        int crescents = 7;
+        for (int c = 0; c < crescents; c++) {
+            double z = ((hash(c * 5 + 1) * 40.0D + age * (3.4D + 1.2D * hash(c * 5 + 2))) % Math.max(front, 4.0D));
+            if (z < 1.5D) continue;
+            double radius = z * tan * (0.95D + 0.25D * hash(c * 5 + 3));
+            double start = hash(c * 5 + 4) * Math.PI * 2.0D + age * (c % 2 == 0 ? 0.12D : -0.12D);
+            double span = 1.2D + 0.8D * hash(c * 5 + 5);
+            double thick = 0.12D + 0.035D * z;
+            int pieces = 14;
+            double[][] outer = new double[pieces + 1][];
+            double[][] inner = new double[pieces + 1][];
+            for (int j = 0; j <= pieces; j++) {
+                double u = j / (double) pieces;
+                double angle = start + span * u;
+                double w = thick * Math.pow(Math.sin(Math.PI * u), 0.8D);
+                // The arc is a little bent along the blast, like the slashes in the picture
+                double zz = z + 0.6D * Math.sin(Math.PI * u);
+                outer[j] = new double[]{Math.cos(angle) * (radius + w), Math.sin(angle) * (radius + w), zz};
+                inner[j] = new double[]{Math.cos(angle) * (radius - w), Math.sin(angle) * (radius - w), zz};
+            }
+            float a = 0.8F * fade * (float) Math.min(1.0D, (front - z) / 6.0D + 0.4D);
+            for (int j = 0; j < pieces; j++) {
+                vertex(vc, matrix, (float) inner[j][0], (float) inner[j][1], (float) inner[j][2], 0.5F, 0.5F, 1.0F, 1.0F, 1.0F, a);
+                vertex(vc, matrix, (float) outer[j][0], (float) outer[j][1], (float) outer[j][2], 0.5F, 0.5F, 1.0F, 1.0F, 1.0F, a);
+                vertex(vc, matrix, (float) outer[j + 1][0], (float) outer[j + 1][1], (float) outer[j + 1][2], 0.5F, 0.5F, 1.0F, 1.0F, 1.0F, a);
+                vertex(vc, matrix, (float) inner[j + 1][0], (float) inner[j + 1][1], (float) inner[j + 1][2], 0.5F, 0.5F, 1.0F, 1.0F, 1.0F, a);
+            }
+        }
+    }
+
+    /** How thick the fog is {@code z} meters from the mouth, thicker near the mouth and at the front. */
+    private static float fogAlpha(double z, double front) {
+        double near = Math.exp(-z / 6.0D);
+        double wave = Math.exp(-Math.pow((front - z) / 5.0D, 2.0D));
+        return (float) Math.min(1.0D, Math.min(1.0D, z / 1.2D) * (0.45D + 0.8D * near + 0.5D * wave));
+    }
+
+    /** A point on the cone, billowing a little. */
+    private static double[] fogPoint(double angle, double z, double tan, float age) {
+        double billow = 1.0D + 0.1D * Math.sin(z * 0.25D - age * 0.4D + angle * 3.0D);
+        double radius = z * tan * billow;
+        return new double[]{Math.cos(angle) * radius, Math.sin(angle) * radius, z};
     }
 
     private void renderWind(WeaponEffectEntity entity, float age, float fade, PoseStack poseStack, MultiBufferSource bufferSource) {
