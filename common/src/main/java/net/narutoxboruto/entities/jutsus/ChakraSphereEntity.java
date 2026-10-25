@@ -1,5 +1,6 @@
 package net.narutoxboruto.entities.jutsus;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -19,6 +20,8 @@ import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.LiquidBlock;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -379,6 +382,9 @@ public class ChakraSphereEntity extends Entity {
                 }
                 if (phaseTicks % 20 == 0) serverLevel.playSound(null, getX(), getY(), getZ(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, 1.5F, 0.6F);
             }
+            if (phaseTicks % 2 == 0 && phaseTicks <= SHURIKEN_BLAST_TICKS - 5) {
+                breakBlocks(serverLevel, radius, ownerEntity);
+            }
             if (phaseTicks == SHURIKEN_BLAST_TICKS - 2) {
                 for (LivingEntity inside : serverLevel.getEntitiesOfClass(LivingEntity.class,
                         new AABB(position(), position()).inflate(SHURIKEN_RADIUS), e -> e != ownerEntity && e.isAlive() && !e.isSpectator())) {
@@ -393,6 +399,31 @@ public class ChakraSphereEntity extends Entity {
                 serverLevel.playSound(null, getX(), getY(), getZ(), SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 3.0F, 1.2F);
             }
             if (phaseTicks >= SHURIKEN_BLAST_TICKS) discard();
+        }
+    }
+
+    /**
+     * Everything inside the burst that can be broken is broken, without drops (there would be thousands of them). The
+     * burst grows, so the ring of blocks it reaches grows with it. A few at a time, so it does not freeze the server.
+     * Bedrock and the like (blocks that cannot be destroyed) and liquids are left alone.
+     */
+    private void breakBlocks(ServerLevel serverLevel, double radius, Entity breaker) {
+        BlockPos centre = blockPosition();
+        int reach = (int) Math.ceil(radius);
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+        int broken = 0;
+        for (int dx = -reach; dx <= reach; dx++) {
+            for (int dy = -reach; dy <= reach; dy++) {
+                for (int dz = -reach; dz <= reach; dz++) {
+                    if (dx * dx + dy * dy + dz * dz > radius * radius) continue;
+                    pos.set(centre.getX() + dx, centre.getY() + dy, centre.getZ() + dz);
+                    BlockState state = serverLevel.getBlockState(pos);
+                    if (state.isAir() || state.getBlock() instanceof LiquidBlock) continue;
+                    if (state.getDestroySpeed(serverLevel, pos) < 0.0F) continue;
+                    serverLevel.destroyBlock(pos, false, breaker);
+                    if (++broken >= 150) return;
+                }
+            }
         }
     }
 
