@@ -9,8 +9,8 @@ import net.narutoxboruto.items.jutsus.ChargedSphereJutsu;
 /** The right arm of a player held out to the side and up while a Rasenshuriken is charged above the hand. */
 public final class RaisedArmPose {
 
-    /** How far the right arm is turned out from hanging down, in radians: out to the side and up, 35 degrees above straight out. */
-    public static final float ARM_TILT = 2.18F;
+    /** How far the right arm is turned out from hanging down, in radians: out to the side and up, 53 degrees above straight out. */
+    public static final float ARM_TILT = 2.5F;
 
     private RaisedArmPose() {
     }

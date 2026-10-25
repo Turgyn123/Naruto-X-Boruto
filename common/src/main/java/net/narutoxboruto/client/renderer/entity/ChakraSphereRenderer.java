@@ -95,8 +95,8 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
                 reach *= pulse;
             }
         } else if (phase == ChakraSphereEntity.ACTIVE) {
-            radius = 0.3F;
-            reach = 1.3F;
+            radius = 0.42F;
+            reach = 2.0F;
         } else {
             blast = true;
             float grown = Mth.clamp(phaseAge / ChakraSphereEntity.SHURIKEN_GROW_TICKS, 0.0F, 1.0F);
@@ -119,17 +119,12 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         Vec3 up = aim.cross(across).normalize();
 
         Matrix4f matrix = poseStack.last().pose();
-        float ribbonAlpha = 0.94F * alpha;
 
-        // The ball, the same for both jutsus
-        ball(bufferSource, poseStack, matrix, aim, across, up, radius, age, alpha, blast);
-
-        // Thrown, ribbons of wind spiral behind the Rasenshuriken like the wind of the fan
-        if (shuriken && phase == ChakraSphereEntity.ACTIVE) {
-            VertexConsumer wind = bufferSource.getBuffer(RenderType.entityTranslucent(WIND_TEXTURE));
-            for (int r = 0; r < 4; r++) {
-                trail(wind, matrix, aim, across, up, reach, age, r, ribbonAlpha);
-            }
+        // The ball, the same for both jutsus, and where the Rasenshuriken has burst, a ball of wind
+        if (blast) {
+            blastBall(bufferSource, matrix, aim, across, up, radius, age, alpha);
+        } else {
+            ball(bufferSource, poseStack, matrix, aim, across, up, radius, age, alpha, false);
         }
 
         // The four blades of the Rasenshuriken, lying flat and turning round the ball
@@ -268,6 +263,21 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         float white = Mth.clamp(glow * 1.2F, 0.0F, 1.0F);
         vc.addVertex(matrix, (float) p.x, (float) p.y, (float) p.z)
                 .setColor(0.45F + 0.5F * white, 0.72F + 0.25F * white, 1.0F, Mth.clamp(glow, 0.0F, 1.0F));
+    }
+
+    /**
+     * Where the Rasenshuriken has burst: a big ball of wind that cuts everything inside it. A soft glow with a bright
+     * heart, two layers of white ribbons of wind spiralling round it the other way each, like the wind of the Giant Fan,
+     * and the flat blades turning inside it (see {@link #shurikenBlades}). No lightning.
+     */
+    private static void blastBall(MultiBufferSource bufferSource, Matrix4f matrix, Vec3 aim, Vec3 across, Vec3 up,
+                                  float radius, float age, float alpha) {
+        VertexConsumer glow = bufferSource.getBuffer(GlowRenderType.GLOW);
+        smoothBall(glow, matrix, radius * 0.3F, 0.9F, 0.95F, 1.0F, 0.2F * alpha);
+        smoothBall(glow, matrix, radius, 0.55F, 0.75F, 0.95F, 0.06F * alpha);
+        VertexConsumer wind = bufferSource.getBuffer(RenderType.entityTranslucent(WIND_TEXTURE));
+        windBall(wind, matrix, aim, across, up, radius * 0.98F, age, 14, 2.2F, 0.9F * alpha);
+        windBall(wind, matrix, aim, across, up, radius * 0.7F, age, 9, -3.0F, 0.7F * alpha);
     }
 
     /** The ball of the Rasengan, and of the Rasenshuriken. */
