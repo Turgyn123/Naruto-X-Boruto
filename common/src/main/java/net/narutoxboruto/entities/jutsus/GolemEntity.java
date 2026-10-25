@@ -141,7 +141,7 @@ public class GolemEntity extends IronGolem {
     @Override
     public void tick() {
         super.tick();
-        if (level().isClientSide() || !(level() instanceof ServerLevel)) return;
+        if (level().isClientSide() || !(level() instanceof ServerLevel serverLevel)) return;
         Player owner = getOwner();
         if (!(owner instanceof ServerPlayer caster) || !caster.isAlive()) {
             revert();
@@ -150,6 +150,9 @@ public class GolemEntity extends IronGolem {
         if (tickCount % 10 == 0 && (distanceToSqr(caster) > RANGE * RANGE || caster.level() != level())) {
             revert();
             return;
+        }
+        if (tickCount % 10 == 5) {
+            DecoyTaunt.attract(serverLevel, this);
         }
         if (tickCount > 0 && tickCount % UPKEEP_INTERVAL == 0) {
             Chakra chakra = Services.PLATFORM.getChakra(caster);

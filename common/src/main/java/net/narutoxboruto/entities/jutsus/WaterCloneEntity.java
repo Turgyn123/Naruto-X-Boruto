@@ -163,6 +163,9 @@ public class WaterCloneEntity extends PathfinderMob {
             }
             chakra.subValue(UPKEEP_COST, caster);
         }
+        if (tickCount % 10 == 5) {
+            DecoyTaunt.attract(serverLevel, this);
+        }
         if (tickCount % 4 == 0) {
             // A shimmer of water drops
             serverLevel.sendParticles(ParticleTypes.FALLING_WATER, getX(), getY() + 1.0D, getZ(), 1, 0.25D, 0.7D, 0.25D, 0.0D);
