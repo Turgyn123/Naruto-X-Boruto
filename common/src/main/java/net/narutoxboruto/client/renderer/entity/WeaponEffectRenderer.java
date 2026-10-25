@@ -87,7 +87,7 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
             poseStack.mulPose(Axis.YP.rotationDegrees(-Mth.lerp(partialTick, entity.yRotO, entity.getYRot())));
             poseStack.mulPose(Axis.XP.rotationDegrees(Mth.lerp(partialTick, entity.xRotO, entity.getXRot())));
             float fade = Mth.clamp((entity.getMaxLife() - age) / 4.0F, 0.0F, 1.0F) * Mth.clamp(age / 2.0F, 0.0F, 1.0F);
-            if (kind == WeaponEffectEntity.WIND) renderWind(entity, age, fade, poseStack, bufferSource);
+            if (kind == WeaponEffectEntity.WIND || kind == WeaponEffectEntity.VACUUM_BULLET) renderWind(entity, age, fade, poseStack, bufferSource);
             else renderCrescent(entity, age, fade, poseStack, bufferSource);
         }
         poseStack.popPose();

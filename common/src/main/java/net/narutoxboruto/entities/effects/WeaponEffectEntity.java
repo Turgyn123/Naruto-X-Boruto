@@ -27,6 +27,8 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.narutoxboruto.entities.ModEntities;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -55,6 +57,7 @@ public class WeaponEffectEntity extends Entity {
     public static final int FIRE_WAVE = 3;
     public static final int ASH_CLOUD = 4;
     public static final int FLAME_BULLET = 5;
+    public static final int VACUUM_BULLET = 6;
 
     private static final EntityDataAccessor<Integer> KIND = SynchedEntityData.defineId(WeaponEffectEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Float> SIZE = SynchedEntityData.defineId(WeaponEffectEntity.class, EntityDataSerializers.FLOAT);
@@ -270,6 +273,64 @@ public class WeaponEffectEntity extends Entity {
         level().playSound(null, at.x, at.y, at.z, SoundEvents.GENERIC_BURN, SoundSource.PLAYERS, 0.8F, 1.2F);
     }
 
+    /** The Vacuum Sphere: 20 small bullets of wind, how fast they fly, how far, and what each one does. */
+    private static final int VACUUM_BULLETS = 20;
+    private static final double VACUUM_SPEED = 2.0D;
+    public static final int VACUUM_TICKS = 25; // 50 meters
+    private static final float VACUUM_DAMAGE = 5.0F;
+    /** Half the angle of the cone the bullets are spread over: 12 degrees. */
+    private static final double VACUUM_SPREAD = Math.tan(Math.toRadians(12.0D));
+    /** Who this bullet has hit already: it goes through them, but hurts each one only once. */
+    private final Set<Integer> hitIds = new HashSet<>();
+
+    /** Wind Release: Vacuum Sphere: a spray of bullets of wind from the mouth of {@code caster}, spread over a wide cone. */
+    public static void spawnVacuumSphere(ServerLevel level, ServerPlayer caster) {
+        Vec3 look = caster.getLookAngle().normalize();
+        Vec3 start = caster.getEyePosition().add(look.scale(0.8D)).add(0.0D, -0.25D, 0.0D);
+        Vec3 right = look.cross(new Vec3(0.0D, 1.0D, 0.0D));
+        right = right.lengthSqr() < 1.0E-4D ? new Vec3(1.0D, 0.0D, 0.0D) : right.normalize();
+        Vec3 up = right.cross(look).normalize();
+        for (int i = 0; i < VACUUM_BULLETS; i++) {
+            // Spread evenly over the cone (a sunflower pattern), with a little chance in it
+            double angle = i * 2.399963D + level.random.nextDouble() * 0.6D;
+            double radius = Math.sqrt((i + 0.5D) / VACUUM_BULLETS) * VACUUM_SPREAD * (0.85D + level.random.nextDouble() * 0.3D);
+            Vec3 direction = look.add(right.scale(Math.cos(angle) * radius)).add(up.scale(Math.sin(angle) * radius)).normalize();
+            WeaponEffectEntity bullet = create(level, VACUUM_BULLET, start, direction, 0.3F, 0xFFE6F2FF, VACUUM_TICKS);
+            bullet.owner = caster.getUUID();
+            bullet.setDeltaMovement(direction.scale(VACUUM_SPEED));
+            level.addFreshEntity(bullet);
+        }
+    }
+
+    /** Flies the bullet on: it goes through every living thing in its way, hurting each once, and stops at a block. */
+    private void tickVacuumBullet() {
+        if (!(level() instanceof ServerLevel serverLevel)) return;
+        Vec3 from = position();
+        Vec3 to = from.add(getDeltaMovement());
+        Entity ownerEntity = owner == null ? null : serverLevel.getEntity(owner);
+        HitResult hit = serverLevel.clip(new ClipContext(from, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this));
+        Vec3 end = hit.getType() == HitResult.Type.MISS ? to : hit.getLocation();
+        for (Entity e : serverLevel.getEntities(this, new AABB(from, end).inflate(0.5D),
+                x -> x instanceof LivingEntity && x.isAlive() && x != ownerEntity && !x.isSpectator())) {
+            if (hitIds.contains(e.getId())) continue;
+            if (e.getBoundingBox().inflate(0.3D).clip(from, end).isEmpty()) continue;
+            hitIds.add(e.getId());
+            e.invulnerableTime = 0;
+            e.hurt(windSource(ownerEntity), VACUUM_DAMAGE);
+        }
+        if (hit.getType() != HitResult.Type.MISS) {
+            discard();
+            return;
+        }
+        setPos(to.x, to.y, to.z);
+        if (--life <= 0) discard();
+    }
+
+    private DamageSource windSource(Entity caster) {
+        if (caster instanceof net.minecraft.world.entity.player.Player player) return this.damageSources().playerAttack(player);
+        return this.damageSources().magic();
+    }
+
     /** A cloud of ash hanging in the air around {@code center}. */
     public static void spawnAshCloud(ServerLevel level, ServerPlayer caster, Vec3 center) {
         WeaponEffectEntity effect = create(level, ASH_CLOUD, center, new Vec3(0.0D, 0.0D, 1.0D), 1.0F, 0xFFFFFFFF, CLOUD_TICKS);
@@ -433,6 +494,10 @@ public class WeaponEffectEntity extends Entity {
         }
         if (getKind() == FLAME_BULLET) {
             tickFlameBullet();
+            return;
+        }
+        if (getKind() == VACUUM_BULLET) {
+            tickVacuumBullet();
             return;
         }
 
