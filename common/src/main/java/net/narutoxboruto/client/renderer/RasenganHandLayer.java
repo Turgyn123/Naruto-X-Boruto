@@ -2,14 +2,16 @@ package net.narutoxboruto.client.renderer;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.model.PlayerModel;
+import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.world.entity.HumanoidArm;
-import net.narutoxboruto.client.RaisedArmPose;
 import net.narutoxboruto.client.renderer.entity.ChakraSphereRenderer;
 import net.narutoxboruto.entities.jutsus.ChakraSphereEntity;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
 /**
  * Draws the Rasengan or Rasenshuriken in the right hand of a player, on the arm itself, so it swings with the arm when the player walks
@@ -32,14 +34,15 @@ public class RasenganHandLayer extends RenderLayer<AbstractClientPlayer, PlayerM
         }
         if (sphere == null) return;
         poseStack.pushPose();
-        getParentModel().translateToHand(HumanoidArm.RIGHT, poseStack);
-        // The arm hangs along +y from the shoulder and the front is -z: the Rasengan is on the end of the hand, and the
-        // Rasenshuriken is above the hand of the raised arm (see RaisedArmPose)
         if (shuriken) {
-            // Past the end of the hand, and from there straight up (in the frame of the arm that way is turned by its tilt)
-            double tilt = RaisedArmPose.ARM_TILT;
-            poseStack.translate((float) (-Math.sin(tilt) * 1.3D), (float) (0.8D - Math.cos(tilt) * 1.3D), 0.0F);
+            // Not in the frame of the arm: the disc must be flat whatever the arm does. So go to the end of the hand in
+            // the frame of the body, from the shoulder along the arm, and then straight up
+            ModelPart arm = getParentModel().rightArm;
+            Vector3f hand = new Quaternionf().rotationZYX(arm.zRot, arm.yRot, arm.xRot).transform(new Vector3f(0.0F, 0.8F, 0.0F));
+            poseStack.translate(arm.x / 16.0F + hand.x, arm.y / 16.0F + hand.y - 1.3F, arm.z / 16.0F + hand.z);
         } else {
+            getParentModel().translateToHand(HumanoidArm.RIGHT, poseStack);
+            // The arm hangs along +y from the shoulder and the front is -z: the Rasengan is on the end of the hand
             poseStack.translate(-0.03F, 0.8F, -0.02F);
         }
         ChakraSphereRenderer.drawHeld(bufferSource, poseStack, sphere, partialTick);

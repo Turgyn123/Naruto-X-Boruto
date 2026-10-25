@@ -13,7 +13,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
-import net.narutoxboruto.client.RaisedArmPose;
 import net.narutoxboruto.client.renderer.GlowRenderType;
 import net.narutoxboruto.entities.jutsus.ChakraSphereEntity;
 import net.narutoxboruto.main.Main;
@@ -36,8 +35,6 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
 
     private static final ResourceLocation WIND_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/wind_streak.png");
     private static final ResourceLocation CRESCENT_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/crescent.png");
-    /** How far the flat disc of the Rasenshuriken is leaned back, so it is not seen edge on, in radians (30 degrees). */
-    private static final double DISC_LEAN = Math.toRadians(30.0D);
     private static final int FULL_BRIGHT = 0xF000F0;
     /** The colour of the wind of the Giant Fan: white with a touch of blue. */
     private static final float[] WIND = {0.94F, 0.96F, 1.0F};
@@ -131,15 +128,9 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
 
         // The four blades of the Rasenshuriken, lying flat and turning round the ball
         if (shuriken) {
+            // Always flat: across the way that is up
             Vec3 discUp = new Vec3(0.0D, 1.0D, 0.0D);
             Vec3 discSide = new Vec3(1.0D, 0.0D, 0.0D);
-            if (!blast) {
-                // Leaned back from the way it is aimed
-                Vec3 flat = new Vec3(aim.x, 0.0D, aim.z);
-                flat = flat.lengthSqr() < 1.0E-4D ? new Vec3(0.0D, 0.0D, 1.0D) : flat.normalize();
-                discUp = new Vec3(0.0D, Math.cos(DISC_LEAN), 0.0D).subtract(flat.scale(Math.sin(DISC_LEAN)));
-                discSide = new Vec3(0.0D, 1.0D, 0.0D).cross(flat).normalize();
-            }
             shurikenBlades(bufferSource, matrix, discUp, discSide, 0.8F * radius, reach, age, alpha * (blast ? 0.7F : 0.95F), blast);
         }
         poseStack.popPose();
@@ -183,13 +174,9 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
             radius *= pulse;
             reach *= pulse;
         }
-        // The right arm is raised outward and up (see RaisedArmPose): in the frame of the arm, straight up is this way, and
-        // 'across' is a way along the flat disc
-        // The disc is leaned back a little (towards the back of the player) so it is not seen edge on from behind
-        double tilt = RaisedArmPose.ARM_TILT;
-        double lean = DISC_LEAN;
-        Vec3 aim = new Vec3(-Math.cos(lean) * Math.sin(tilt), -Math.cos(lean) * Math.cos(tilt), Math.sin(lean));
-        Vec3 across = new Vec3(Math.cos(tilt), -Math.sin(tilt), 0.0D);
+        // Drawn in the frame of the body (see RasenganHandLayer), where up is -y, so the disc is always flat
+        Vec3 aim = new Vec3(0.0D, -1.0D, 0.0D);
+        Vec3 across = new Vec3(1.0D, 0.0D, 0.0D);
         Vec3 up = aim.cross(across).normalize();
         ball(bufferSource, poseStack, matrix, aim, across, up, radius, age, 1.0F, false);
         shurikenBlades(bufferSource, matrix, aim, across, 0.8F * radius, reach, age, 0.95F, false);
@@ -213,6 +200,11 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
             Vec3 sideB = axes[k].cross(sideA).normalize();
             float spin = age * (0.35F + 0.1F * k) * (k == 1 ? -1.0F : 1.0F);
             windBlades(bufferSource.getBuffer(GlowRenderType.GLOW), matrix, sideA, sideB, inner, reach, spin, age, alpha, blast);
+            if (!blast) {
+                // A smaller set between the big blades, turning the other way
+                windBlades(bufferSource.getBuffer(GlowRenderType.GLOW), matrix, sideA, sideB, inner, reach * 0.6F,
+                        -spin * 1.4F + (float) (Math.PI / 4.0D), age, alpha * 0.8F, false);
+            }
         }
     }
 
@@ -248,11 +240,17 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
                 centreLine[j] = centre;
                 strength[j] = (float) (1.0D - 0.35D * t);
             }
-            for (int j = 0; j < steps; j++) {
-                for (int k = 0; k < offset.length - 1; k++) {
-                    gradientQuad(vc, matrix, rail[k][j], rail[k + 1][j], rail[k + 1][j + 1], rail[k][j + 1],
-                            glow[k] * strength[j] * alpha, glow[k + 1] * strength[j] * alpha,
-                            glow[k + 1] * strength[j + 1] * alpha, glow[k] * strength[j + 1] * alpha);
+            // Five thin layers one above the other, so the blades have some thickness and are not lost seen from the side
+            Vec3 axis = sideA.cross(sideB).normalize();
+            for (int layer = -2; layer <= 2; layer++) {
+                Vec3 lift = axis.scale(layer * 0.03D * scale);
+                float layerGlow = layer == 0 ? 0.55F : 0.3F;
+                for (int j = 0; j < steps; j++) {
+                    for (int k = 0; k < offset.length - 1; k++) {
+                        gradientQuad(vc, matrix, rail[k][j].add(lift), rail[k + 1][j].add(lift), rail[k + 1][j + 1].add(lift), rail[k][j + 1].add(lift),
+                                glow[k] * strength[j] * alpha * layerGlow, glow[k + 1] * strength[j] * alpha * layerGlow,
+                                glow[k + 1] * strength[j + 1] * alpha * layerGlow, glow[k] * strength[j + 1] * alpha * layerGlow);
+                    }
                 }
             }
             bolt(vc, matrix, centreLine, 0.012F * scale, alpha * (blast ? 0.4F : 0.6F));
