@@ -190,7 +190,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
             return;
         }
         float spin = age * 0.35F;
-        windBlades(bufferSource.getBuffer(GlowRenderType.GLOW), matrix, side, sideB, inner, reach, spin, age, alpha * 0.6F, false);
+        windBlades(bufferSource.getBuffer(GlowRenderType.GLOW), matrix, side, sideB, inner, reach, spin, age, alpha * 0.85F, false);
     }
 
     /**
@@ -207,8 +207,9 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         // and how strongly it glows
         // The glow is about the same over the middle of the blade and only fades at the edges, so it is seen as a shape and
         // not as one bright line
-        double[] offset = {1.15D, 0.85D, 0.5D, 0.15D, -0.2D, -0.5D, -0.7D};
-        float[] glow = {0.0F, 0.25F, 0.55F, 0.6F, 0.55F, 0.25F, 0.0F};
+        // (the edges fade over a thin band only, so the outline of the blade is clear)
+        double[] offset = {1.1D, 1.0D, 0.5D, 0.15D, -0.2D, -0.5D, -0.62D};
+        float[] glow = {0.0F, 0.55F, 0.65F, 0.7F, 0.65F, 0.55F, 0.0F};
         for (int blade = 0; blade < 4; blade++) {
             double base = spin + blade * (Math.PI / 2.0D);
             Vec3[][] rail = new Vec3[offset.length][steps + 1];
