@@ -126,7 +126,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
                     radius, age, alpha, true);
         } else {
             // The Rasenshuriken ball is dimmer, so the blades round it can be seen
-            ball(bufferSource, poseStack, matrix, aim, across, up, radius, age, shuriken ? alpha * 0.45F : alpha, false);
+            ball(bufferSource, poseStack, matrix, aim, across, up, radius, age, shuriken ? alpha * 0.35F : alpha, false);
         }
 
         // The four blades of the Rasenshuriken, lying flat and turning round the ball
@@ -190,7 +190,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
             return;
         }
         float spin = age * 0.35F;
-        windBlades(bufferSource.getBuffer(GlowRenderType.GLOW), matrix, side, sideB, inner, reach, spin, age, alpha, false);
+        windBlades(bufferSource.getBuffer(GlowRenderType.GLOW), matrix, side, sideB, inner, reach, spin, age, alpha * 0.6F, false);
     }
 
     /**
@@ -253,7 +253,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
     private static void glowVertex(VertexConsumer vc, Matrix4f matrix, Vec3 p, float glow) {
         float white = Mth.clamp(glow * 1.2F, 0.0F, 1.0F);
         vc.addVertex(matrix, (float) p.x, (float) p.y, (float) p.z)
-                .setColor(0.45F + 0.5F * white, 0.72F + 0.25F * white, 1.0F, Mth.clamp(glow, 0.0F, 1.0F));
+                .setColor(0.35F + 0.4F * white, 0.62F + 0.3F * white, 1.0F, Mth.clamp(glow, 0.0F, 1.0F));
     }
 
     /** The ball of the Rasengan, and of the Rasenshuriken. */
