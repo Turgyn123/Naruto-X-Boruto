@@ -121,7 +121,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
 
         // The ball, the same for both jutsus, and where the Rasenshuriken has burst, a ball of wind
         if (blast) {
-            blastBall(bufferSource, matrix, new Vec3(0.0D, 1.0D, 0.0D), new Vec3(1.0D, 0.0D, 0.0D), new Vec3(0.0D, 0.0D, 1.0D), radius, age, alpha);
+            blastBall(bufferSource, matrix, radius, alpha);
         } else {
             // The Rasenshuriken ball is dimmer, so the blades round it can be seen
             ball(bufferSource, poseStack, matrix, aim, across, up, radius, age, shuriken ? alpha * 0.45F : alpha, false);
@@ -173,18 +173,22 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
      */
     private static void shurikenBlades(MultiBufferSource bufferSource, Matrix4f matrix, Vec3 up, Vec3 side, float inner,
                                        float reach, float age, float alpha, boolean blast) {
-        int sets = blast ? 3 : 1;
-        // Three directions across each other: the flat disc lies across the first, and in the burst there is one more
-        // across each of the others
-        Vec3 third = up.cross(side).normalize();
-        Vec3[] axes = {up, side, third};
-        Vec3[] firsts = {side, third, up};
-        for (int k = 0; k < sets; k++) {
-            Vec3 sideA = firsts[k];
-            Vec3 sideB = axes[k].cross(sideA).normalize();
-            float spin = age * (0.35F + 0.1F * k) * (k == 1 ? -1.0F : 1.0F);
-            windBlades(bufferSource.getBuffer(GlowRenderType.GLOW), matrix, sideA, sideB, inner, reach, spin, age, alpha, blast);
+        Vec3 sideB = up.cross(side).normalize();
+        if (blast) {
+            // Where it has burst: a stack of flat shurikens one above the other, each as wide as the ball is at that height,
+            // all turning fast and not at the same speed, so everything inside the ball is cut
+            float[] levels = {-0.6F, -0.3F, 0.0F, 0.3F, 0.6F};
+            for (int i = 0; i < levels.length; i++) {
+                float r = reach * (float) Math.sqrt(1.0F - levels[i] * levels[i]) * 0.97F;
+                Matrix4f lifted = new Matrix4f(matrix).translate((float) (up.x * levels[i] * reach),
+                        (float) (up.y * levels[i] * reach), (float) (up.z * levels[i] * reach));
+                float spin = age * (0.45F + 0.05F * i) * (i % 2 == 0 ? 1.0F : -1.0F) + i * 0.9F;
+                windBlades(bufferSource.getBuffer(GlowRenderType.GLOW), lifted, side, sideB, 0.05F * r, r, spin, age, alpha * 0.8F, true);
+            }
+            return;
         }
+        float spin = age * 0.35F;
+        windBlades(bufferSource.getBuffer(GlowRenderType.GLOW), matrix, side, sideB, inner, reach, spin, age, alpha, false);
     }
 
     /**
@@ -256,35 +260,14 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
     }
 
     /**
-     * Where the Rasenshuriken has burst: a big ball of wind that cuts everything inside it. A soft glow with a bright
-     * heart, and thin white streaks of wind that whirl round it in bands, each band the other way, turning at their own
-     * speed. The flat blades turn inside it (see {@link #shurikenBlades}). No lightning and no textures.
+     * Where the Rasenshuriken has burst: a big soft dome of pale blue light with a bright heart. What cuts inside it is the
+     * stack of flat shurikens (see {@link #shurikenBlades}), not lines or lightning.
      */
-    private static void blastBall(MultiBufferSource bufferSource, Matrix4f matrix, Vec3 aim, Vec3 across, Vec3 up,
-                                  float radius, float age, float alpha) {
+    private static void blastBall(MultiBufferSource bufferSource, Matrix4f matrix, float radius, float alpha) {
         VertexConsumer glow = bufferSource.getBuffer(GlowRenderType.GLOW);
-        smoothBall(glow, matrix, radius * 0.3F, 0.9F, 0.95F, 1.0F, 0.2F * alpha);
-        smoothBall(glow, matrix, radius * 0.7F, 0.6F, 0.8F, 1.0F, 0.04F * alpha);
-        smoothBall(glow, matrix, radius, 0.55F, 0.75F, 0.95F, 0.07F * alpha);
-        float scale = radius / 1.25F;
-        int bands = 16;
-        for (int band = 0; band < bands; band++) {
-            double latitude = Math.PI * ((band + 0.5D) / bands - 0.5D) * 0.92D;
-            double ring = radius * Math.cos(latitude) * 1.01D;
-            double height = radius * Math.sin(latitude);
-            double speed = (band % 2 == 0 ? 1.0D : -1.0D) * (0.22D + 0.04D * (band % 5));
-            for (int arc = 0; arc < 3; arc++) {
-                double start = arc * (Math.PI * 2.0D / 3.0D) + age * speed + band * 0.9D;
-                double span = 1.3D + 0.5D * hash(band * 3 + arc);
-                Vec3[] path = new Vec3[13];
-                for (int k = 0; k < path.length; k++) {
-                    double angle = start + span * k / (path.length - 1.0D);
-                    double wobble = 0.03D * radius * Math.sin(angle * 3.0D + band);
-                    path[k] = across.scale(Math.cos(angle) * ring).add(up.scale(Math.sin(angle) * ring)).add(aim.scale(height + wobble));
-                }
-                bolt(glow, matrix, path, 0.011F * scale, 0.8F * alpha);
-            }
-        }
+        smoothBall(glow, matrix, radius * 0.25F, 0.9F, 0.95F, 1.0F, 0.18F * alpha);
+        smoothBall(glow, matrix, radius * 0.6F, 0.6F, 0.8F, 1.0F, 0.04F * alpha);
+        smoothBall(glow, matrix, radius, 0.5F, 0.72F, 0.95F, 0.08F * alpha);
     }
 
     /** The ball of the Rasengan, and of the Rasenshuriken. */
