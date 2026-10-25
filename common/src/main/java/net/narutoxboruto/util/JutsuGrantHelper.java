@@ -40,8 +40,7 @@ public class JutsuGrantHelper {
             case "earth":
                 grantMultipleJutsus(serverPlayer, storage,
                         ModItems.EARTH_WALL_JUTSU, "Earth Wall",
-                        ModItems.EARTH_WAVE_JUTSU, "Earth Wave",
-                        ModItems.EARTH_DRAGON_BULLET_JUTSU, "Earth Dragon Bullet");
+                        ModItems.EARTH_WAVE_JUTSU, "Earth Wave");
                 break;
             case "water":
                 grantMultipleJutsus(serverPlayer, storage,
@@ -174,7 +173,6 @@ public class JutsuGrantHelper {
         if (playerReleases.toLowerCase().contains("earth")) {
             modified |= restoreIfMissing(serverPlayer, storage, ModItems.EARTH_WALL_JUTSU, checkInventory);
             modified |= restoreIfMissing(serverPlayer, storage, ModItems.EARTH_WAVE_JUTSU, checkInventory);
-            modified |= restoreIfMissing(serverPlayer, storage, ModItems.EARTH_DRAGON_BULLET_JUTSU, checkInventory);
         }
 
         if (playerReleases.toLowerCase().contains("water")) {
