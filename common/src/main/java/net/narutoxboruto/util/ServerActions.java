@@ -96,7 +96,21 @@ public final class ServerActions {
      * @param slot  left, right, offset_left, offset_right, scale, hide, show or reset
      * @param value the dojutsu type, an "x,y" pair or a scale, depending on the slot
      */
+    /** Left click with the Water Clone Technique in hand: all the water clones of the player fall back into water. */
+    public static void dismissClones(ServerPlayer player) {
+        if (!(player.getMainHandItem().getItem() instanceof net.narutoxboruto.items.jutsus.WaterClone)) return;
+        if (player.level() instanceof net.minecraft.server.level.ServerLevel level) {
+            for (net.narutoxboruto.entities.jutsus.WaterCloneEntity clone : net.narutoxboruto.entities.jutsus.WaterCloneEntity.clonesOf(level, player)) {
+                clone.revert();
+            }
+        }
+    }
+
     public static void equipDojutsu(ServerPlayer player, String slot, String value) {
+        if (slot.equals("dismiss_clones")) {
+            dismissClones(player);
+            return;
+        }
         Dojutsu dojutsu = Services.PLATFORM.getDojutsu(player);
 
         switch (slot) {
