@@ -53,8 +53,9 @@ public class JutsuGrantHelper {
                         ModItems.LIGHTNING_CHAKRA_MODE, "Lightning Chakra Mode");
                 break;
             case "wind":
-                grantSingleJutsu(serverPlayer, storage,
-                        ModItems.RASENSHURIKEN_JUTSU, "Rasenshuriken");
+                grantMultipleJutsus(serverPlayer, storage,
+                        ModItems.RASENSHURIKEN_JUTSU, "Rasenshuriken",
+                        ModItems.BORUTO_STREAM_JUTSU, "Boruto Stream");
                 break;
         }
     }
@@ -157,6 +158,7 @@ public class JutsuGrantHelper {
 
         if (playerReleases.toLowerCase().contains("wind")) {
             modified |= restoreIfMissing(serverPlayer, storage, ModItems.RASENSHURIKEN_JUTSU, checkInventory);
+            modified |= restoreIfMissing(serverPlayer, storage, ModItems.BORUTO_STREAM_JUTSU, checkInventory);
         }
 
         if (playerReleases.toLowerCase().contains("fire")) {
