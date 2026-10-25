@@ -199,8 +199,8 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         float scale = Math.max(0.5F, reach / 1.25F);
         // Across a blade: from the sharp (outer) edge to the back, how far out from the middle line (times the half width)
         // and how strongly it glows
-        double[] offset = {0.8D, 0.4D, 0.0D, -0.25D, -0.5D};
-        float[] glow = {0.06F, 0.45F, 0.9F, 0.45F, 0.06F};
+        double[] offset = {1.15D, 0.8D, 0.4D, 0.0D, -0.25D, -0.5D, -0.7D};
+        float[] glow = {0.0F, 0.1F, 0.4F, 0.75F, 0.4F, 0.1F, 0.0F};
         for (int blade = 0; blade < 4; blade++) {
             double base = spin + blade * (Math.PI / 2.0D);
             Vec3[][] rail = new Vec3[offset.length][steps + 1];
@@ -208,7 +208,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
             float[] strength = new float[steps + 1];
             for (int j = 0; j <= steps; j++) {
                 double t = j / (double) steps;
-                double angle = base + 1.0D * t;
+                double angle = base + 1.5D * t;
                 double radius = 0.3D * inner + (reach - 0.3D * inner) * t;
                 Vec3 radial = sideA.scale(Math.cos(angle)).add(sideB.scale(Math.sin(angle)));
                 Vec3 tangent = sideA.scale(-Math.sin(angle)).add(sideB.scale(Math.cos(angle)));
@@ -219,11 +219,11 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
                 centreLine[j] = centre;
                 strength[j] = (float) (1.0D - 0.35D * t);
             }
-            // Five thin layers one above the other, so the blades have some thickness and are not lost seen from the side
+            // Three thin layers one above the other, so the blades have some thickness and are not lost seen from the side
             Vec3 axis = sideA.cross(sideB).normalize();
-            for (int layer = -2; layer <= 2; layer++) {
-                Vec3 lift = axis.scale(layer * 0.03D * scale);
-                float layerGlow = layer == 0 ? 0.3F : 0.14F;
+            for (int layer = -1; layer <= 1; layer++) {
+                Vec3 lift = axis.scale(layer * 0.04D * scale);
+                float layerGlow = layer == 0 ? 0.4F : 0.22F;
                 for (int j = 0; j < steps; j++) {
                     for (int k = 0; k < offset.length - 1; k++) {
                         gradientQuad(vc, matrix, rail[k][j].add(lift), rail[k + 1][j].add(lift), rail[k + 1][j + 1].add(lift), rail[k][j + 1].add(lift),
@@ -232,7 +232,15 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
                     }
                 }
             }
-            bolt(vc, matrix, centreLine, 0.012F * scale, alpha * (blast ? 0.4F : 0.45F));
+            // A few thin pale streaks along the blade, like the light turning inside it
+            for (int streak = 0; streak < 3; streak++) {
+                Vec3[] line = new Vec3[steps + 1];
+                double across = streak == 0 ? 0.5D : (streak == 1 ? 0.0D : -0.35D);
+                for (int j = 0; j <= steps; j++) {
+                    line[j] = rail[3][j].add(rail[2][j].subtract(rail[3][j]).scale(across * 2.0D));
+                }
+                bolt(vc, matrix, line, 0.007F * scale, alpha * (blast ? 0.2F : 0.3F));
+            }
         }
     }
 
