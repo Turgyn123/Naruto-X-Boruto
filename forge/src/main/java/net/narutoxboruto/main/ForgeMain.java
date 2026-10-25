@@ -83,6 +83,7 @@ public class ForgeMain {
             ModEntities.FIRE_BALL = ForgeEntities.FIRE_BALL.get();
             ModEntities.SHARK_BOMB = ForgeEntities.SHARK_BOMB.get();
             ModEntities.WATER_DRAGON = ForgeEntities.WATER_DRAGON.get();
+            ModEntities.WATER_CLONE = ForgeEntities.WATER_CLONE.get();
             ModEntities.LIGHTNING_ARC = ForgeEntities.LIGHTNING_ARC.get();
             ModEntities.WEAPON_EFFECT = ForgeEntities.WEAPON_EFFECT.get();
             ModEntities.CHAKRA_SPHERE = ForgeEntities.CHAKRA_SPHERE.get();
@@ -117,5 +118,6 @@ public class ForgeMain {
         event.put(ForgeEntities.AMEYURI_RINGO.get(), AmeyuriRingo.setAttribute());
         event.put(ForgeEntities.CHOJURO.get(), Chojuro.setAttribute());
         event.put(ForgeEntities.ZABUZA_MOMOCHI.get(), ZabuzaMomochi.setAttribute());
+        event.put(ForgeEntities.WATER_CLONE.get(), net.narutoxboruto.entities.jutsus.WaterCloneEntity.setAttribute());
     }
 }

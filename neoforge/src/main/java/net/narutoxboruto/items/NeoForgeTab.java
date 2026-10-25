@@ -102,6 +102,7 @@ public class NeoForgeTab {
                 output.accept(RASENSHURIKEN_JUTSU.get());
                 output.accept(VACUUM_SPHERE_JUTSU.get());
                 output.accept(GREAT_BREAKTHROUGH_JUTSU.get());
+                output.accept(WATER_CLONE_JUTSU.get());
                 output.accept(FLAME_BULLET_JUTSU.get());
                 output.accept(GREAT_FIRE_ANNIHILATION_JUTSU.get());
                 output.accept(ASH_PILE_BURNING_JUTSU.get());

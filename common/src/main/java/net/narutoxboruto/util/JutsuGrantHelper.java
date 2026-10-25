@@ -46,7 +46,8 @@ public class JutsuGrantHelper {
                 grantMultipleJutsus(serverPlayer, storage,
                         ModItems.WATER_PRISON_JUTSU, "Water Prison",
                         ModItems.SHARK_BOMB_JUTSU, "Shark Bomb",
-                        ModItems.WATER_DRAGON_JUTSU, "Water Dragon");
+                        ModItems.WATER_DRAGON_JUTSU, "Water Dragon",
+                        ModItems.WATER_CLONE_JUTSU, "Water Clone Technique");
                 break;
             case "lightning":
                 grantSingleJutsu(serverPlayer, storage,
@@ -179,6 +180,7 @@ public class JutsuGrantHelper {
             modified |= restoreIfMissing(serverPlayer, storage, ModItems.WATER_PRISON_JUTSU, checkInventory);
             modified |= restoreIfMissing(serverPlayer, storage, ModItems.SHARK_BOMB_JUTSU, checkInventory);
             modified |= restoreIfMissing(serverPlayer, storage, ModItems.WATER_DRAGON_JUTSU, checkInventory);
+            modified |= restoreIfMissing(serverPlayer, storage, ModItems.WATER_CLONE_JUTSU, checkInventory);
         }
 
         if (playerReleases.toLowerCase().contains("lightning")) {
