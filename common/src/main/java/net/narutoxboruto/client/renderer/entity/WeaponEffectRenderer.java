@@ -50,6 +50,7 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
     private static final ResourceLocation FIRE_PUFF_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/fire_puff.png");
     private static final ResourceLocation ASH_PUFF_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/ash_puff.png");
     private static final ResourceLocation ROCK_TEXTURE = ResourceLocation.withDefaultNamespace("textures/block/dirt.png");
+    private static final ResourceLocation SPEAR_TEXTURE = ResourceLocation.withDefaultNamespace("textures/block/stone.png");
     private static final int FULL_BRIGHT = 0xF000F0;
 
     public WeaponEffectRenderer(EntityRendererProvider.Context context) {
@@ -169,7 +170,7 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
         double sideX = Mth.cos(yaw);
         double sideZ = Mth.sin(yaw);
         Level level = entity.level();
-        VertexConsumer vc = bufferSource.getBuffer(RenderType.entityCutoutNoCull(ROCK_TEXTURE));
+        VertexConsumer vc = bufferSource.getBuffer(RenderType.entityCutoutNoCull(SPEAR_TEXTURE));
         float sink = Mth.clamp((WeaponEffectEntity.SPEAR_TICKS - age) / WeaponEffectEntity.SPEAR_SINK, 0.0F, 1.0F);
         int seed = entity.getId() * 29;
         for (int i = 0; i < WeaponEffectEntity.SPEAR_COUNT; i++) {
