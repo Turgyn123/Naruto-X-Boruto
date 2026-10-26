@@ -49,7 +49,7 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
     private static final ResourceLocation FLAME_BLOB_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/flame_blob.png");
     private static final ResourceLocation FIRE_PUFF_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/fire_puff.png");
     private static final ResourceLocation ASH_PUFF_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/ash_puff.png");
-    private static final ResourceLocation ROCK_TEXTURE = ResourceLocation.withDefaultNamespace("textures/block/packed_mud.png");
+    private static final ResourceLocation ROCK_TEXTURE = ResourceLocation.withDefaultNamespace("textures/block/dirt.png");
     private static final int FULL_BRIGHT = 0xF000F0;
 
     public WeaponEffectRenderer(EntityRendererProvider.Context context) {
@@ -119,7 +119,7 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
     }
 
     /**
-     * Earth Release: Sandwich: two huge walls of rock (the texture of packed mud) that rise on both sides, with a jagged crown
+     * Earth Release: Sandwich: two huge walls of rock (the dirt block texture) that rise on both sides, with a jagged crown
      * and lumps of rock on the inside, and then slam together. The local z axis is the way the caster aims, and x is across it.
      */
     private void renderSandwich(float age, PoseStack poseStack, MultiBufferSource bufferSource, int light, int seed) {
