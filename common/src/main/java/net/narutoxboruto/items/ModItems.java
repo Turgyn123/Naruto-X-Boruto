@@ -63,6 +63,8 @@ public class ModItems {
     public static final String GREAT_BREAKTHROUGH_JUTSU = "great_breakthrough_jutsu";
     public static final String WATER_CLONE_JUTSU = "water_clone_jutsu";
     public static final String GOLEM_JUTSU = "golem_jutsu";
+    public static final String EARTH_SANDWICH_JUTSU = "earth_sandwich_jutsu";
+    public static final String EARTH_SPEAR_JUTSU = "earth_spear_jutsu";
     public static final String GREAT_FIRE_ANNIHILATION_JUTSU = "great_fire_annihilation_jutsu";
     public static final String ASH_PILE_BURNING_JUTSU = "ash_pile_burning_jutsu";
     public static final String WATER_DRAGON_JUTSU = "water_dragon_jutsu";

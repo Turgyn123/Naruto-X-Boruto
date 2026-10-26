@@ -49,6 +49,7 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
     private static final ResourceLocation FLAME_BLOB_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/flame_blob.png");
     private static final ResourceLocation FIRE_PUFF_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/fire_puff.png");
     private static final ResourceLocation ASH_PUFF_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/ash_puff.png");
+    private static final ResourceLocation ROCK_TEXTURE = ResourceLocation.withDefaultNamespace("textures/block/packed_mud.png");
     private static final int FULL_BRIGHT = 0xF000F0;
 
     public WeaponEffectRenderer(EntityRendererProvider.Context context) {
@@ -80,6 +81,20 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
             return;
         }
 
+        if (kind == WeaponEffectEntity.SANDWICH) {
+            poseStack.pushPose();
+            poseStack.mulPose(Axis.YP.rotationDegrees(-Mth.lerp(partialTick, entity.yRotO, entity.getYRot())));
+            renderSandwich(age, poseStack, bufferSource, rockLight(packedLight), entity.getId());
+            poseStack.popPose();
+            return;
+        }
+        if (kind == WeaponEffectEntity.EARTH_SPEARS) {
+            poseStack.pushPose();
+            renderEarthSpears(entity, age, poseStack, bufferSource, rockLight(packedLight));
+            poseStack.popPose();
+            return;
+        }
+
         poseStack.pushPose();
         if (kind == WeaponEffectEntity.THREAD) {
             renderThread(entity, age, partialTick, poseStack, bufferSource);
@@ -94,6 +109,151 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
             else renderCrescent(entity, age, fade, poseStack, bufferSource);
         }
         poseStack.popPose();
+    }
+
+    // ---------------------------------------------------------------- earth jutsu
+
+    /** The light where the rock stands, but never darker than dusk, so the rock can always be seen. */
+    private static int rockLight(int packedLight) {
+        return LightTexture.pack(Math.max(LightTexture.block(packedLight), 9), Math.max(LightTexture.sky(packedLight), 9));
+    }
+
+    /**
+     * Earth Release: Sandwich: two huge walls of rock (the texture of packed mud) that rise on both sides, with a jagged crown
+     * and lumps of rock on the inside, and then slam together. The local z axis is the way the caster aims, and x is across it.
+     */
+    private void renderSandwich(float age, PoseStack poseStack, MultiBufferSource bufferSource, int light, int seed) {
+        float rise = WeaponEffectEntity.sandwichRise(age);
+        if (rise <= 0.001F) return;
+        float gap = (float) WeaponEffectEntity.sandwichGap(age);
+        float thickness = (float) WeaponEffectEntity.SANDWICH_THICKNESS;
+        float half = (float) WeaponEffectEntity.SANDWICH_HALF_LENGTH;
+        float height = (float) WeaponEffectEntity.SANDWICH_HEIGHT * rise;
+        Matrix4f m = poseStack.last().pose();
+        VertexConsumer vc = bufferSource.getBuffer(RenderType.entityCutoutNoCull(ROCK_TEXTURE));
+        for (int side = -1; side <= 1; side += 2) {
+            float inner = side * gap;
+            float outer = side * (gap + thickness);
+            float x0 = Math.min(inner, outer);
+            float x1 = Math.max(inner, outer);
+            // The body of the wall, from deep in the ground
+            rockBox(vc, m, x0, -4.0F, -half, x1, height, half, 1.0F, light);
+            // A jagged crown: columns of different heights along the top
+            int columns = 6;
+            float width = 2.0F * half / columns;
+            for (int c = 0; c < columns; c++) {
+                float extra = (0.8F + 2.6F * hash(seed * 31 + c * 7 + side * 3)) * rise;
+                float inset = 0.25F + 0.5F * hash(seed * 13 + c * 5 + side);
+                rockBox(vc, m, x0 + inset, height - 0.2F, -half + c * width + 0.1F, x1 - inset, height + extra, -half + (c + 1) * width - 0.1F, 0.95F, light);
+            }
+            // Lumps of rock that stick out of the inside of the wall
+            for (int c = 0; c < 7; c++) {
+                float z = -half + 0.6F + (2.0F * half - 1.8F) * hash(seed * 17 + c * 11 + side * 5);
+                float y = (0.5F + (height - 2.5F) * hash(seed * 19 + c * 3 + side * 7));
+                float size = 0.6F + 0.9F * hash(seed * 23 + c + side);
+                float face = inner;
+                if (y < 0.0F || y > height) continue;
+                rockBox(vc, m, side < 0 ? face : face - size, y, z, side < 0 ? face + size : face, y + size, z + size * 1.3F, 0.9F, light);
+            }
+        }
+    }
+
+    /**
+     * Earth Release: Earth Spear: a row of spears of rock, one every tick further on, each with two smaller ones beside it. A
+     * spear is a tapering column of rock that ends in a point, and bursts up out of the ground fast.
+     */
+    private void renderEarthSpears(WeaponEffectEntity entity, float age, PoseStack poseStack, MultiBufferSource bufferSource, int light) {
+        float yaw = entity.getYRot() * ((float) Math.PI / 180.0F);
+        double forwardX = -Mth.sin(yaw);
+        double forwardZ = Mth.cos(yaw);
+        double sideX = Mth.cos(yaw);
+        double sideZ = Mth.sin(yaw);
+        Level level = entity.level();
+        VertexConsumer vc = bufferSource.getBuffer(RenderType.entityCutoutNoCull(ROCK_TEXTURE));
+        float sink = Mth.clamp((WeaponEffectEntity.SPEAR_TICKS - age) / WeaponEffectEntity.SPEAR_SINK, 0.0F, 1.0F);
+        int seed = entity.getId() * 29;
+        for (int i = 0; i < WeaponEffectEntity.SPEAR_COUNT; i++) {
+            float since = age - i;
+            if (since < 0.0F) continue;
+            float grow = Mth.clamp(since / 3.0F, 0.0F, 1.0F);
+            grow = grow * (2.0F - grow) * sink;
+            if (grow <= 0.001F) continue;
+            for (int k = -1; k <= 1; k++) {
+                float across = k * 1.0F;
+                double along = WeaponEffectEntity.SPEAR_STEP * (i + 1) + (k == 0 ? 0.0D : 0.45D);
+                float spearHeight = (k == 0 ? 3.4F + 1.2F * hash(seed + i * 3) : 1.8F + 0.9F * hash(seed + i * 5 + k)) * grow;
+                float lean = k * 0.18F + (hash(seed + i * 7 + k) - 0.5F) * 0.12F;
+                double x = entity.getX() + forwardX * along + sideX * across;
+                double z = entity.getZ() + forwardZ * along + sideZ * across;
+                double ground = groundAt(level, x, z, entity.getY()) - entity.getY();
+                poseStack.pushPose();
+                // Local frame: turned to the way of the line, standing on the ground at that spot
+                poseStack.mulPose(Axis.YP.rotationDegrees(-entity.getYRot()));
+                poseStack.translate(across, ground - 0.4D, along);
+                poseStack.mulPose(Axis.ZP.rotationDegrees(-lean * 57.2958F));
+                rockSpear(vc, poseStack.last().pose(), (k == 0 ? 0.62F : 0.42F), spearHeight, light);
+                poseStack.popPose();
+            }
+        }
+    }
+
+    /** A spear of rock: a column that narrows (four sided) to a point. The local y axis is up. */
+    private static void rockSpear(VertexConsumer vc, Matrix4f m, float halfBase, float height, int light) {
+        float halfMid = halfBase * 0.55F;
+        float midY = height * 0.55F;
+        float[][] baseCorner = {{-halfBase, -halfBase}, {halfBase, -halfBase}, {halfBase, halfBase}, {-halfBase, halfBase}};
+        float[][] midCorner = {{-halfMid, -halfMid}, {halfMid, -halfMid}, {halfMid, halfMid}, {-halfMid, halfMid}};
+        float[] shade = {0.8F, 0.65F, 0.9F, 1.0F};
+        for (int c = 0; c < 4; c++) {
+            int n = (c + 1) % 4;
+            float tone = shade[c];
+            // The column
+            solidVertex(vc, m, baseCorner[c][0], -2.0F, baseCorner[c][1], 0.0F, 1.0F, tone, light);
+            solidVertex(vc, m, baseCorner[n][0], -2.0F, baseCorner[n][1], 1.0F, 1.0F, tone, light);
+            solidVertex(vc, m, midCorner[n][0], midY, midCorner[n][1], 1.0F, 0.0F, tone, light);
+            solidVertex(vc, m, midCorner[c][0], midY, midCorner[c][1], 0.0F, 0.0F, tone, light);
+            // The point
+            solidVertex(vc, m, midCorner[c][0], midY, midCorner[c][1], 0.0F, 1.0F, tone * 1.05F, light);
+            solidVertex(vc, m, midCorner[n][0], midY, midCorner[n][1], 1.0F, 1.0F, tone * 1.05F, light);
+            solidVertex(vc, m, halfMid * 0.05F, height, 0.0F, 0.5F, 0.0F, tone * 1.05F, light);
+            solidVertex(vc, m, halfMid * 0.05F, height, 0.0F, 0.5F, 0.0F, tone * 1.05F, light);
+        }
+    }
+
+    /** A box of rock whose faces repeat the texture every two blocks, and are shaded so it looks solid. */
+    private static void rockBox(VertexConsumer vc, Matrix4f m, float x0, float y0, float z0, float x1, float y1, float z1, float shade, int light) {
+        if (y1 <= y0) return;
+        float top = Math.min(shade, 1.0F);
+        float side = top * 0.82F;
+        float end = top * 0.7F;
+        float bottom = top * 0.55F;
+        float ux = (x1 - x0) / 2.0F;
+        float uy = (y1 - y0) / 2.0F;
+        float uz = (z1 - z0) / 2.0F;
+        // bottom, top
+        solidVertex(vc, m, x0, y0, z0, 0, 0, bottom, light); solidVertex(vc, m, x1, y0, z0, ux, 0, bottom, light);
+        solidVertex(vc, m, x1, y0, z1, ux, uz, bottom, light); solidVertex(vc, m, x0, y0, z1, 0, uz, bottom, light);
+        solidVertex(vc, m, x0, y1, z0, 0, 0, top, light); solidVertex(vc, m, x0, y1, z1, 0, uz, top, light);
+        solidVertex(vc, m, x1, y1, z1, ux, uz, top, light); solidVertex(vc, m, x1, y1, z0, ux, 0, top, light);
+        // the two long faces (along x)
+        solidVertex(vc, m, x0, y0, z0, 0, uy, side, light); solidVertex(vc, m, x0, y1, z0, 0, 0, side, light);
+        solidVertex(vc, m, x1, y1, z0, ux, 0, side, light); solidVertex(vc, m, x1, y0, z0, ux, uy, side, light);
+        solidVertex(vc, m, x0, y0, z1, 0, uy, side, light); solidVertex(vc, m, x1, y0, z1, ux, uy, side, light);
+        solidVertex(vc, m, x1, y1, z1, ux, 0, side, light); solidVertex(vc, m, x0, y1, z1, 0, 0, side, light);
+        // the two ends (along z)
+        solidVertex(vc, m, x0, y0, z0, 0, uy, end, light); solidVertex(vc, m, x0, y0, z1, uz, uy, end, light);
+        solidVertex(vc, m, x0, y1, z1, uz, 0, end, light); solidVertex(vc, m, x0, y1, z0, 0, 0, end, light);
+        solidVertex(vc, m, x1, y0, z0, 0, uy, end, light); solidVertex(vc, m, x1, y1, z0, 0, 0, end, light);
+        solidVertex(vc, m, x1, y1, z1, uz, 0, end, light); solidVertex(vc, m, x1, y0, z1, uz, uy, end, light);
+    }
+
+    private static void solidVertex(VertexConsumer vc, Matrix4f m, float x, float y, float z, float u, float v, float tone, int light) {
+        vc.addVertex(m, x, y, z)
+                .setColor(tone, tone, tone, 1.0F)
+                .setUv(u, v)
+                .setOverlay(OverlayTexture.NO_OVERLAY)
+                .setLight(light)
+                .setNormal(0.0F, 1.0F, 0.0F);
     }
 
     // ---------------------------------------------------------------- fire jutsu
