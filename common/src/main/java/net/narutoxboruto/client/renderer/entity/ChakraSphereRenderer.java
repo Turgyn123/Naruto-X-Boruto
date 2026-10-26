@@ -126,11 +126,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
                     radius, age, alpha, false);
         } else {
             // The Rasenshuriken ball is dimmer, so the blades round it can be seen
-            if (shuriken) {
-                ball(bufferSource, poseStack, matrix, aim, across, up, radius, age, alpha * 0.35F, false);
-            } else {
-                fogBall(bufferSource, matrix, aim, across, up, radius, age, alpha);
-            }
+            ball(bufferSource, poseStack, matrix, aim, across, up, radius, age, shuriken ? alpha * 0.35F : alpha, false);
         }
 
         // The four blades of the Rasenshuriken, lying flat and turning round the ball
@@ -169,7 +165,7 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         Vec3 aim = new Vec3(0.0D, 0.0D, -1.0D);
         Vec3 across = new Vec3(1.0D, 0.0D, 0.0D);
         Vec3 up = aim.cross(across).normalize();
-        fogBall(bufferSource, poseStack.last().pose(), aim, across, up, heldRadius(charge, age), age, 1.0F);
+        ball(bufferSource, poseStack, poseStack.last().pose(), aim, across, up, heldRadius(charge, age), age, 1.0F, false);
     }
 
     /**
@@ -259,85 +255,6 @@ public class ChakraSphereRenderer extends EntityRenderer<ChakraSphereEntity> {
         float white = Mth.clamp(glow * 1.2F, 0.0F, 1.0F);
         vc.addVertex(matrix, (float) p.x, (float) p.y, (float) p.z)
                 .setColor(0.35F + 0.4F * white, 0.62F + 0.3F * white, 1.0F, Mth.clamp(glow, 0.0F, 1.0F));
-    }
-
-    /**
-     * The Rasengan in the style of the Great Breakthrough: not glowing, but a ball of thick milky white fog that billows, with
-     * thin white crescents that curl round it and spin with it. Three layers of fog, one inside the other (the bigger one
-     * fainter), and six crescents, pointed at both ends, on tilted orbits round the ball, some turning each way.
-     */
-    private static void fogBall(MultiBufferSource bufferSource, Matrix4f matrix, Vec3 aim, Vec3 across, Vec3 up,
-                                float radius, float age, float alpha) {
-        if (alpha < 0.01F) return;
-        float r = radius * (1.0F + 0.03F * Mth.sin(age * 0.8F));
-        VertexConsumer vc = bufferSource.getBuffer(RenderType.entityTranslucent(WeaponEffectRenderer.WHITE_TEXTURE));
-        // From the inside to the outside: the heart is the thickest and whitest, the outside a faint haze
-        fogSphere(vc, matrix, aim, across, up, r * 0.55F, age, 0.0F, 0.97F, 0.97F, 1.0F, 0.9F * alpha);
-        fogSphere(vc, matrix, aim, across, up, r * 0.8F, age, 2.1F, 0.95F, 0.95F, 0.99F, 0.5F * alpha);
-        fogSphere(vc, matrix, aim, across, up, r, age, 4.2F, 0.93F, 0.93F, 0.98F, 0.3F * alpha);
-        // Thin white crescents on tilted orbits, turning round the ball
-        int crescents = 6;
-        for (int k = 0; k < crescents; k++) {
-            double direction = k % 2 == 0 ? 1.0D : -1.0D;
-            double tilt = 0.35D + 0.9D * hash(k * 17 + 3);
-            double azimuth = k * (Math.PI * 2.0D / crescents) + 0.4D;
-            Vec3 normal = aim.scale(Math.cos(tilt))
-                    .add(across.scale(Math.cos(azimuth) * Math.sin(tilt)))
-                    .add(up.scale(Math.sin(azimuth) * Math.sin(tilt))).normalize();
-            Vec3 e1 = normal.cross(Math.abs(normal.y) < 0.9D ? new Vec3(0.0D, 1.0D, 0.0D) : new Vec3(1.0D, 0.0D, 0.0D)).normalize();
-            Vec3 e2 = normal.cross(e1).normalize();
-            double start = age * 0.42D * direction + k * 1.7D;
-            double span = 1.9D + 0.7D * hash(k * 5 + 1);
-            float orbit = r * (1.12F + 0.1F * (k % 3));
-            float width = r * 0.11F;
-            int steps = 12;
-            Vec3 previousLeft = null;
-            Vec3 previousRight = null;
-            for (int i = 0; i <= steps; i++) {
-                double t = i / (double) steps;
-                double angle = start + direction * span * t;
-                Vec3 centre = e1.scale(Math.cos(angle) * orbit).add(e2.scale(Math.sin(angle) * orbit));
-                double halfWidth = width * Math.sin(Math.PI * t);
-                Vec3 left = centre.add(normal.scale(halfWidth));
-                Vec3 right = centre.subtract(normal.scale(halfWidth));
-                if (previousLeft != null) {
-                    float fade = (float) Math.sin(Math.PI * (t - 0.5D / steps)) * 0.9F * alpha;
-                    texturedVertex(vc, matrix, previousLeft, 0.0F, 0.0F, fade, 1.0F, 1.0F, 1.0F);
-                    texturedVertex(vc, matrix, left, 1.0F, 0.0F, fade, 1.0F, 1.0F, 1.0F);
-                    texturedVertex(vc, matrix, right, 1.0F, 1.0F, fade, 1.0F, 1.0F, 1.0F);
-                    texturedVertex(vc, matrix, previousRight, 0.0F, 1.0F, fade, 1.0F, 1.0F, 1.0F);
-                }
-                previousLeft = left;
-                previousRight = right;
-            }
-        }
-    }
-
-    /** One layer of the fog: a sphere whose surface billows slowly, so it looks like a cloud and not like a ball. */
-    private static void fogSphere(VertexConsumer vc, Matrix4f matrix, Vec3 aim, Vec3 across, Vec3 up, float radius, float age,
-                                  float phase, float cr, float cg, float cb, float alpha) {
-        int rings = 8;
-        int segments = 12;
-        Vec3[][] points = new Vec3[rings + 1][segments + 1];
-        for (int i = 0; i <= rings; i++) {
-            double polar = Math.PI * i / rings;
-            for (int j = 0; j <= segments; j++) {
-                double azimuth = Math.PI * 2.0D * (j % segments) / segments + age * 0.12D;
-                double billow = 1.0D + 0.08D * Math.sin(azimuth * 3.0D + polar * 2.0D + age * 0.3D + phase)
-                        + 0.05D * Math.sin(azimuth * 2.0D - polar * 3.0D - age * 0.2D + phase);
-                points[i][j] = aim.scale(Math.cos(polar) * radius * billow)
-                        .add(across.scale(Math.sin(polar) * Math.cos(azimuth) * radius * billow))
-                        .add(up.scale(Math.sin(polar) * Math.sin(azimuth) * radius * billow));
-            }
-        }
-        for (int i = 0; i < rings; i++) {
-            for (int j = 0; j < segments; j++) {
-                texturedVertex(vc, matrix, points[i][j], 0.0F, 0.0F, alpha, cr, cg, cb);
-                texturedVertex(vc, matrix, points[i][j + 1], 1.0F, 0.0F, alpha, cr, cg, cb);
-                texturedVertex(vc, matrix, points[i + 1][j + 1], 1.0F, 1.0F, alpha, cr, cg, cb);
-                texturedVertex(vc, matrix, points[i + 1][j], 0.0F, 1.0F, alpha, cr, cg, cb);
-            }
-        }
     }
 
     /** The ball of the Rasengan, and of the Rasenshuriken. */
