@@ -120,43 +120,85 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
     }
 
     /**
-     * Earth Release: Sandwich: two huge walls of rock (the dirt block texture) that rise on both sides, with a jagged crown
-     * and lumps of rock on the inside, and then slam together. The local z axis is the way the caster aims, and x is across it.
+     * Earth Release: Sandwich, as in the anime: two quarters of a huge ring of rock (the dirt block texture) that rise on
+     * both sides of the target, curve round it, lean in at the top, and then close in on the middle and smash together. The
+     * local z axis is the way the caster aims, and x is across it.
      */
     private void renderSandwich(float age, PoseStack poseStack, MultiBufferSource bufferSource, int light, int seed) {
         float rise = WeaponEffectEntity.sandwichRise(age);
         if (rise <= 0.001F) return;
-        float gap = (float) WeaponEffectEntity.sandwichGap(age);
+        float radius = (float) WeaponEffectEntity.sandwichRadius(age);
         float thickness = (float) WeaponEffectEntity.SANDWICH_THICKNESS;
-        float half = (float) WeaponEffectEntity.SANDWICH_HALF_LENGTH;
         float height = (float) WeaponEffectEntity.SANDWICH_HEIGHT * rise;
+        float halfArc = (float) WeaponEffectEntity.SANDWICH_HALF_ARC;
         Matrix4f m = poseStack.last().pose();
         VertexConsumer vc = bufferSource.getBuffer(RenderType.entityCutoutNoCull(ROCK_TEXTURE));
+        int segments = 12;
+        // Two tiers, so the wall leans in at the top like the cliffs of the anime: the lower three fifths stand up, the top
+        // fifths are pulled in towards the middle
+        float[] tierTop = {0.0F, 0.35F, 0.7F, 1.0F};
+        float[] tierLean = {0.0F, 0.0F, 0.9F, 2.2F};
         for (int side = -1; side <= 1; side += 2) {
-            float inner = side * gap;
-            float outer = side * (gap + thickness);
-            float x0 = Math.min(inner, outer);
-            float x1 = Math.max(inner, outer);
-            // The body of the wall, from deep in the ground
-            rockBox(vc, m, x0, -4.0F, -half, x1, height, half, 1.0F, light);
-            // A jagged crown: columns of different heights along the top
-            int columns = 6;
-            float width = 2.0F * half / columns;
-            for (int c = 0; c < columns; c++) {
-                float extra = (0.8F + 2.6F * hash(seed * 31 + c * 7 + side * 3)) * rise;
-                float inset = 0.25F + 0.5F * hash(seed * 13 + c * 5 + side);
-                rockBox(vc, m, x0 + inset, height - 0.2F, -half + c * width + 0.1F, x1 - inset, height + extra, -half + (c + 1) * width - 0.1F, 0.95F, light);
-            }
-            // Lumps of rock that stick out of the inside of the wall
-            for (int c = 0; c < 7; c++) {
-                float z = -half + 0.6F + (2.0F * half - 1.8F) * hash(seed * 17 + c * 11 + side * 5);
-                float y = (0.5F + (height - 2.5F) * hash(seed * 19 + c * 3 + side * 7));
-                float size = 0.6F + 0.9F * hash(seed * 23 + c + side);
-                float face = inner;
-                if (y < 0.0F || y > height) continue;
-                rockBox(vc, m, side < 0 ? face : face - size, y, z, side < 0 ? face + size : face, y + size, z + size * 1.3F, 0.9F, light);
+            for (int t = 0; t < 3; t++) {
+                float y0 = t == 0 ? -4.0F : height * tierTop[t];
+                float y1 = height * tierTop[t + 1];
+                if (y1 <= y0) continue;
+                float lean0 = tierLean[t] * rise;
+                float lean1 = tierLean[t + 1] * rise;
+                for (int i = 0; i < segments; i++) {
+                    float a0 = -halfArc + 2.0F * halfArc * i / segments;
+                    float a1 = -halfArc + 2.0F * halfArc * (i + 1) / segments;
+                    // A little different height on every column, so the top edge is rough
+                    float rough = t == 2 ? (0.7F + 0.3F * hash(seed * 31 + i * 7 + side * 3)) : 1.0F;
+                    float top = t == 2 ? y0 + (y1 - y0) * rough : y1;
+                    ringBlock(vc, m, side, Math.max(0.05F, radius - lean0), radius + thickness - lean0,
+                            Math.max(0.05F, radius - lean1), radius + thickness - lean1, a0, a1, y0, top, 1.0F, light);
+                }
             }
         }
+    }
+
+    /**
+     * One piece of the ring: between two angles, from an inside radius to an outside radius, at the bottom ({@code in0},
+     * {@code out0} at {@code y0}) and at the top ({@code in1}, {@code out1} at {@code y1}). {@code side} is -1 for the wall on the
+     * -x side and 1 for the other one.
+     */
+    private static void ringBlock(VertexConsumer vc, Matrix4f m, int side, float in0, float out0, float in1, float out1,
+                                  float a0, float a1, float y0, float y1, float shade, int light) {
+        float[] bi0 = corner(side, in0, a0, y0);
+        float[] bi1 = corner(side, in0, a1, y0);
+        float[] bo0 = corner(side, out0, a0, y0);
+        float[] bo1 = corner(side, out0, a1, y0);
+        float[] ti0 = corner(side, in1, a0, y1);
+        float[] ti1 = corner(side, in1, a1, y1);
+        float[] to0 = corner(side, out1, a0, y1);
+        float[] to1 = corner(side, out1, a1, y1);
+        float u = (a1 - a0) * (in0 + out0) * 0.25F;
+        float v = (y1 - y0) / 2.0F;
+        float w = (out0 - in0) / 2.0F;
+        float inner = shade * 0.85F;
+        float outer = shade * 0.95F;
+        float end = shade * 0.7F;
+        // the inside (the face seen from the middle) and the outside
+        face(vc, m, bi0, 0, v, bi1, u, v, ti1, u, 0, ti0, 0, 0, inner, light);
+        face(vc, m, bo0, 0, v, bo1, u, v, to1, u, 0, to0, 0, 0, outer, light);
+        // the top
+        face(vc, m, ti0, 0, 0, ti1, u, 0, to1, u, w, to0, 0, w, shade, light);
+        // the two ends
+        face(vc, m, bi0, 0, v, bo0, w, v, to0, w, 0, ti0, 0, 0, end, light);
+        face(vc, m, bi1, 0, v, bo1, w, v, to1, w, 0, ti1, 0, 0, end, light);
+    }
+
+    private static float[] corner(int side, float radius, float angle, float y) {
+        return new float[]{side * radius * Mth.cos(angle), y, radius * Mth.sin(angle)};
+    }
+
+    private static void face(VertexConsumer vc, Matrix4f m, float[] p0, float u0, float v0, float[] p1, float u1, float v1,
+                             float[] p2, float u2, float v2, float[] p3, float u3, float v3, float tone, int light) {
+        solidVertex(vc, m, p0[0], p0[1], p0[2], u0, v0, tone, light);
+        solidVertex(vc, m, p1[0], p1[1], p1[2], u1, v1, tone, light);
+        solidVertex(vc, m, p2[0], p2[1], p2[2], u2, v2, tone, light);
+        solidVertex(vc, m, p3[0], p3[1], p3[2], u3, v3, tone, light);
     }
 
     /**

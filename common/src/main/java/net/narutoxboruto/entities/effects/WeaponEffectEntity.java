@@ -474,9 +474,9 @@ public class WeaponEffectEntity extends Entity {
     // ---------------------------------------------------------------- earth jutsu
 
     /**
-     * Earth Release: Sandwich: two huge walls of rock rise out of the ground on both sides of where the caster aims, stand a
-     * moment so the target sees what is coming, then slam together and crush everything between them. The walls stand
-     * across the way the caster aims, so the caster is in front of the open side.
+     * Earth Release: Sandwich, as in the anime: two quarters of a huge ring of rock rise out of the ground on both sides of
+     * where the caster aims, curving round the target, stand a moment, then close in on the middle and crush everything
+     * between them. The open sides of the ring are in front of and behind the target.
      */
     public static final double SANDWICH_RANGE = 30.0D;
     public static final int SANDWICH_RISE = 14;
@@ -485,20 +485,22 @@ public class WeaponEffectEntity extends Entity {
     public static final int SANDWICH_STAY = 24;
     public static final int SANDWICH_SINK = 12;
     public static final int SANDWICH_TICKS = SANDWICH_RISE + SANDWICH_HOLD + SANDWICH_SLAM + SANDWICH_STAY + SANDWICH_SINK;
-    /** From the middle to the inside of each wall before they slam. */
-    public static final double SANDWICH_GAP = 7.0D;
+    /** The inside radius of the ring the two walls are quarters of, before they slam, and where they end up. */
+    public static final double SANDWICH_RADIUS = 9.0D;
+    public static final double SANDWICH_MIN_RADIUS = 0.8D;
     public static final double SANDWICH_THICKNESS = 3.0D;
-    public static final double SANDWICH_HALF_LENGTH = 5.0D;
+    /** Each wall is a quarter of the ring: 45 degrees to each side of the line across the way the caster aims. */
+    public static final double SANDWICH_HALF_ARC = Math.toRadians(45.0D);
     public static final double SANDWICH_HEIGHT = 12.0D;
     private static final float SANDWICH_WALL_DAMAGE = 15.0F;
     private static final float SANDWICH_CRUSH_DAMAGE = 25.0F;
     /** Who the walls have crushed already (hitIds holds who the walls have hit). */
     private final Set<Integer> crushIds = new HashSet<>();
 
-    /** How far the inside of each wall is from the middle, at this age: the walls slam together after they have risen and stood. */
-    public static double sandwichGap(float age) {
+    /** The inside radius of the ring at this age: the walls close in on the middle after they have risen and stood. */
+    public static double sandwichRadius(float age) {
         float t = Mth.clamp((age - SANDWICH_RISE - SANDWICH_HOLD) / SANDWICH_SLAM, 0.0F, 1.0F);
-        return SANDWICH_GAP * (1.0D - t * t);
+        return SANDWICH_RADIUS + (SANDWICH_MIN_RADIUS - SANDWICH_RADIUS) * t * t;
     }
 
     /** How far out of the ground the walls are, from 0 to 1: they rise in the beginning and sink at the end. */
@@ -559,14 +561,14 @@ public class WeaponEffectEntity extends Entity {
         return false;
     }
 
-    /** Hits what is in the walls, drags what is between them in as they close and crushes what is left when they meet. */
+    /** Hits what is in the walls, drags what is inside the ring in as it closes and crushes what is left when the walls meet. */
     private void tickSandwich() {
         if (!(level() instanceof ServerLevel serverLevel)) return;
         float age = tickCount;
-        float gap = (float) sandwichGap(age);
+        double radius = sandwichRadius(age);
         Vec3 forward = Vec3.directionFromRotation(0.0F, getYRot());
         Vec3 side = new Vec3(Mth.cos(getYRot() * ((float) Math.PI / 180.0F)), 0.0D, Mth.sin(getYRot() * ((float) Math.PI / 180.0F)));
-        double reach = SANDWICH_GAP + SANDWICH_THICKNESS + 2.0D;
+        double reach = SANDWICH_RADIUS + SANDWICH_THICKNESS + 2.0D;
         Entity caster = owner == null ? null : serverLevel.getEntity(owner);
         boolean up = age >= SANDWICH_RISE && age < SANDWICH_TICKS - SANDWICH_SINK;
         boolean closing = age > SANDWICH_RISE + SANDWICH_HOLD;
@@ -579,25 +581,28 @@ public class WeaponEffectEntity extends Entity {
             serverLevel.playSound(null, getX(), getY(), getZ(), SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 2.0F, 0.4F);
         }
         if (up) {
-            AABB box = new AABB(getX() - reach - SANDWICH_HALF_LENGTH, getY() - 1.0D, getZ() - reach - SANDWICH_HALF_LENGTH,
-                    getX() + reach + SANDWICH_HALF_LENGTH, getY() + SANDWICH_HEIGHT, getZ() + reach + SANDWICH_HALF_LENGTH);
+            AABB box = new AABB(getX() - reach, getY() - 1.0D, getZ() - reach, getX() + reach, getY() + SANDWICH_HEIGHT, getZ() + reach);
             for (LivingEntity e : serverLevel.getEntitiesOfClass(LivingEntity.class, box, x -> x.isAlive() && !x.isSpectator() && !isOwners(x))) {
                 Vec3 rel = e.position().subtract(position());
                 double lx = rel.dot(side);
                 double lz = rel.dot(forward);
-                if (Math.abs(lz) > SANDWICH_HALF_LENGTH + 0.4D) continue;
+                double distance = Math.sqrt(lx * lx + lz * lz);
+                // How far round the ring it is, from the line across the aim, on the side of the wall it is nearest to
+                double angle = Math.abs(Math.atan2(lz, Math.abs(lx)));
+                boolean onArc = angle <= SANDWICH_HALF_ARC + 0.1D;
                 // In a wall: it is hit by the rock once
-                if (Math.abs(lx) >= gap - 0.3D && Math.abs(lx) <= gap + SANDWICH_THICKNESS + 0.3D && hitIds.add(e.getId())) {
+                if (onArc && distance >= radius - 0.3D && distance <= radius + SANDWICH_THICKNESS + 0.3D && hitIds.add(e.getId())) {
                     e.invulnerableTime = 0;
                     e.hurt(earthSource(caster), SANDWICH_WALL_DAMAGE);
                 }
-                // Between the walls while they close: pulled to the middle
-                if (closing && Math.abs(lx) < gap + 0.2D && Math.abs(lx) > 0.4D) {
-                    e.push(-Math.signum(lx) * 0.18D * side.x, 0.0D, -Math.signum(lx) * 0.18D * side.z);
+                // Inside the ring while it closes: pulled to the middle
+                if (closing && distance < radius + 0.2D && distance > 0.5D && angle <= SANDWICH_HALF_ARC + 0.5D) {
+                    e.push(-lx / distance * 0.2D * side.x - lz / distance * 0.2D * forward.x, 0.0D,
+                            -lx / distance * 0.2D * side.z - lz / distance * 0.2D * forward.z);
                     e.hurtMarked = true;
                 }
-                // The walls meet: whatever is between them is crushed
-                if (closed && Math.abs(lx) <= SANDWICH_THICKNESS + 0.5D && crushIds.add(e.getId())) {
+                // The walls meet: whatever is caught is crushed
+                if (closed && distance <= SANDWICH_RADIUS * 0.9D && crushIds.add(e.getId())) {
                     e.invulnerableTime = 0;
                     e.hurt(earthSource(caster), SANDWICH_CRUSH_DAMAGE);
                 }
@@ -605,7 +610,7 @@ public class WeaponEffectEntity extends Entity {
         }
         if (closed) {
             serverLevel.sendParticles(new net.minecraft.core.particles.BlockParticleOption(ParticleTypes.BLOCK, net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState()),
-                    getX(), getY() + 3.0D, getZ(), 24, 1.2D, 3.0D, SANDWICH_HALF_LENGTH * 0.6D, 0.08D);
+                    getX(), getY() + 3.0D, getZ(), 24, 1.2D, 3.0D, 1.2D, 0.08D);
         }
         if (--life <= 0) discard();
     }
