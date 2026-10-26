@@ -117,7 +117,6 @@ public class WaterCloneEntity extends PathfinderMob {
         }
         WaterCloneEntity clone = new WaterCloneEntity(ModEntities.WATER_CLONE, level);
         clone.entityData.set(OWNER, Optional.of(owner.getUUID()));
-        clone.setCustomName(owner.getName());
         // Beside the caster, on the side where there is room
         Vec3 look = owner.getLookAngle();
         Vec3 flat = new Vec3(look.x, 0.0D, look.z);

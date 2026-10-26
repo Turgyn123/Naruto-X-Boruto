@@ -58,6 +58,12 @@ public class WaterCloneRenderer extends HumanoidMobRenderer<WaterCloneEntity, Pl
         return DefaultPlayerSkin.get(owner);
     }
 
+    /** No name above it. */
+    @Override
+    protected boolean shouldShowName(WaterCloneEntity entity) {
+        return false;
+    }
+
     @Override
     public ResourceLocation getTextureLocation(WaterCloneEntity entity) {
         return skin(entity).texture();

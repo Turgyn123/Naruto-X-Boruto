@@ -28,6 +28,12 @@ public class GolemRenderer extends MobRenderer<GolemEntity, GolemModel> {
         }
     }
 
+    /** No name above it. */
+    @Override
+    protected boolean shouldShowName(GolemEntity entity) {
+        return false;
+    }
+
     @Override
     public ResourceLocation getTextureLocation(GolemEntity golem) {
         return TEXTURE;

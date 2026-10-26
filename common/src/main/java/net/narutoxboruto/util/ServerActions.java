@@ -96,13 +96,20 @@ public final class ServerActions {
      * @param slot  left, right, offset_left, offset_right, scale, hide, show or reset
      * @param value the dojutsu type, an "x,y" pair or a scale, depending on the slot
      */
-    /** Left click with the Water Clone Technique in hand: all the water clones of the player fall back into water. */
+    /**
+     * Left click with the Water Clone Technique in hand: all the water clones of the player fall back into water. With the
+     * Golem Technique in hand: the golem crumbles back into earth.
+     */
     public static void dismissClones(ServerPlayer player) {
-        if (!(player.getMainHandItem().getItem() instanceof net.narutoxboruto.items.jutsus.WaterClone)) return;
-        if (player.level() instanceof net.minecraft.server.level.ServerLevel level) {
+        if (!(player.level() instanceof net.minecraft.server.level.ServerLevel level)) return;
+        net.minecraft.world.item.Item held = player.getMainHandItem().getItem();
+        if (held instanceof net.narutoxboruto.items.jutsus.WaterClone) {
             for (net.narutoxboruto.entities.jutsus.WaterCloneEntity clone : net.narutoxboruto.entities.jutsus.WaterCloneEntity.clonesOf(level, player)) {
                 clone.revert();
             }
+        } else if (held instanceof net.narutoxboruto.items.jutsus.GolemTechnique) {
+            net.narutoxboruto.entities.jutsus.GolemEntity golem = net.narutoxboruto.entities.jutsus.GolemEntity.of(level, player);
+            if (golem != null) golem.revert();
         }
     }
 
