@@ -486,11 +486,11 @@ public class WeaponEffectEntity extends Entity {
     public static final int SANDWICH_SINK = 12;
     public static final int SANDWICH_TICKS = SANDWICH_RISE + SANDWICH_HOLD + SANDWICH_SLAM + SANDWICH_STAY + SANDWICH_SINK;
     /** The inside radius of the ring the two walls are quarters of, before they slam, and where they end up. */
-    public static final double SANDWICH_RADIUS = 9.0D;
+    public static final double SANDWICH_RADIUS = 7.0D;
     public static final double SANDWICH_MIN_RADIUS = 0.8D;
-    public static final double SANDWICH_THICKNESS = 3.0D;
-    /** Each wall is a quarter of the ring: 45 degrees to each side of the line across the way the caster aims. */
-    public static final double SANDWICH_HALF_ARC = Math.toRadians(45.0D);
+    public static final double SANDWICH_THICKNESS = 2.5D;
+    /** Each wall is a quarter of the ring: 50 degrees to each side of the line across the way the caster aims. */
+    public static final double SANDWICH_HALF_ARC = Math.toRadians(50.0D);
     public static final double SANDWICH_HEIGHT = 12.0D;
     private static final float SANDWICH_WALL_DAMAGE = 15.0F;
     private static final float SANDWICH_CRUSH_DAMAGE = 25.0F;

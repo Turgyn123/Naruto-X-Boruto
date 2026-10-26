@@ -133,11 +133,11 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
         float halfArc = (float) WeaponEffectEntity.SANDWICH_HALF_ARC;
         Matrix4f m = poseStack.last().pose();
         VertexConsumer vc = bufferSource.getBuffer(RenderType.entityCutoutNoCull(ROCK_TEXTURE));
-        int segments = 12;
+        int segments = 18;
         // Two tiers, so the wall leans in at the top like the cliffs of the anime: the lower three fifths stand up, the top
         // fifths are pulled in towards the middle
         float[] tierTop = {0.0F, 0.35F, 0.7F, 1.0F};
-        float[] tierLean = {0.0F, 0.0F, 0.9F, 2.2F};
+        float[] tierLean = {0.0F, 0.0F, 1.4F, 3.2F};
         for (int side = -1; side <= 1; side += 2) {
             for (int t = 0; t < 3; t++) {
                 float y0 = t == 0 ? -4.0F : height * tierTop[t];
