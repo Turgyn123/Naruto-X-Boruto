@@ -35,7 +35,7 @@ public class MixinPlayerRenderer {
             at = @At("HEAD"), cancellable = true)
     private void narutoxboruto$ironSkinTexture(AbstractClientPlayer player, CallbackInfoReturnable<ResourceLocation> cir) {
         if (IronSkin.isActive(player)) {
-            cir.setReturnValue(IronSkinSkin.TEXTURE);
+            cir.setReturnValue(IronSkinSkin.textureFor(player));
         }
     }
 
@@ -44,7 +44,7 @@ public class MixinPlayerRenderer {
     private void narutoxboruto$ironSkinHand(PoseStack poseStack, MultiBufferSource buffer, int light, AbstractClientPlayer player,
                                             ModelPart arm, ModelPart sleeve, CallbackInfo ci) {
         if (IronSkin.isActive(player)) {
-            arm.render(poseStack, buffer.getBuffer(RenderType.entityCutoutNoCull(IronSkinSkin.TEXTURE)), light, OverlayTexture.NO_OVERLAY);
+            arm.render(poseStack, buffer.getBuffer(RenderType.entityCutoutNoCull(IronSkinSkin.textureFor(player))), light, OverlayTexture.NO_OVERLAY);
         }
     }
 }
