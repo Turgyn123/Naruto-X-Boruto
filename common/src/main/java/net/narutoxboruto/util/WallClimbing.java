@@ -39,6 +39,8 @@ public final class WallClimbing {
     /** True when this player's chakra control would let them hold on to a wall right now. */
     public static boolean canCling(Player player) {
         if (!(player instanceof ModeHandler modes) || !modes.$getChakraControl()) return false;
+        // Not while hiding in the earth: the walls of the earth must not catch the player
+        if (net.narutoxboruto.items.jutsus.HidingInRock.isActive(player)) return false;
         return !player.isSpectator() && !player.isDeadOrDying()
                 && !player.getAbilities().flying && !player.isFallFlying() && !player.isPassenger()
                 && !player.isInWater() && !player.isInLava() && !player.onClimbable();

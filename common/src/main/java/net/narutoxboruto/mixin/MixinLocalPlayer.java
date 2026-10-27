@@ -6,7 +6,6 @@ import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.Input;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.entity.player.ProfilePublicKey;
-import net.narutoxboruto.effect.ModEffects;
 import net.narutoxboruto.items.PreventSlow;
 import net.narutoxboruto.items.jutsus.HidingInRock;
 import net.narutoxboruto.client.WallFrame;
@@ -34,7 +33,7 @@ public abstract class MixinLocalPlayer extends AbstractClientPlayer {
             input.forwardImpulse *= 5;
         }
         // Hiding in Rock: inside the earth, jump rises and sneak sinks
-        if (ModEffects.HIDING_IN_ROCK != null && this.hasEffect(ModEffects.HIDING_IN_ROCK) && HidingInRock.isEmbedded(this)) {
+        if (HidingInRock.isActive(this) && HidingInRock.isEmbedded(this)) {
             double rise = input.jumping ? 0.3D : (input.shiftKeyDown ? -0.3D : 0.0D);
             this.setDeltaMovement(this.getDeltaMovement().x, rise, this.getDeltaMovement().z);
         }

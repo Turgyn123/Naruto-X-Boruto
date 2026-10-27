@@ -7,8 +7,10 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BlockTags;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
@@ -16,7 +18,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.narutoxboruto.capabilities.info.Chakra;
-import net.narutoxboruto.effect.ModEffects;
+import net.narutoxboruto.main.Main;
 import net.narutoxboruto.main.platform.Services;
 
 import java.util.HashMap;
@@ -26,15 +28,18 @@ import java.util.UUID;
 
 /**
  * Earth Release: Hiding in Rock. Rank C, 30 chakra and 15 chakra per second while it is on, up to 60 meters from where the
- * caster slipped into the earth. The caster sinks into the earth, becomes invisible and can move freely through earth, at their
+ * caster slipped into the earth. The caster sinks into the earth, turns see-through and can move freely through earth, at their
  * own speed (jump to rise, sneak to sink). Out of the earth they fall again. Use it again to come out on the surface. Requires
  * Earth release affinity.
+ *
+ * <p>Whether it is on is a bonus of nothing (zero armor toughness) with its own name: the clients are sent it, and it is not saved,
+ * so it never stays on a player after a relog or a death. It has no status icon.</p>
  */
 public class HidingInRock extends AbstractJutsuItem {
 
     public static final int UPKEEP_COST = 15;
     public static final int UPKEEP_INTERVAL = 20;
-    private static final int EFFECT_TICKS = UPKEEP_INTERVAL * 3;
+    private static final ResourceLocation MARKER = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "hiding_in_rock_marker");
     public static final double RANGE = 60.0D;
     /** Where each player slipped into the earth (only the server touches it). */
     private static final Map<UUID, Vec3> ENTRY = new HashMap<>();
@@ -65,7 +70,7 @@ public class HidingInRock extends AbstractJutsuItem {
 
     @Override
     protected boolean executeJutsu(ServerPlayer player, Level level) {
-        if (player.hasEffect(ModEffects.HIDING_IN_ROCK)) {
+        if (isActive(player)) {
             // Already on: this use comes out of the earth (and the cost is given back)
             leave(player);
             return false;
@@ -74,20 +79,21 @@ public class HidingInRock extends AbstractJutsuItem {
             player.displayClientMessage(Component.literal("There is no earth here to hide in"), true);
             return false;
         }
-        applyEffects(player);
+        player.getAttribute(Attributes.ARMOR_TOUGHNESS).addTransientModifier(new AttributeModifier(MARKER, 0.0D, AttributeModifier.Operation.ADD_VALUE));
         ENTRY.put(player.getUUID(), player.position());
         level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.GRAVEL_BREAK, SoundSource.PLAYERS, 1.4F, 0.6F);
         return true;
     }
 
-    private static void applyEffects(ServerPlayer player) {
-        player.addEffect(new MobEffectInstance(ModEffects.HIDING_IN_ROCK, EFFECT_TICKS, 0, false, false, true));
-        player.addEffect(new MobEffectInstance(MobEffects.INVISIBILITY, EFFECT_TICKS, 0, false, false, false));
+    /** Whether the player is hiding in the earth. Works on the client too. */
+    public static boolean isActive(Player player) {
+        AttributeInstance toughness = player.getAttribute(Attributes.ARMOR_TOUGHNESS);
+        return toughness != null && toughness.hasModifier(MARKER);
     }
 
     /** Every second for every player: while hiding it costs chakra, and it ends when the chakra runs out or the caster is too far. */
     public static void tickUpkeep(ServerPlayer player) {
-        if (ModEffects.HIDING_IN_ROCK == null || !player.hasEffect(ModEffects.HIDING_IN_ROCK)) {
+        if (!isActive(player)) {
             ENTRY.remove(player.getUUID());
             return;
         }
@@ -104,13 +110,11 @@ public class HidingInRock extends AbstractJutsuItem {
             return;
         }
         chakra.subValue(UPKEEP_COST, player);
-        applyEffects(player);
     }
 
     /** Comes out of the earth: the effects end, and if the caster is inside earth they are put on the surface above. */
     public static void leave(ServerPlayer player) {
-        player.removeEffect(ModEffects.HIDING_IN_ROCK);
-        player.removeEffect(MobEffects.INVISIBILITY);
+        player.getAttribute(Attributes.ARMOR_TOUGHNESS).removeModifier(MARKER);
         ENTRY.remove(player.getUUID());
         Level level = player.level();
         BlockPos pos = player.blockPosition();
@@ -152,6 +156,6 @@ public class HidingInRock extends AbstractJutsuItem {
         tooltip.add(Component.literal("Rank: C").withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.literal("Range: 60 meters").withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.literal("Upkeep: " + UPKEEP_COST + " chakra per second").withStyle(ChatFormatting.BLUE));
-        tooltip.add(Component.literal("Sink into the earth, invisible, and move through it. Jump to rise, sneak to sink. Use again to come out.").withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.literal("Sink into the earth, see-through, and move through it. Jump to rise, sneak to sink. Use again to come out.").withStyle(ChatFormatting.GRAY));
     }
 }

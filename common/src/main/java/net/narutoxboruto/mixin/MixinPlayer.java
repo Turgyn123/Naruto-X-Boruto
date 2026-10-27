@@ -123,7 +123,7 @@ public abstract class MixinPlayer extends LivingEntity implements ModeHandler {
     @Inject(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/LivingEntity;tick()V"))
     private void narutoxboruto$hidingInRock(CallbackInfo ci) {
         Player self = (Player) (Object) this;
-        if (ModEffects.HIDING_IN_ROCK != null && this.hasEffect(ModEffects.HIDING_IN_ROCK)) {
+        if (HidingInRock.isActive(self)) {
             boolean embedded = HidingInRock.isEmbedded(self);
             this.noPhysics = embedded || HidingInRock.isOnEarth(self);
             if (embedded) {

@@ -108,7 +108,6 @@ public class ForgeMain {
             ModItems.CHAKRA_PAPER_ITEM = ForgeItems.CHAKRA_PAPER.get();
 
             ModEffects.CHAKRA_CONTROL = Holder.direct(ForgeEffects.CHAKRA_CONTROL.get());
-            ModEffects.HIDING_IN_ROCK = Holder.direct(ForgeEffects.HIDING_IN_ROCK.get());
         });
     }
 

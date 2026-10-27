@@ -12,6 +12,7 @@
   "client": [
     "MixinEntityGlowing",
     "MixinGameRenderer",
+    "MixinLivingEntityRenderer",
     "MixinMinecraftClick",
     "MixinLocalPlayer",
     "MixinPlayerModel",

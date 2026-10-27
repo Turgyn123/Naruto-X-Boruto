@@ -105,7 +105,6 @@ public class NeoForgeMain {
         ModItems.CHAKRA_PAPER_ITEM = NeoForgeItems.CHAKRA_PAPER.get();
 
         ModEffects.CHAKRA_CONTROL = NeoForgeEffects.CHAKRA_CONTROL;
-        ModEffects.HIDING_IN_ROCK = NeoForgeEffects.HIDING_IN_ROCK;
     }
 
     private void attributes(EntityAttributeCreationEvent event) {

@@ -19,12 +19,6 @@ public class FabricEffects {
                     0.5, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL)
     );
 
-    public static final Holder<MobEffect> HIDING_IN_ROCK = Registry.registerForHolder(
-            BuiltInRegistries.MOB_EFFECT,
-            ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "hiding_in_rock"),
-            new HidingInRockEffect()
-    );
-
     public static void register() {
         // Class load triggers static field registration
     }

@@ -19,8 +19,6 @@ public class ForgeEffects {
                     0.5, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL)
     );
 
-    public static final RegistryObject<MobEffect> HIDING_IN_ROCK = MOD_EFFECTS.register("hiding_in_rock", HidingInRockEffect::new);
-
     public static void register(IEventBus eventBus) {
         MOD_EFFECTS.register(eventBus);
     }

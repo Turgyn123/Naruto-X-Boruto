@@ -8,5 +8,4 @@ import net.minecraft.world.effect.MobEffect;
  */
 public class ModEffects {
     public static Holder<MobEffect> CHAKRA_CONTROL;
-    public static Holder<MobEffect> HIDING_IN_ROCK;
 }
