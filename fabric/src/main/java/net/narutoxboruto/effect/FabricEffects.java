@@ -19,12 +19,6 @@ public class FabricEffects {
                     0.5, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL)
     );
 
-    public static final Holder<MobEffect> IRON_SKIN = Registry.registerForHolder(
-            BuiltInRegistries.MOB_EFFECT,
-            ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "iron_skin"),
-            IronSkinEffect.create()
-    );
-
     public static final Holder<MobEffect> HIDING_IN_ROCK = Registry.registerForHolder(
             BuiltInRegistries.MOB_EFFECT,
             ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "hiding_in_rock"),

@@ -51,7 +51,6 @@ public class NeoForgeClient {
             if (renderer != null) {
                 renderer.addLayer(new DojutsuEyeLayer(renderer));
                 renderer.addLayer(new RasenganHandLayer(renderer));
-                renderer.addLayer(new net.narutoxboruto.client.renderer.IronSkinLayer(renderer));
             }
         }
     }

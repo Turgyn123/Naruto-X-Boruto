@@ -4,8 +4,10 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.entity.player.PlayerRenderer;
 import net.narutoxboruto.client.WallFrame;
-import net.narutoxboruto.client.renderer.IronSkinLayer;
-import net.narutoxboruto.effect.ModEffects;
+import net.minecraft.resources.ResourceLocation;
+import net.narutoxboruto.client.IronSkinSkin;
+import net.narutoxboruto.items.jutsus.IronSkin;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -28,14 +30,21 @@ public class MixinPlayerRenderer {
         WallFrame.transformModel(poseStack, player, rotationYaw, partialTicks);
     }
 
-    /** Earth Release: Iron Skin: the arm in first person is covered in hardened earth too. */
+    /** Earth Release: Iron Skin: the skin of the player is the dirt texture while it is on. */
+    @Inject(method = "getTextureLocation(Lnet/minecraft/client/player/AbstractClientPlayer;)Lnet/minecraft/resources/ResourceLocation;",
+            at = @At("HEAD"), cancellable = true)
+    private void narutoxboruto$ironSkinTexture(AbstractClientPlayer player, CallbackInfoReturnable<ResourceLocation> cir) {
+        if (IronSkin.isActive(player)) {
+            cir.setReturnValue(IronSkinSkin.TEXTURE);
+        }
+    }
+
+    /** The arm in first person too (it takes its texture straight from the skin of the player). */
     @Inject(method = "renderHand", at = @At("TAIL"))
     private void narutoxboruto$ironSkinHand(PoseStack poseStack, MultiBufferSource buffer, int light, AbstractClientPlayer player,
                                             ModelPart arm, ModelPart sleeve, CallbackInfo ci) {
-        if (ModEffects.IRON_SKIN != null && player.hasEffect(ModEffects.IRON_SKIN)) {
-            arm.render(poseStack, buffer.getBuffer(RenderType.entityTranslucent(IronSkinLayer.TEXTURE)),
-                    net.minecraft.client.renderer.LightTexture.pack(Math.max(net.minecraft.client.renderer.LightTexture.block(light), 7), Math.max(net.minecraft.client.renderer.LightTexture.sky(light), 7)),
-                    OverlayTexture.NO_OVERLAY, IronSkinLayer.COLOR);
+        if (IronSkin.isActive(player)) {
+            arm.render(poseStack, buffer.getBuffer(RenderType.entityCutoutNoCull(IronSkinSkin.TEXTURE)), light, OverlayTexture.NO_OVERLAY);
         }
     }
 }
