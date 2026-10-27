@@ -34,6 +34,7 @@ public class ForgeClient {
             PlayerRenderer renderer = event.getSkin(skin);
             if (renderer != null) {
                 renderer.addLayer(new RasenganHandLayer(renderer));
+                renderer.addLayer(new net.narutoxboruto.client.renderer.IronSkinLayer(renderer));
             }
         }
     }

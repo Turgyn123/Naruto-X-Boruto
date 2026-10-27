@@ -16,6 +16,7 @@ public class FabricDojutsuEyeRenderer {
                     if (entityRenderer instanceof PlayerRenderer playerRenderer) {
                         registrationHelper.register(new DojutsuEyeLayer(playerRenderer));
                         registrationHelper.register(new RasenganHandLayer(playerRenderer));
+                        registrationHelper.register(new IronSkinLayer(playerRenderer));
                     }
                 });
     }

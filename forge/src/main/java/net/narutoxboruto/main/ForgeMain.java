@@ -108,6 +108,7 @@ public class ForgeMain {
             ModItems.CHAKRA_PAPER_ITEM = ForgeItems.CHAKRA_PAPER.get();
 
             ModEffects.CHAKRA_CONTROL = Holder.direct(ForgeEffects.CHAKRA_CONTROL.get());
+            ModEffects.IRON_SKIN = Holder.direct(ForgeEffects.IRON_SKIN.get());
         });
     }
 

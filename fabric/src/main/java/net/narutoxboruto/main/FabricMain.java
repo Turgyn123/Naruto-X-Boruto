@@ -90,6 +90,7 @@ public class FabricMain implements ModInitializer {
         ModItems.CHAKRA_PAPER_ITEM = FabricItems.CHAKRA_PAPER;
 
         ModEffects.CHAKRA_CONTROL = FabricEffects.CHAKRA_CONTROL;
+        ModEffects.IRON_SKIN = FabricEffects.IRON_SKIN;
 
         // Register networking (server-side)
         FabricPacketHandler.registerServer();

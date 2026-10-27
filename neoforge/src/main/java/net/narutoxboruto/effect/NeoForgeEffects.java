@@ -19,6 +19,8 @@ public class NeoForgeEffects {
                     0.5,  AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL)
     );
 
+    public static final DeferredHolder<MobEffect, MobEffect> IRON_SKIN = MOD_EFFECTS.register("iron_skin", IronSkinEffect::create);
+
     public static void register(IEventBus eventBus) {
         MOD_EFFECTS.register(eventBus);
     }

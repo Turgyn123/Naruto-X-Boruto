@@ -75,7 +75,7 @@ public class NeoForgeItems {
     public static final DeferredItem<Item> WATER_CLONE_JUTSU = ITEMS.register("water_clone_jutsu", () -> new WaterClone(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<Item> GOLEM_JUTSU = ITEMS.register("golem_jutsu", () -> new GolemTechnique(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<Item> EARTH_SANDWICH_JUTSU = ITEMS.register("earth_sandwich_jutsu", () -> new EarthSandwich(new Item.Properties().stacksTo(1)));
-    public static final DeferredItem<Item> EARTH_SPEAR_JUTSU = ITEMS.register("earth_spear_jutsu", () -> new EarthSpear(new Item.Properties().stacksTo(1)));
+    public static final DeferredItem<Item> IRON_SKIN_JUTSU = ITEMS.register("iron_skin_jutsu", () -> new IronSkin(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<Item> GREAT_FIRE_ANNIHILATION_JUTSU = ITEMS.register("great_fire_annihilation_jutsu", () -> new GreatFireAnnihilation(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<Item> ASH_PILE_BURNING_JUTSU = ITEMS.register("ash_pile_burning_jutsu", () -> new AshPileBurning(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<Item> SHARK_BOMB_JUTSU = ITEMS.register("shark_bomb_jutsu", () -> new SharkBomb(new Item.Properties().stacksTo(1)));

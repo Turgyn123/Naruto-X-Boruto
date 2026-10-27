@@ -50,7 +50,6 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
     private static final ResourceLocation FIRE_PUFF_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/fire_puff.png");
     private static final ResourceLocation ASH_PUFF_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/ash_puff.png");
     private static final ResourceLocation ROCK_TEXTURE = ResourceLocation.withDefaultNamespace("textures/block/dirt.png");
-    private static final ResourceLocation SPEAR_TEXTURE = ResourceLocation.withDefaultNamespace("textures/block/stone.png");
     private static final int FULL_BRIGHT = 0xF000F0;
 
     public WeaponEffectRenderer(EntityRendererProvider.Context context) {
@@ -86,12 +85,6 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
             poseStack.pushPose();
             poseStack.mulPose(Axis.YP.rotationDegrees(-Mth.lerp(partialTick, entity.yRotO, entity.getYRot())));
             renderSandwich(age, poseStack, bufferSource, rockLight(packedLight), entity.getId());
-            poseStack.popPose();
-            return;
-        }
-        if (kind == WeaponEffectEntity.EARTH_SPEARS) {
-            poseStack.pushPose();
-            renderEarthSpears(entity, age, poseStack, bufferSource, rockLight(packedLight));
             poseStack.popPose();
             return;
         }
@@ -199,68 +192,6 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
         solidVertex(vc, m, p1[0], p1[1], p1[2], u1, v1, tone, light);
         solidVertex(vc, m, p2[0], p2[1], p2[2], u2, v2, tone, light);
         solidVertex(vc, m, p3[0], p3[1], p3[2], u3, v3, tone, light);
-    }
-
-    /**
-     * Earth Release: Earth Spear: a row of spears of rock, one every tick further on, each with two smaller ones beside it. A
-     * spear is a tapering column of rock that ends in a point, and bursts up out of the ground fast.
-     */
-    private void renderEarthSpears(WeaponEffectEntity entity, float age, PoseStack poseStack, MultiBufferSource bufferSource, int light) {
-        float yaw = entity.getYRot() * ((float) Math.PI / 180.0F);
-        double forwardX = -Mth.sin(yaw);
-        double forwardZ = Mth.cos(yaw);
-        double sideX = Mth.cos(yaw);
-        double sideZ = Mth.sin(yaw);
-        Level level = entity.level();
-        VertexConsumer vc = bufferSource.getBuffer(RenderType.entityCutoutNoCull(SPEAR_TEXTURE));
-        float sink = Mth.clamp((WeaponEffectEntity.SPEAR_TICKS - age) / WeaponEffectEntity.SPEAR_SINK, 0.0F, 1.0F);
-        int seed = entity.getId() * 29;
-        for (int i = 0; i < WeaponEffectEntity.SPEAR_COUNT; i++) {
-            float since = age - i;
-            if (since < 0.0F) continue;
-            float grow = Mth.clamp(since / 3.0F, 0.0F, 1.0F);
-            grow = grow * (2.0F - grow) * sink;
-            if (grow <= 0.001F) continue;
-            for (int k = -1; k <= 1; k++) {
-                float across = k * 1.0F;
-                double along = WeaponEffectEntity.SPEAR_STEP * (i + 1) + (k == 0 ? 0.0D : 0.45D);
-                float spearHeight = (k == 0 ? 3.4F + 1.2F * hash(seed + i * 3) : 1.8F + 0.9F * hash(seed + i * 5 + k)) * grow;
-                float lean = k * 0.18F + (hash(seed + i * 7 + k) - 0.5F) * 0.12F;
-                double x = entity.getX() + forwardX * along + sideX * across;
-                double z = entity.getZ() + forwardZ * along + sideZ * across;
-                double ground = groundAt(level, x, z, entity.getY()) - entity.getY();
-                poseStack.pushPose();
-                // Local frame: turned to the way of the line, standing on the ground at that spot
-                poseStack.mulPose(Axis.YP.rotationDegrees(-entity.getYRot()));
-                poseStack.translate(across, ground - 0.4D, along);
-                poseStack.mulPose(Axis.ZP.rotationDegrees(-lean * 57.2958F));
-                rockSpear(vc, poseStack.last().pose(), (k == 0 ? 0.62F : 0.42F), spearHeight, light);
-                poseStack.popPose();
-            }
-        }
-    }
-
-    /** A spear of rock: a column that narrows (four sided) to a point. The local y axis is up. */
-    private static void rockSpear(VertexConsumer vc, Matrix4f m, float halfBase, float height, int light) {
-        float halfMid = halfBase * 0.55F;
-        float midY = height * 0.55F;
-        float[][] baseCorner = {{-halfBase, -halfBase}, {halfBase, -halfBase}, {halfBase, halfBase}, {-halfBase, halfBase}};
-        float[][] midCorner = {{-halfMid, -halfMid}, {halfMid, -halfMid}, {halfMid, halfMid}, {-halfMid, halfMid}};
-        float[] shade = {0.8F, 0.65F, 0.9F, 1.0F};
-        for (int c = 0; c < 4; c++) {
-            int n = (c + 1) % 4;
-            float tone = shade[c];
-            // The column
-            solidVertex(vc, m, baseCorner[c][0], -2.0F, baseCorner[c][1], 0.0F, 1.0F, tone, light);
-            solidVertex(vc, m, baseCorner[n][0], -2.0F, baseCorner[n][1], 1.0F, 1.0F, tone, light);
-            solidVertex(vc, m, midCorner[n][0], midY, midCorner[n][1], 1.0F, 0.0F, tone, light);
-            solidVertex(vc, m, midCorner[c][0], midY, midCorner[c][1], 0.0F, 0.0F, tone, light);
-            // The point
-            solidVertex(vc, m, midCorner[c][0], midY, midCorner[c][1], 0.0F, 1.0F, tone * 1.05F, light);
-            solidVertex(vc, m, midCorner[n][0], midY, midCorner[n][1], 1.0F, 1.0F, tone * 1.05F, light);
-            solidVertex(vc, m, halfMid * 0.05F, height, 0.0F, 0.5F, 0.0F, tone * 1.05F, light);
-            solidVertex(vc, m, halfMid * 0.05F, height, 0.0F, 0.5F, 0.0F, tone * 1.05F, light);
-        }
     }
 
     /** A box of rock whose faces repeat the texture every two blocks, and are shaded so it looks solid. */

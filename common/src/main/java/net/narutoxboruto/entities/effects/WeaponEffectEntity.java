@@ -67,7 +67,6 @@ public class WeaponEffectEntity extends Entity {
     public static final int VACUUM_BULLET = 6;
     public static final int GREAT_BREAKTHROUGH = 7;
     public static final int SANDWICH = 8;
-    public static final int EARTH_SPEARS = 9;
 
     private static final EntityDataAccessor<Integer> KIND = SynchedEntityData.defineId(WeaponEffectEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Float> SIZE = SynchedEntityData.defineId(WeaponEffectEntity.class, EntityDataSerializers.FLOAT);
@@ -620,51 +619,6 @@ public class WeaponEffectEntity extends Entity {
         return this.damageSources().magic();
     }
 
-    /**
-     * Earth Release: Earth Spear: a row of spears of rock bursts out of the ground in front of the caster, one after the
-     * other, each with two smaller spears beside it. Every spear hits what is above it once and throws it up.
-     */
-    public static final int SPEAR_COUNT = 13;
-    public static final double SPEAR_STEP = 1.5D;
-    public static final int SPEAR_STAY = 22;
-    public static final int SPEAR_SINK = 8;
-    public static final int SPEAR_TICKS = SPEAR_COUNT + SPEAR_STAY + SPEAR_SINK;
-    private static final float SPEAR_DAMAGE = 12.0F;
-    private static final double SPEAR_RADIUS = 1.5D;
-
-    public static void spawnEarthSpears(ServerLevel level, ServerPlayer caster) {
-        Vec3 look = caster.getLookAngle();
-        Vec3 flat = new Vec3(look.x, 0.0D, look.z);
-        flat = flat.lengthSqr() < 1.0E-4D ? new Vec3(0.0D, 0.0D, 1.0D) : flat.normalize();
-        WeaponEffectEntity effect = create(level, EARTH_SPEARS, caster.position(), flat, 1.0F, 0xFFFFFFFF, SPEAR_TICKS);
-        effect.owner = caster.getUUID();
-        level.addFreshEntity(effect);
-    }
-
-    /** One spear bursts out every tick, further on, and hits what stands above it. */
-    private void tickEarthSpears() {
-        if (!(level() instanceof ServerLevel serverLevel)) return;
-        int i = tickCount;
-        if (i < SPEAR_COUNT) {
-            Vec3 forward = Vec3.directionFromRotation(0.0F, getYRot());
-            Vec3 centre = position().add(forward.scale(SPEAR_STEP * (i + 1)));
-            Entity caster = owner == null ? null : serverLevel.getEntity(owner);
-            AABB box = new AABB(centre.x - SPEAR_RADIUS, centre.y - 2.0D, centre.z - SPEAR_RADIUS,
-                    centre.x + SPEAR_RADIUS, centre.y + 4.0D, centre.z + SPEAR_RADIUS);
-            for (LivingEntity e : serverLevel.getEntitiesOfClass(LivingEntity.class, box, x -> x.isAlive() && !x.isSpectator() && !isOwners(x))) {
-                if (!hitIds.add(e.getId())) continue;
-                e.invulnerableTime = 0;
-                e.hurt(earthSource(caster), SPEAR_DAMAGE);
-                e.setDeltaMovement(e.getDeltaMovement().add(0.0D, 0.8D, 0.0D));
-                e.hurtMarked = true;
-            }
-            if (i % 3 == 0) {
-                serverLevel.playSound(null, centre.x, centre.y, centre.z, SoundEvents.STONE_BREAK, SoundSource.PLAYERS, 1.2F, 0.7F + 0.05F * i);
-            }
-        }
-        if (--life <= 0) discard();
-    }
-
     /** A cloud of ash hanging in the air around {@code center}. */
     public static void spawnAshCloud(ServerLevel level, ServerPlayer caster, Vec3 center) {
         WeaponEffectEntity effect = create(level, ASH_CLOUD, center, new Vec3(0.0D, 0.0D, 1.0D), 1.0F, 0xFFFFFFFF, CLOUD_TICKS);
@@ -840,10 +794,6 @@ public class WeaponEffectEntity extends Entity {
         }
         if (getKind() == SANDWICH) {
             tickSandwich();
-            return;
-        }
-        if (getKind() == EARTH_SPEARS) {
-            tickEarthSpears();
             return;
         }
 

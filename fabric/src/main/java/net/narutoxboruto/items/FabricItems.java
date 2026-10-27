@@ -74,7 +74,7 @@ public class FabricItems {
     public static final Item WATER_CLONE_JUTSU = register("water_clone_jutsu", new WaterClone(new Item.Properties().stacksTo(1)));
     public static final Item GOLEM_JUTSU = register("golem_jutsu", new GolemTechnique(new Item.Properties().stacksTo(1)));
     public static final Item EARTH_SANDWICH_JUTSU = register("earth_sandwich_jutsu", new EarthSandwich(new Item.Properties().stacksTo(1)));
-    public static final Item EARTH_SPEAR_JUTSU = register("earth_spear_jutsu", new EarthSpear(new Item.Properties().stacksTo(1)));
+    public static final Item IRON_SKIN_JUTSU = register("iron_skin_jutsu", new IronSkin(new Item.Properties().stacksTo(1)));
     public static final Item GREAT_FIRE_ANNIHILATION_JUTSU = register("great_fire_annihilation_jutsu", new GreatFireAnnihilation(new Item.Properties().stacksTo(1)));
     public static final Item ASH_PILE_BURNING_JUTSU = register("ash_pile_burning_jutsu", new AshPileBurning(new Item.Properties().stacksTo(1)));
     public static final Item SHARK_BOMB_JUTSU = register("shark_bomb_jutsu", new SharkBomb(new Item.Properties().stacksTo(1)));
