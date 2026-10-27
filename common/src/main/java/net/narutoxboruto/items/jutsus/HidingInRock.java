@@ -16,19 +16,15 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.Vec3;
 import net.narutoxboruto.capabilities.info.Chakra;
 import net.narutoxboruto.main.Main;
 import net.narutoxboruto.main.platform.Services;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 
 /**
- * Earth Release: Hiding in Rock. Rank C, 30 chakra and 15 chakra per second while it is on, up to 60 meters from where the
- * caster slipped into the earth. The caster sinks into the earth, turns see-through and can move freely through earth, at their
+ * Earth Release: Hiding in Rock. Rank C, 30 chakra and 15 chakra per second while it is on, with no limit on how far. The
+ * caster sinks into the earth, turns see-through and can move freely through earth, at their
  * own speed (jump to rise, sneak to sink). Out of the earth they fall again. Use it again to come out on the surface. Requires
  * Earth release affinity.
  *
@@ -40,9 +36,6 @@ public class HidingInRock extends AbstractJutsuItem {
     public static final int UPKEEP_COST = 15;
     public static final int UPKEEP_INTERVAL = 20;
     private static final ResourceLocation MARKER = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "hiding_in_rock_marker");
-    public static final double RANGE = 60.0D;
-    /** Where each player slipped into the earth (only the server touches it). */
-    private static final Map<UUID, Vec3> ENTRY = new HashMap<>();
 
     public HidingInRock(Properties pProperties) {
         super(pProperties);
@@ -80,7 +73,6 @@ public class HidingInRock extends AbstractJutsuItem {
             return false;
         }
         player.getAttribute(Attributes.ARMOR_TOUGHNESS).addTransientModifier(new AttributeModifier(MARKER, 0.0D, AttributeModifier.Operation.ADD_VALUE));
-        ENTRY.put(player.getUUID(), player.position());
         level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.GRAVEL_BREAK, SoundSource.PLAYERS, 1.4F, 0.6F);
         return true;
     }
@@ -94,18 +86,11 @@ public class HidingInRock extends AbstractJutsuItem {
     /** Every second for every player: while hiding it costs chakra, and it ends when the chakra runs out or the caster is too far. */
     public static void tickUpkeep(ServerPlayer player) {
         if (!isActive(player)) {
-            ENTRY.remove(player.getUUID());
             return;
         }
         Chakra chakra = Services.PLATFORM.getChakra(player);
         if (chakra.getValue() < UPKEEP_COST) {
             player.displayClientMessage(Component.translatable("msg.no_chakra"), true);
-            leave(player);
-            return;
-        }
-        Vec3 entry = ENTRY.computeIfAbsent(player.getUUID(), id -> player.position());
-        if (player.position().distanceToSqr(entry) > RANGE * RANGE) {
-            player.displayClientMessage(Component.literal("Too far from where you went into the earth"), true);
             leave(player);
             return;
         }
@@ -115,7 +100,6 @@ public class HidingInRock extends AbstractJutsuItem {
     /** Comes out of the earth: the effects end, and if the caster is inside earth they are put on the surface above. */
     public static void leave(ServerPlayer player) {
         player.getAttribute(Attributes.ARMOR_TOUGHNESS).removeModifier(MARKER);
-        ENTRY.remove(player.getUUID());
         Level level = player.level();
         BlockPos pos = player.blockPosition();
         for (int up = 0; up < 120; up++) {
@@ -154,7 +138,6 @@ public class HidingInRock extends AbstractJutsuItem {
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, context, tooltip, flag);
         tooltip.add(Component.literal("Rank: C").withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.literal("Range: 60 meters").withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.literal("Upkeep: " + UPKEEP_COST + " chakra per second").withStyle(ChatFormatting.BLUE));
         tooltip.add(Component.literal("Sink into the earth, see-through, and move through it. Jump to rise, sneak to sink. Use again to come out.").withStyle(ChatFormatting.GRAY));
     }
