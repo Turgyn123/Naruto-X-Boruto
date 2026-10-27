@@ -5,10 +5,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.tags.DamageTypeTags;
-import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
@@ -20,9 +18,8 @@ import java.util.List;
 
 /**
  * Earth Release: Iron Skin. Rank B, 40 chakra and 25 chakra per second while it is on, on the caster only. Earth chakra flows
- * through the body, which turns darker (an earthen skin is drawn over the player) and as hard as diamond: attacks do little to no
- * damage, except lightning. The caster also hits harder and is hard to knock back. Use it again to stop. Requires Earth release
- * affinity.
+ * through the body, which turns darker (an earthen skin of dirt is drawn over the player) and hardens: it gives Resistance II. Use
+ * it again to stop. Requires Earth release affinity.
  */
 public class IronSkin extends AbstractJutsuItem {
 
@@ -30,8 +27,6 @@ public class IronSkin extends AbstractJutsuItem {
     /** Upkeep is paid every second, and the effect is renewed each time, so it can never get stuck on a player. */
     public static final int UPKEEP_INTERVAL = 20;
     private static final int EFFECT_TICKS = UPKEEP_INTERVAL * 3;
-    /** Attacks do a tenth of their damage. */
-    public static final float DAMAGE_FACTOR = 0.1F;
 
     public IronSkin(Properties pProperties) {
         super(pProperties);
@@ -62,10 +57,11 @@ public class IronSkin extends AbstractJutsuItem {
         if (player.hasEffect(ModEffects.IRON_SKIN)) {
             // Already on: this use turns it off (and the cost is given back)
             player.removeEffect(ModEffects.IRON_SKIN);
+            player.removeEffect(MobEffects.DAMAGE_RESISTANCE);
             player.displayClientMessage(Component.literal("Iron Skin released"), true);
             return false;
         }
-        player.addEffect(new MobEffectInstance(ModEffects.IRON_SKIN, EFFECT_TICKS, 0, false, false, true));
+        applyEffects(player);
         level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.STONE_PLACE, SoundSource.PLAYERS, 1.6F, 0.6F);
         level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.GRAVEL_BREAK, SoundSource.PLAYERS, 1.2F, 0.5F);
         return true;
@@ -77,17 +73,18 @@ public class IronSkin extends AbstractJutsuItem {
         Chakra chakra = Services.PLATFORM.getChakra(player);
         if (chakra.getValue() < UPKEEP_COST) {
             player.removeEffect(ModEffects.IRON_SKIN);
+            player.removeEffect(MobEffects.DAMAGE_RESISTANCE);
             player.displayClientMessage(Component.translatable("msg.no_chakra"), true);
             return;
         }
         chakra.subValue(UPKEEP_COST, player);
-        player.addEffect(new MobEffectInstance(ModEffects.IRON_SKIN, EFFECT_TICKS, 0, false, false, true));
+        applyEffects(player);
     }
 
-    /** Lightning Release is the one thing earth chakra does not turn aside. */
-    public static boolean isLightning(DamageSource source) {
-        return source.is(DamageTypeTags.IS_LIGHTNING) || source.is(DamageTypes.LIGHTNING_BOLT)
-                || source.getMsgId().toLowerCase().contains("lightning");
+    /** The earthen skin, and Resistance II (without particles). */
+    private static void applyEffects(ServerPlayer player) {
+        player.addEffect(new MobEffectInstance(ModEffects.IRON_SKIN, EFFECT_TICKS, 0, false, false, true));
+        player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, EFFECT_TICKS, 1, false, false, false));
     }
 
     @Override
@@ -96,6 +93,6 @@ public class IronSkin extends AbstractJutsuItem {
         tooltip.add(Component.literal("Rank: B").withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.literal("Range: self").withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.literal("Upkeep: " + UPKEEP_COST + " chakra per second").withStyle(ChatFormatting.BLUE));
-        tooltip.add(Component.literal("Your skin turns to hardened earth: almost no damage, except from lightning. Use again to stop.").withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.literal("Your skin turns to hardened earth (Resistance II). Use again to stop.").withStyle(ChatFormatting.GRAY));
     }
 }

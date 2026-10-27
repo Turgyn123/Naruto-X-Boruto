@@ -3,6 +3,7 @@ package net.narutoxboruto.client.renderer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
@@ -13,8 +14,8 @@ import net.narutoxboruto.effect.ModEffects;
 import net.narutoxboruto.main.Main;
 
 /**
- * Earth Release: Iron Skin: while it is on, the whole body of the player is drawn again over their own skin in hardened, darker
- * earth (the eyes stay clear). It is in the layout of a player skin, so it fits every part of the body, and it is drawn on the
+ * Earth Release: Iron Skin: while it is on, the whole body of the player is drawn again over their own skin in the dirt
+ * texture of the game (the eyes stay clear). It is in the layout of a player skin, so it fits every part of the body, and it is drawn on the
  * pose the player has, so it moves with them. The arms in first person are done in MixinPlayerRenderer.
  */
 public class IronSkinLayer extends RenderLayer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> {
@@ -31,7 +32,8 @@ public class IronSkinLayer extends RenderLayer<AbstractClientPlayer, PlayerModel
     public void render(PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, AbstractClientPlayer player,
                        float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks, float netHeadYaw, float headPitch) {
         if (ModEffects.IRON_SKIN == null || !player.hasEffect(ModEffects.IRON_SKIN) || player.isInvisible()) return;
-        getParentModel().renderToBuffer(poseStack, bufferSource.getBuffer(RenderType.entityTranslucent(TEXTURE)), packedLight,
+        int light = LightTexture.pack(Math.max(LightTexture.block(packedLight), 7), Math.max(LightTexture.sky(packedLight), 7));
+        getParentModel().renderToBuffer(poseStack, bufferSource.getBuffer(RenderType.entityTranslucent(TEXTURE)), light,
                 LivingEntityRenderer.getOverlayCoords(player, 0.0F), COLOR);
     }
 }

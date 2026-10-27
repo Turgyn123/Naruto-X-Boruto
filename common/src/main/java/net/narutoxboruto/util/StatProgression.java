@@ -124,6 +124,7 @@ public final class StatProgression {
         }
         if (tick % net.narutoxboruto.items.jutsus.IronSkin.UPKEEP_INTERVAL == 0) {
             net.narutoxboruto.items.jutsus.IronSkin.tickUpkeep(player);
+            net.narutoxboruto.items.jutsus.HidingInRock.tickUpkeep(player);
         }
         if (tick % LIGHTNING_MODE_DRAIN_INTERVAL == 0) {
             LightningChakraMode.tickChakraDrain(player);

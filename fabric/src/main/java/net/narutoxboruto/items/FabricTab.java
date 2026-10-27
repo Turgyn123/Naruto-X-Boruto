@@ -124,7 +124,7 @@ public class FabricTab {
                         output.accept(FabricItems.VACUUM_SPHERE_JUTSU);
                         output.accept(FabricItems.GREAT_BREAKTHROUGH_JUTSU);
                         output.accept(FabricItems.WATER_CLONE_JUTSU);
-                        output.accept(FabricItems.EARTH_SANDWICH_JUTSU);
+                        output.accept(FabricItems.HIDING_IN_ROCK_JUTSU);
                         output.accept(FabricItems.IRON_SKIN_JUTSU);
                         output.accept(FabricItems.FLAME_BULLET_JUTSU);
                         output.accept(FabricItems.GREAT_FIRE_ANNIHILATION_JUTSU);

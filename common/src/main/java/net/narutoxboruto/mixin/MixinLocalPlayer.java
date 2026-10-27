@@ -6,7 +6,9 @@ import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.Input;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.entity.player.ProfilePublicKey;
+import net.narutoxboruto.effect.ModEffects;
 import net.narutoxboruto.items.PreventSlow;
+import net.narutoxboruto.items.jutsus.HidingInRock;
 import net.narutoxboruto.client.WallFrame;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
@@ -30,6 +32,11 @@ public abstract class MixinLocalPlayer extends AbstractClientPlayer {
         if (this.useItem.getItem() instanceof PreventSlow) {
             input.leftImpulse *= 5;
             input.forwardImpulse *= 5;
+        }
+        // Hiding in Rock: inside the earth, jump rises and sneak sinks
+        if (ModEffects.HIDING_IN_ROCK != null && this.hasEffect(ModEffects.HIDING_IN_ROCK) && HidingInRock.isEmbedded(this)) {
+            double rise = input.jumping ? 0.3D : (input.shiftKeyDown ? -0.3D : 0.0D);
+            this.setDeltaMovement(this.getDeltaMovement().x, rise, this.getDeltaMovement().z);
         }
         // Walking on walls with Chakra Control: needs the input of this tick, and runs before the player moves
         WallFrame.tick((LocalPlayer) (Object) this, input);

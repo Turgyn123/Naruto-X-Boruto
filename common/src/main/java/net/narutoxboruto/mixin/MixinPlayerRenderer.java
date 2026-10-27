@@ -33,7 +33,9 @@ public class MixinPlayerRenderer {
     private void narutoxboruto$ironSkinHand(PoseStack poseStack, MultiBufferSource buffer, int light, AbstractClientPlayer player,
                                             ModelPart arm, ModelPart sleeve, CallbackInfo ci) {
         if (ModEffects.IRON_SKIN != null && player.hasEffect(ModEffects.IRON_SKIN)) {
-            arm.render(poseStack, buffer.getBuffer(RenderType.entityTranslucent(IronSkinLayer.TEXTURE)), light, OverlayTexture.NO_OVERLAY, IronSkinLayer.COLOR);
+            arm.render(poseStack, buffer.getBuffer(RenderType.entityTranslucent(IronSkinLayer.TEXTURE)),
+                    net.minecraft.client.renderer.LightTexture.pack(Math.max(net.minecraft.client.renderer.LightTexture.block(light), 7), Math.max(net.minecraft.client.renderer.LightTexture.sky(light), 7)),
+                    OverlayTexture.NO_OVERLAY, IronSkinLayer.COLOR);
         }
     }
 }

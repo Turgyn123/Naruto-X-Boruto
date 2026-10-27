@@ -106,6 +106,7 @@ public class NeoForgeMain {
 
         ModEffects.CHAKRA_CONTROL = NeoForgeEffects.CHAKRA_CONTROL;
         ModEffects.IRON_SKIN = NeoForgeEffects.IRON_SKIN;
+        ModEffects.HIDING_IN_ROCK = NeoForgeEffects.HIDING_IN_ROCK;
     }
 
     private void attributes(EntityAttributeCreationEvent event) {

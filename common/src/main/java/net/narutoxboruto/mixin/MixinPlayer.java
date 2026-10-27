@@ -9,7 +9,6 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.EntityType;
@@ -29,7 +28,7 @@ import net.narutoxboruto.dojutsu.DojutsuProgression;
 import net.narutoxboruto.effect.ModEffects;
 import net.narutoxboruto.entities.ModeHandler;
 import net.narutoxboruto.items.PreventSlow;
-import net.narutoxboruto.items.jutsus.IronSkin;
+import net.narutoxboruto.items.jutsus.HidingInRock;
 import net.narutoxboruto.items.swords.Hiramekarei;
 import net.narutoxboruto.items.swords.Kiba;
 import org.spongepowered.asm.mixin.Mixin;
@@ -37,7 +36,6 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
@@ -119,13 +117,27 @@ public abstract class MixinPlayer extends LivingEntity implements ModeHandler {
         }
     }
 
-    /** Earth Release: Iron Skin: attacks do almost no damage, except lightning. */
-    @ModifyVariable(method = "actuallyHurt", at = @At("HEAD"), argsOnly = true)
-    private float narutoxboruto$ironSkin(float amount, DamageSource source) {
-        if (ModEffects.IRON_SKIN != null && this.hasEffect(ModEffects.IRON_SKIN) && !IronSkin.isLightning(source)) {
-            return amount * IronSkin.DAMAGE_FACTOR;
+    /** Earth Release: Hiding in Rock: in the earth the player passes through it and does not fall; out of it they fall again. */
+    @Unique private boolean $rockNoGravity;
+
+    @Inject(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/LivingEntity;tick()V"))
+    private void narutoxboruto$hidingInRock(CallbackInfo ci) {
+        Player self = (Player) (Object) this;
+        if (ModEffects.HIDING_IN_ROCK != null && this.hasEffect(ModEffects.HIDING_IN_ROCK)) {
+            boolean embedded = HidingInRock.isEmbedded(self);
+            this.noPhysics = embedded || HidingInRock.isOnEarth(self);
+            if (embedded) {
+                this.setNoGravity(true);
+                this.$rockNoGravity = true;
+                this.fallDistance = 0.0F;
+            } else if (this.$rockNoGravity) {
+                this.setNoGravity(false);
+                this.$rockNoGravity = false;
+            }
+        } else if (this.$rockNoGravity) {
+            this.setNoGravity(false);
+            this.$rockNoGravity = false;
         }
-        return amount;
     }
 
     @Override

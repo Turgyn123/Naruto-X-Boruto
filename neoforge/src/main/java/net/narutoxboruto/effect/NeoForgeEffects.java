@@ -21,6 +21,8 @@ public class NeoForgeEffects {
 
     public static final DeferredHolder<MobEffect, MobEffect> IRON_SKIN = MOD_EFFECTS.register("iron_skin", IronSkinEffect::create);
 
+    public static final DeferredHolder<MobEffect, MobEffect> HIDING_IN_ROCK = MOD_EFFECTS.register("hiding_in_rock", HidingInRockEffect::new);
+
     public static void register(IEventBus eventBus) {
         MOD_EFFECTS.register(eventBus);
     }

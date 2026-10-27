@@ -49,7 +49,6 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
     private static final ResourceLocation FLAME_BLOB_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/flame_blob.png");
     private static final ResourceLocation FIRE_PUFF_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/fire_puff.png");
     private static final ResourceLocation ASH_PUFF_TEXTURE = ResourceLocation.fromNamespaceAndPath(Main.MOD_ID, "textures/entity/effects/ash_puff.png");
-    private static final ResourceLocation ROCK_TEXTURE = ResourceLocation.withDefaultNamespace("textures/block/dirt.png");
     private static final int FULL_BRIGHT = 0xF000F0;
 
     public WeaponEffectRenderer(EntityRendererProvider.Context context) {
@@ -81,14 +80,6 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
             return;
         }
 
-        if (kind == WeaponEffectEntity.SANDWICH) {
-            poseStack.pushPose();
-            poseStack.mulPose(Axis.YP.rotationDegrees(-Mth.lerp(partialTick, entity.yRotO, entity.getYRot())));
-            renderSandwich(age, poseStack, bufferSource, rockLight(packedLight), entity.getId());
-            poseStack.popPose();
-            return;
-        }
-
         poseStack.pushPose();
         if (kind == WeaponEffectEntity.THREAD) {
             renderThread(entity, age, partialTick, poseStack, bufferSource);
@@ -103,131 +94,6 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
             else renderCrescent(entity, age, fade, poseStack, bufferSource);
         }
         poseStack.popPose();
-    }
-
-    // ---------------------------------------------------------------- earth jutsu
-
-    /** The light where the rock stands, but never darker than dusk, so the rock can always be seen. */
-    private static int rockLight(int packedLight) {
-        return LightTexture.pack(Math.max(LightTexture.block(packedLight), 9), Math.max(LightTexture.sky(packedLight), 9));
-    }
-
-    /**
-     * Earth Release: Sandwich, as in the anime: two quarters of a huge ring of rock (the dirt block texture) that rise on
-     * both sides of the target, curve round it, lean in at the top, and then close in on the middle and smash together. The
-     * local z axis is the way the caster aims, and x is across it.
-     */
-    private void renderSandwich(float age, PoseStack poseStack, MultiBufferSource bufferSource, int light, int seed) {
-        float rise = WeaponEffectEntity.sandwichRise(age);
-        if (rise <= 0.001F) return;
-        float radius = (float) WeaponEffectEntity.sandwichRadius(age);
-        float thickness = (float) WeaponEffectEntity.SANDWICH_THICKNESS;
-        float height = (float) WeaponEffectEntity.SANDWICH_HEIGHT * rise;
-        float halfArc = (float) WeaponEffectEntity.SANDWICH_HALF_ARC;
-        Matrix4f m = poseStack.last().pose();
-        VertexConsumer vc = bufferSource.getBuffer(RenderType.entityCutoutNoCull(ROCK_TEXTURE));
-        int segments = 18;
-        // Two tiers, so the wall leans in at the top like the cliffs of the anime: the lower three fifths stand up, the top
-        // fifths are pulled in towards the middle
-        float[] tierTop = {0.0F, 0.35F, 0.7F, 1.0F};
-        float[] tierLean = {0.0F, 0.0F, 1.4F, 3.2F};
-        for (int side = -1; side <= 1; side += 2) {
-            for (int t = 0; t < 3; t++) {
-                float y0 = t == 0 ? -4.0F : height * tierTop[t];
-                float y1 = height * tierTop[t + 1];
-                if (y1 <= y0) continue;
-                float lean0 = tierLean[t] * rise;
-                float lean1 = tierLean[t + 1] * rise;
-                for (int i = 0; i < segments; i++) {
-                    float a0 = -halfArc + 2.0F * halfArc * i / segments;
-                    float a1 = -halfArc + 2.0F * halfArc * (i + 1) / segments;
-                    // A little different height on every column, so the top edge is rough
-                    float rough = t == 2 ? (0.7F + 0.3F * hash(seed * 31 + i * 7 + side * 3)) : 1.0F;
-                    float top = t == 2 ? y0 + (y1 - y0) * rough : y1;
-                    ringBlock(vc, m, side, Math.max(0.05F, radius - lean0), radius + thickness - lean0,
-                            Math.max(0.05F, radius - lean1), radius + thickness - lean1, a0, a1, y0, top, 1.0F, light);
-                }
-            }
-        }
-    }
-
-    /**
-     * One piece of the ring: between two angles, from an inside radius to an outside radius, at the bottom ({@code in0},
-     * {@code out0} at {@code y0}) and at the top ({@code in1}, {@code out1} at {@code y1}). {@code side} is -1 for the wall on the
-     * -x side and 1 for the other one.
-     */
-    private static void ringBlock(VertexConsumer vc, Matrix4f m, int side, float in0, float out0, float in1, float out1,
-                                  float a0, float a1, float y0, float y1, float shade, int light) {
-        float[] bi0 = corner(side, in0, a0, y0);
-        float[] bi1 = corner(side, in0, a1, y0);
-        float[] bo0 = corner(side, out0, a0, y0);
-        float[] bo1 = corner(side, out0, a1, y0);
-        float[] ti0 = corner(side, in1, a0, y1);
-        float[] ti1 = corner(side, in1, a1, y1);
-        float[] to0 = corner(side, out1, a0, y1);
-        float[] to1 = corner(side, out1, a1, y1);
-        float u = (a1 - a0) * (in0 + out0) * 0.25F;
-        float v = (y1 - y0) / 2.0F;
-        float w = (out0 - in0) / 2.0F;
-        float inner = shade * 0.85F;
-        float outer = shade * 0.95F;
-        float end = shade * 0.7F;
-        // the inside (the face seen from the middle) and the outside
-        face(vc, m, bi0, 0, v, bi1, u, v, ti1, u, 0, ti0, 0, 0, inner, light);
-        face(vc, m, bo0, 0, v, bo1, u, v, to1, u, 0, to0, 0, 0, outer, light);
-        // the top
-        face(vc, m, ti0, 0, 0, ti1, u, 0, to1, u, w, to0, 0, w, shade, light);
-        // the two ends
-        face(vc, m, bi0, 0, v, bo0, w, v, to0, w, 0, ti0, 0, 0, end, light);
-        face(vc, m, bi1, 0, v, bo1, w, v, to1, w, 0, ti1, 0, 0, end, light);
-    }
-
-    private static float[] corner(int side, float radius, float angle, float y) {
-        return new float[]{side * radius * Mth.cos(angle), y, radius * Mth.sin(angle)};
-    }
-
-    private static void face(VertexConsumer vc, Matrix4f m, float[] p0, float u0, float v0, float[] p1, float u1, float v1,
-                             float[] p2, float u2, float v2, float[] p3, float u3, float v3, float tone, int light) {
-        solidVertex(vc, m, p0[0], p0[1], p0[2], u0, v0, tone, light);
-        solidVertex(vc, m, p1[0], p1[1], p1[2], u1, v1, tone, light);
-        solidVertex(vc, m, p2[0], p2[1], p2[2], u2, v2, tone, light);
-        solidVertex(vc, m, p3[0], p3[1], p3[2], u3, v3, tone, light);
-    }
-
-    /** A box of rock whose faces repeat the texture every two blocks, and are shaded so it looks solid. */
-    private static void rockBox(VertexConsumer vc, Matrix4f m, float x0, float y0, float z0, float x1, float y1, float z1, float shade, int light) {
-        if (y1 <= y0) return;
-        float top = Math.min(shade, 1.0F);
-        float side = top * 0.82F;
-        float end = top * 0.7F;
-        float bottom = top * 0.55F;
-        float ux = (x1 - x0) / 2.0F;
-        float uy = (y1 - y0) / 2.0F;
-        float uz = (z1 - z0) / 2.0F;
-        // bottom, top
-        solidVertex(vc, m, x0, y0, z0, 0, 0, bottom, light); solidVertex(vc, m, x1, y0, z0, ux, 0, bottom, light);
-        solidVertex(vc, m, x1, y0, z1, ux, uz, bottom, light); solidVertex(vc, m, x0, y0, z1, 0, uz, bottom, light);
-        solidVertex(vc, m, x0, y1, z0, 0, 0, top, light); solidVertex(vc, m, x0, y1, z1, 0, uz, top, light);
-        solidVertex(vc, m, x1, y1, z1, ux, uz, top, light); solidVertex(vc, m, x1, y1, z0, ux, 0, top, light);
-        // the two long faces (along x)
-        solidVertex(vc, m, x0, y0, z0, 0, uy, side, light); solidVertex(vc, m, x0, y1, z0, 0, 0, side, light);
-        solidVertex(vc, m, x1, y1, z0, ux, 0, side, light); solidVertex(vc, m, x1, y0, z0, ux, uy, side, light);
-        solidVertex(vc, m, x0, y0, z1, 0, uy, side, light); solidVertex(vc, m, x1, y0, z1, ux, uy, side, light);
-        solidVertex(vc, m, x1, y1, z1, ux, 0, side, light); solidVertex(vc, m, x0, y1, z1, 0, 0, side, light);
-        // the two ends (along z)
-        solidVertex(vc, m, x0, y0, z0, 0, uy, end, light); solidVertex(vc, m, x0, y0, z1, uz, uy, end, light);
-        solidVertex(vc, m, x0, y1, z1, uz, 0, end, light); solidVertex(vc, m, x0, y1, z0, 0, 0, end, light);
-        solidVertex(vc, m, x1, y0, z0, 0, uy, end, light); solidVertex(vc, m, x1, y1, z0, 0, 0, end, light);
-        solidVertex(vc, m, x1, y1, z1, uz, 0, end, light); solidVertex(vc, m, x1, y0, z1, uz, uy, end, light);
-    }
-
-    private static void solidVertex(VertexConsumer vc, Matrix4f m, float x, float y, float z, float u, float v, float tone, int light) {
-        vc.addVertex(m, x, y, z)
-                .setColor(tone, tone, tone, 1.0F)
-                .setUv(u, v)
-                .setOverlay(OverlayTexture.NO_OVERLAY)
-                .setLight(light)
-                .setNormal(0.0F, 1.0F, 0.0F);
     }
 
     // ---------------------------------------------------------------- fire jutsu

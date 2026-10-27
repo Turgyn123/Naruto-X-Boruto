@@ -66,7 +66,6 @@ public class WeaponEffectEntity extends Entity {
     public static final int FLAME_BULLET = 5;
     public static final int VACUUM_BULLET = 6;
     public static final int GREAT_BREAKTHROUGH = 7;
-    public static final int SANDWICH = 8;
 
     private static final EntityDataAccessor<Integer> KIND = SynchedEntityData.defineId(WeaponEffectEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Float> SIZE = SynchedEntityData.defineId(WeaponEffectEntity.class, EntityDataSerializers.FLOAT);
@@ -470,155 +469,6 @@ public class WeaponEffectEntity extends Entity {
         return this.damageSources().magic();
     }
 
-    // ---------------------------------------------------------------- earth jutsu
-
-    /**
-     * Earth Release: Sandwich, as in the anime: two quarters of a huge ring of rock rise out of the ground on both sides of
-     * where the caster aims, curving round the target, stand a moment, then close in on the middle and crush everything
-     * between them. The open sides of the ring are in front of and behind the target.
-     */
-    public static final double SANDWICH_RANGE = 30.0D;
-    public static final int SANDWICH_RISE = 14;
-    public static final int SANDWICH_HOLD = 10;
-    public static final int SANDWICH_SLAM = 6;
-    public static final int SANDWICH_STAY = 24;
-    public static final int SANDWICH_SINK = 12;
-    public static final int SANDWICH_TICKS = SANDWICH_RISE + SANDWICH_HOLD + SANDWICH_SLAM + SANDWICH_STAY + SANDWICH_SINK;
-    /** The inside radius of the ring the two walls are quarters of, before they slam, and where they end up. */
-    public static final double SANDWICH_RADIUS = 7.0D;
-    public static final double SANDWICH_MIN_RADIUS = 0.8D;
-    public static final double SANDWICH_THICKNESS = 2.5D;
-    /** Each wall is a quarter of the ring: 50 degrees to each side of the line across the way the caster aims. */
-    public static final double SANDWICH_HALF_ARC = Math.toRadians(50.0D);
-    public static final double SANDWICH_HEIGHT = 12.0D;
-    private static final float SANDWICH_WALL_DAMAGE = 15.0F;
-    private static final float SANDWICH_CRUSH_DAMAGE = 25.0F;
-    /** Who the walls have crushed already (hitIds holds who the walls have hit). */
-    private final Set<Integer> crushIds = new HashSet<>();
-
-    /** The inside radius of the ring at this age: the walls close in on the middle after they have risen and stood. */
-    public static double sandwichRadius(float age) {
-        float t = Mth.clamp((age - SANDWICH_RISE - SANDWICH_HOLD) / SANDWICH_SLAM, 0.0F, 1.0F);
-        return SANDWICH_RADIUS + (SANDWICH_MIN_RADIUS - SANDWICH_RADIUS) * t * t;
-    }
-
-    /** How far out of the ground the walls are, from 0 to 1: they rise in the beginning and sink at the end. */
-    public static float sandwichRise(float age) {
-        float up = Mth.clamp(age / SANDWICH_RISE, 0.0F, 1.0F);
-        float down = Mth.clamp((SANDWICH_TICKS - age) / SANDWICH_SINK, 0.0F, 1.0F);
-        float t = Math.min(up, down);
-        return t * t * (3.0F - 2.0F * t);
-    }
-
-    /** The ground at {@code at}: the first spot, from a little above it downwards, that has room above solid ground. */
-    private static double groundBelow(ServerLevel level, Vec3 at) {
-        BlockPos pos = BlockPos.containing(at.x, at.y + 0.5D, at.z);
-        for (int i = 0; i < 6 && !level.getBlockState(pos).getCollisionShape(level, pos).isEmpty(); i++) {
-            pos = pos.above();
-        }
-        for (int i = 0; i < 30; i++) {
-            BlockPos below = pos.below();
-            if (!level.getBlockState(below).getCollisionShape(level, below).isEmpty()) break;
-            pos = below;
-        }
-        return pos.getY();
-    }
-
-    /** Where the caster aims, up to {@code range} meters: a creature, or a block, or the end of the line. */
-    private static Vec3 aimPoint(ServerLevel level, ServerPlayer caster, double range) {
-        Vec3 eye = caster.getEyePosition();
-        Vec3 end = eye.add(caster.getLookAngle().scale(range));
-        HitResult block = level.clip(new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, caster));
-        Vec3 stop = block.getType() == HitResult.Type.MISS ? end : block.getLocation();
-        EntityHitResult entity = ProjectileUtil.getEntityHitResult(level, caster, eye, stop, new AABB(eye, stop).inflate(1.0D),
-                e -> e instanceof LivingEntity && e.isAlive() && !e.isSpectator() && e != caster);
-        return entity != null ? entity.getEntity().position() : stop;
-    }
-
-    public static void spawnSandwich(ServerLevel level, ServerPlayer caster) {
-        Vec3 point = aimPoint(level, caster, SANDWICH_RANGE);
-        Vec3 toward = new Vec3(point.x - caster.getX(), 0.0D, point.z - caster.getZ());
-        if (toward.lengthSqr() < 1.0D) {
-            Vec3 look = caster.getLookAngle();
-            toward = new Vec3(look.x, 0.0D, look.z);
-        }
-        toward = toward.lengthSqr() < 1.0E-4D ? new Vec3(0.0D, 0.0D, 1.0D) : toward.normalize();
-        Vec3 base = new Vec3(point.x, groundBelow(level, point), point.z);
-        WeaponEffectEntity effect = create(level, SANDWICH, base, toward, 1.0F, 0xFFFFFFFF, SANDWICH_TICKS);
-        effect.owner = caster.getUUID();
-        level.addFreshEntity(effect);
-        level.playSound(null, base.x, base.y, base.z, SoundEvents.STONE_BREAK, SoundSource.PLAYERS, 2.5F, 0.5F);
-        level.playSound(null, base.x, base.y, base.z, SoundEvents.GRAVEL_BREAK, SoundSource.PLAYERS, 2.5F, 0.4F);
-    }
-
-    /** Whether {@code e} is a creature of the caster (a clone or the golem), which the walls leave alone. */
-    private boolean isOwners(Entity e) {
-        if (owner == null) return false;
-        if (e.getUUID().equals(owner)) return true;
-        if (e instanceof net.narutoxboruto.entities.jutsus.WaterCloneEntity clone) return owner.equals(clone.getOwnerId());
-        if (e instanceof net.narutoxboruto.entities.jutsus.GolemEntity golem) return owner.equals(golem.getOwnerId());
-        return false;
-    }
-
-    /** Hits what is in the walls, drags what is inside the ring in as it closes and crushes what is left when the walls meet. */
-    private void tickSandwich() {
-        if (!(level() instanceof ServerLevel serverLevel)) return;
-        float age = tickCount;
-        double radius = sandwichRadius(age);
-        Vec3 forward = Vec3.directionFromRotation(0.0F, getYRot());
-        Vec3 side = new Vec3(Mth.cos(getYRot() * ((float) Math.PI / 180.0F)), 0.0D, Mth.sin(getYRot() * ((float) Math.PI / 180.0F)));
-        double reach = SANDWICH_RADIUS + SANDWICH_THICKNESS + 2.0D;
-        Entity caster = owner == null ? null : serverLevel.getEntity(owner);
-        boolean up = age >= SANDWICH_RISE && age < SANDWICH_TICKS - SANDWICH_SINK;
-        boolean closing = age > SANDWICH_RISE + SANDWICH_HOLD;
-        boolean closed = age == SANDWICH_RISE + SANDWICH_HOLD + SANDWICH_SLAM;
-        if (age == SANDWICH_RISE + SANDWICH_HOLD) {
-            serverLevel.playSound(null, getX(), getY(), getZ(), SoundEvents.STONE_BREAK, SoundSource.PLAYERS, 2.5F, 0.4F);
-        }
-        if (closed) {
-            serverLevel.playSound(null, getX(), getY(), getZ(), SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 2.0F, 0.5F);
-            serverLevel.playSound(null, getX(), getY(), getZ(), SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 2.0F, 0.4F);
-        }
-        if (up) {
-            AABB box = new AABB(getX() - reach, getY() - 1.0D, getZ() - reach, getX() + reach, getY() + SANDWICH_HEIGHT, getZ() + reach);
-            for (LivingEntity e : serverLevel.getEntitiesOfClass(LivingEntity.class, box, x -> x.isAlive() && !x.isSpectator() && !isOwners(x))) {
-                Vec3 rel = e.position().subtract(position());
-                double lx = rel.dot(side);
-                double lz = rel.dot(forward);
-                double distance = Math.sqrt(lx * lx + lz * lz);
-                // How far round the ring it is, from the line across the aim, on the side of the wall it is nearest to
-                double angle = Math.abs(Math.atan2(lz, Math.abs(lx)));
-                boolean onArc = angle <= SANDWICH_HALF_ARC + 0.1D;
-                // In a wall: it is hit by the rock once
-                if (onArc && distance >= radius - 0.3D && distance <= radius + SANDWICH_THICKNESS + 0.3D && hitIds.add(e.getId())) {
-                    e.invulnerableTime = 0;
-                    e.hurt(earthSource(caster), SANDWICH_WALL_DAMAGE);
-                }
-                // Inside the ring while it closes: pulled to the middle
-                if (closing && distance < radius + 0.2D && distance > 0.5D && angle <= SANDWICH_HALF_ARC + 0.5D) {
-                    e.push(-lx / distance * 0.2D * side.x - lz / distance * 0.2D * forward.x, 0.0D,
-                            -lx / distance * 0.2D * side.z - lz / distance * 0.2D * forward.z);
-                    e.hurtMarked = true;
-                }
-                // The walls meet: whatever is caught is crushed
-                if (closed && distance <= SANDWICH_RADIUS * 0.9D && crushIds.add(e.getId())) {
-                    e.invulnerableTime = 0;
-                    e.hurt(earthSource(caster), SANDWICH_CRUSH_DAMAGE);
-                }
-            }
-        }
-        if (closed) {
-            serverLevel.sendParticles(new net.minecraft.core.particles.BlockParticleOption(ParticleTypes.BLOCK, net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState()),
-                    getX(), getY() + 3.0D, getZ(), 24, 1.2D, 3.0D, 1.2D, 0.08D);
-        }
-        if (--life <= 0) discard();
-    }
-
-    private DamageSource earthSource(Entity caster) {
-        if (caster instanceof net.minecraft.world.entity.player.Player player) return this.damageSources().playerAttack(player);
-        return this.damageSources().magic();
-    }
-
     /** A cloud of ash hanging in the air around {@code center}. */
     public static void spawnAshCloud(ServerLevel level, ServerPlayer caster, Vec3 center) {
         WeaponEffectEntity effect = create(level, ASH_CLOUD, center, new Vec3(0.0D, 0.0D, 1.0D), 1.0F, 0xFFFFFFFF, CLOUD_TICKS);
@@ -790,10 +640,6 @@ public class WeaponEffectEntity extends Entity {
         }
         if (getKind() == GREAT_BREAKTHROUGH) {
             tickGreatBreakthrough();
-            return;
-        }
-        if (getKind() == SANDWICH) {
-            tickSandwich();
             return;
         }
 
