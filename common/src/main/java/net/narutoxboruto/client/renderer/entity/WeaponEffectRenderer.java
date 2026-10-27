@@ -80,6 +80,13 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
             return;
         }
 
+        if (kind == WeaponEffectEntity.CHIDORI) {
+            poseStack.pushPose();
+            renderChidori(entity, age, partialTick, poseStack, bufferSource);
+            poseStack.popPose();
+            return;
+        }
+
         poseStack.pushPose();
         if (kind == WeaponEffectEntity.THREAD) {
             renderThread(entity, age, partialTick, poseStack, bufferSource);
@@ -94,6 +101,72 @@ public class WeaponEffectRenderer extends EntityRenderer<WeaponEffectEntity> {
             else renderCrescent(entity, age, fade, poseStack, bufferSource);
         }
         poseStack.popPose();
+    }
+
+    // ---------------------------------------------------------------- lightning jutsu
+
+    /**
+     * Lightning Release: Chidori: a ball of white blue lightning in the hand that crackles. A bright white heart in glowing blue
+     * shells, and many thin jagged bolts that leap out of it in every direction and change several times each tick of a second, so it
+     * seems to chirp. It grows while it charges, and while the caster dashes it has long bolts that stream back behind it. Where it hits it
+     * bursts: a ball that swells and fades, full of bolts.
+     */
+    private void renderChidori(WeaponEffectEntity entity, float age, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource) {
+        int state = entity.getTargetId();
+        float burst = state >= 2 ? (state - 2) + partialTick : -1.0F;
+        float charge = Mth.clamp(age / WeaponEffectEntity.CHIDORI_CHARGE, 0.0F, 1.0F);
+        float radius;
+        float alpha = 1.0F;
+        if (burst >= 0.0F) {
+            float t = Mth.clamp(burst / WeaponEffectEntity.CHIDORI_BURST, 0.0F, 1.0F);
+            radius = 0.3F + 1.1F * t;
+            alpha = 1.0F - t;
+        } else if (state == 1) {
+            radius = 0.26F;
+        } else {
+            radius = 0.06F + 0.17F * charge;
+        }
+        if (alpha < 0.02F) return;
+        Matrix4f matrix = poseStack.last().pose();
+        VertexConsumer vc = bufferSource.getBuffer(GlowRenderType.GLOW);
+        // The ball: a white heart and shells of blue light
+        ChakraSphereRenderer.smoothBall(vc, matrix, radius * 0.45F, 1.0F, 1.0F, 1.0F, 0.9F * alpha);
+        ChakraSphereRenderer.smoothBall(vc, matrix, radius * 0.75F, 0.8F, 0.92F, 1.0F, 0.45F * alpha);
+        ChakraSphereRenderer.smoothBall(vc, matrix, radius * 1.1F, 0.45F, 0.7F, 1.0F, 0.22F * alpha);
+        ChakraSphereRenderer.smoothBall(vc, matrix, radius * 1.6F, 0.35F, 0.6F, 1.0F, 0.09F * alpha);
+        // Bolts that leap out of it, in new places three or four times each second tick
+        int jump = (int) (age * 2.0F);
+        int seed = entity.getId() * 53 + jump * 17;
+        int bolts = burst >= 0.0F ? 18 : 12;
+        for (int i = 0; i < bolts; i++) {
+            Vec3 direction = chidoriDirection(seed + i * 7);
+            double length = radius * (2.2D + 3.2D * hash(seed + i * 11)) * (burst >= 0.0F ? 1.6D : 1.0D);
+            Vec3 side = direction.cross(chidoriDirection(seed + i * 13)).normalize().scale(length * 0.22D);
+            Vec3 start = direction.scale(radius * 0.8D);
+            Vec3 middle = direction.scale(radius * 0.8D + length * 0.5D).add(side);
+            Vec3 end = direction.scale(radius * 0.8D + length).subtract(side.scale(0.8D));
+            ChakraSphereRenderer.bolt(vc, matrix, new Vec3[]{start, middle, end}, 0.012F + 0.01F * radius, 0.95F * alpha);
+        }
+        if (state == 1) {
+            // Streaming back behind the dash
+            float yaw = Mth.lerp(partialTick, entity.yRotO, entity.getYRot()) * ((float) Math.PI / 180.0F);
+            float pitch = Mth.lerp(partialTick, entity.xRotO, entity.getXRot()) * ((float) Math.PI / 180.0F);
+            Vec3 back = new Vec3(Mth.sin(yaw) * Mth.cos(pitch), Mth.sin(pitch), -Mth.cos(yaw) * Mth.cos(pitch));
+            for (int i = 0; i < 6; i++) {
+                Vec3 spread = chidoriDirection(seed + 400 + i * 5).scale(0.35D);
+                Vec3 mid = back.scale(0.9D).add(spread.scale(0.6D));
+                Vec3 end = back.scale(1.8D + hash(seed + i) * 0.8D).add(spread);
+                ChakraSphereRenderer.bolt(vc, matrix, new Vec3[]{back.scale(0.2D), mid, end}, 0.014F, 0.85F * alpha);
+            }
+        }
+    }
+
+    /** A direction that points anywhere, always the same for the same number. */
+    private static Vec3 chidoriDirection(int n) {
+        double theta = hash(n * 7 + 1) * Math.PI * 2.0D;
+        double z = hash(n * 7 + 2) * 2.0D - 1.0D;
+        double ring = Math.sqrt(1.0D - z * z);
+        return new Vec3(Math.cos(theta) * ring, z, Math.sin(theta) * ring);
     }
 
     // ---------------------------------------------------------------- fire jutsu

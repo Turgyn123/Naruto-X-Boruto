@@ -105,6 +105,7 @@ public class ForgeTab {
                 output.accept(GREAT_BREAKTHROUGH_JUTSU.get());
                 output.accept(WATER_CLONE_JUTSU.get());
                 output.accept(HIDING_IN_ROCK_JUTSU.get());
+                output.accept(CHIDORI_JUTSU.get());
                 output.accept(IRON_SKIN_JUTSU.get());
                 output.accept(FLAME_BULLET_JUTSU.get());
                 output.accept(GREAT_FIRE_ANNIHILATION_JUTSU.get());

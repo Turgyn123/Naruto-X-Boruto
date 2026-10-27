@@ -66,6 +66,7 @@ public class WeaponEffectEntity extends Entity {
     public static final int FLAME_BULLET = 5;
     public static final int VACUUM_BULLET = 6;
     public static final int GREAT_BREAKTHROUGH = 7;
+    public static final int CHIDORI = 8;
 
     private static final EntityDataAccessor<Integer> KIND = SynchedEntityData.defineId(WeaponEffectEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Float> SIZE = SynchedEntityData.defineId(WeaponEffectEntity.class, EntityDataSerializers.FLOAT);
@@ -469,6 +470,122 @@ public class WeaponEffectEntity extends Entity {
         return this.damageSources().magic();
     }
 
+    // ---------------------------------------------------------------- lightning jutsu
+
+    /**
+     * Lightning Release: Chidori: a ball of crackling lightning in the right hand of the caster that charges for a second, and
+     * then the caster dashes forward with it, until it hits a living thing (or a wall, or they have gone about 17 meters), where
+     * it bursts. It is shown to the clients by the state in TARGET: 0 charging, 1 dashing, 2 and up how long it has been bursting.
+     */
+    public static final int CHIDORI_CHARGE = 20;
+    public static final int CHIDORI_DASH = 12;
+    public static final int CHIDORI_BURST = 8;
+    private static final double CHIDORI_SPEED = 1.45D;
+    private static final float CHIDORI_DAMAGE = 30.0F;
+    private int chidoriTicks;
+
+    /** The right hand of the caster, a little in front. */
+    private static Vec3 chidoriHand(LivingEntity caster) {
+        Vec3 look = caster.getLookAngle();
+        Vec3 flat = new Vec3(look.x, 0.0D, look.z);
+        flat = flat.lengthSqr() < 1.0E-4D ? new Vec3(0.0D, 0.0D, 1.0D) : flat.normalize();
+        Vec3 right = new Vec3(-flat.z, 0.0D, flat.x);
+        return caster.position().add(0.0D, caster.getBbHeight() * 0.62D, 0.0D).add(right.scale(0.42D)).add(flat.scale(0.55D)).add(look.scale(0.15D));
+    }
+
+    public static boolean hasChidori(ServerLevel level, ServerPlayer caster) {
+        return !level.getEntitiesOfClass(WeaponEffectEntity.class, caster.getBoundingBox().inflate(40.0D),
+                e -> e.getKind() == CHIDORI && caster.getUUID().equals(e.owner) && e.isAlive()).isEmpty();
+    }
+
+    public static void spawnChidori(ServerLevel level, ServerPlayer caster) {
+        WeaponEffectEntity effect = create(level, CHIDORI, chidoriHand(caster), caster.getLookAngle(), 1.0F, 0xFFFFFFFF,
+                CHIDORI_CHARGE + CHIDORI_DASH + CHIDORI_BURST + 10);
+        effect.owner = caster.getUUID();
+        effect.entityData.set(TARGET, 0);
+        level.addFreshEntity(effect);
+        level.playSound(null, caster.getX(), caster.getY(), caster.getZ(), SoundEvents.LIGHTNING_BOLT_IMPACT, SoundSource.PLAYERS, 0.5F, 2.0F);
+    }
+
+    private void tickChidori() {
+        if (!(level() instanceof ServerLevel serverLevel)) return;
+        Entity found = owner == null ? null : serverLevel.getEntity(owner);
+        int state = this.entityData.get(TARGET);
+        if (state >= 2) {
+            // Bursting where it hit
+            if (state - 2 >= CHIDORI_BURST) {
+                discard();
+                return;
+            }
+            this.entityData.set(TARGET, state + 1);
+            return;
+        }
+        if (!(found instanceof ServerPlayer caster) || !caster.isAlive()) {
+            discard();
+            return;
+        }
+        Vec3 look = caster.getLookAngle();
+        Vec3 hand = chidoriHand(caster);
+        setPos(hand.x, hand.y, hand.z);
+        setYRot((float) (Mth.atan2(-look.x, look.z) * (180.0D / Math.PI)));
+        setXRot((float) (-Math.toDegrees(Math.asin(Mth.clamp(look.y, -1.0D, 1.0D)))));
+        chidoriTicks++;
+        if (state == 0) {
+            // Charging: it is put away if the caster puts the jutsu away
+            if (!(caster.getMainHandItem().getItem() instanceof net.narutoxboruto.items.jutsus.Chidori)) {
+                discard();
+                return;
+            }
+            if (chidoriTicks % 4 == 0) {
+                serverLevel.playSound(null, hand.x, hand.y, hand.z, SoundEvents.LIGHTNING_BOLT_IMPACT, SoundSource.PLAYERS, 0.25F, 1.8F + 0.01F * chidoriTicks);
+            }
+            if (chidoriTicks >= CHIDORI_CHARGE) {
+                this.entityData.set(TARGET, 1);
+                chidoriTicks = 0;
+                serverLevel.playSound(null, hand.x, hand.y, hand.z, SoundEvents.TRIDENT_THUNDER.value(), SoundSource.PLAYERS, 1.0F, 1.6F);
+            }
+            return;
+        }
+        // Dashing: the caster is driven forward with the lightning ahead of them
+        Vec3 dir = new Vec3(look.x, Math.max(look.y, -0.15D), look.z).normalize();
+        caster.setDeltaMovement(dir.scale(CHIDORI_SPEED));
+        caster.hurtMarked = true;
+        caster.fallDistance = 0.0F;
+        Vec3 tip = hand.add(look.scale(0.7D));
+        LivingEntity victim = null;
+        for (LivingEntity e : serverLevel.getEntitiesOfClass(LivingEntity.class, new AABB(tip, tip).inflate(1.5D),
+                x -> x.isAlive() && !x.isSpectator() && x != caster && !isOwnersCreature(x))) {
+            victim = e;
+            break;
+        }
+        if (victim != null) {
+            victim.invulnerableTime = 0;
+            victim.hurt(lightningSource(caster), CHIDORI_DAMAGE);
+            victim.setDeltaMovement(victim.getDeltaMovement().add(dir.scale(1.0D)).add(0.0D, 0.3D, 0.0D));
+            victim.hurtMarked = true;
+        }
+        if (victim != null || caster.horizontalCollision || chidoriTicks >= CHIDORI_DASH) {
+            caster.setDeltaMovement(dir.scale(0.15D));
+            caster.hurtMarked = true;
+            setPos(tip.x, tip.y, tip.z);
+            this.entityData.set(TARGET, 2);
+            serverLevel.playSound(null, tip.x, tip.y, tip.z, SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.PLAYERS, victim != null ? 0.9F : 0.4F, 1.3F);
+            serverLevel.sendParticles(ParticleTypes.ELECTRIC_SPARK, tip.x, tip.y, tip.z, 25, 0.5D, 0.5D, 0.5D, 0.4D);
+        }
+    }
+
+    private boolean isOwnersCreature(Entity e) {
+        if (owner == null) return false;
+        if (e instanceof net.narutoxboruto.entities.jutsus.WaterCloneEntity clone) return owner.equals(clone.getOwnerId());
+        if (e instanceof net.narutoxboruto.entities.jutsus.GolemEntity golem) return owner.equals(golem.getOwnerId());
+        return false;
+    }
+
+    private DamageSource lightningSource(Entity caster) {
+        if (caster instanceof net.minecraft.world.entity.player.Player player) return this.damageSources().playerAttack(player);
+        return this.damageSources().lightningBolt();
+    }
+
     /** A cloud of ash hanging in the air around {@code center}. */
     public static void spawnAshCloud(ServerLevel level, ServerPlayer caster, Vec3 center) {
         WeaponEffectEntity effect = create(level, ASH_CLOUD, center, new Vec3(0.0D, 0.0D, 1.0D), 1.0F, 0xFFFFFFFF, CLOUD_TICKS);
@@ -640,6 +757,10 @@ public class WeaponEffectEntity extends Entity {
         }
         if (getKind() == GREAT_BREAKTHROUGH) {
             tickGreatBreakthrough();
+            return;
+        }
+        if (getKind() == CHIDORI) {
+            tickChidori();
             return;
         }
 

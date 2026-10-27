@@ -52,8 +52,9 @@ public class JutsuGrantHelper {
                         ModItems.WATER_CLONE_JUTSU, "Water Clone Technique");
                 break;
             case "lightning":
-                grantSingleJutsu(serverPlayer, storage,
-                        ModItems.LIGHTNING_CHAKRA_MODE, "Lightning Chakra Mode");
+                grantMultipleJutsus(serverPlayer, storage,
+                        ModItems.LIGHTNING_CHAKRA_MODE, "Lightning Chakra Mode",
+                        ModItems.CHIDORI_JUTSU, "Chidori");
                 break;
             case "wind":
                 grantMultipleJutsus(serverPlayer, storage,
@@ -189,6 +190,7 @@ public class JutsuGrantHelper {
 
         if (playerReleases.toLowerCase().contains("lightning")) {
             modified |= restoreIfMissing(serverPlayer, storage, ModItems.LIGHTNING_CHAKRA_MODE, checkInventory);
+            modified |= restoreIfMissing(serverPlayer, storage, ModItems.CHIDORI_JUTSU, checkInventory);
         }
 
         if (modified) {

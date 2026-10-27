@@ -75,6 +75,7 @@ public class NeoForgeItems {
     public static final DeferredItem<Item> WATER_CLONE_JUTSU = ITEMS.register("water_clone_jutsu", () -> new WaterClone(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<Item> GOLEM_JUTSU = ITEMS.register("golem_jutsu", () -> new GolemTechnique(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<Item> HIDING_IN_ROCK_JUTSU = ITEMS.register("hiding_in_rock_jutsu", () -> new HidingInRock(new Item.Properties().stacksTo(1)));
+    public static final DeferredItem<Item> CHIDORI_JUTSU = ITEMS.register("chidori_jutsu", () -> new Chidori(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<Item> IRON_SKIN_JUTSU = ITEMS.register("iron_skin_jutsu", () -> new IronSkin(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<Item> GREAT_FIRE_ANNIHILATION_JUTSU = ITEMS.register("great_fire_annihilation_jutsu", () -> new GreatFireAnnihilation(new Item.Properties().stacksTo(1)));
     public static final DeferredItem<Item> ASH_PILE_BURNING_JUTSU = ITEMS.register("ash_pile_burning_jutsu", () -> new AshPileBurning(new Item.Properties().stacksTo(1)));
